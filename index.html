@@ -1,0 +1,3182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>IAPSER ART · Control y Gestión de Visitas Gerenciadas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #F0F1EE;
+      color: #17202A;
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+      line-height: 1.4;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Shell Layout */
+    .shell {
+      display: flex;
+      min-height: 100vh;
+      width: 100%;
+    }
+
+    /* Sidebar / Rail */
+    .rail {
+      width: 230px;
+      flex: none;
+      background: #17202A;
+      display: flex;
+      flex-direction: column;
+      color: #D9DEE2;
+    }
+    .rail-header {
+      padding: 22px 20px 20px;
+      border-bottom: 1px solid #2E3A46;
+    }
+    .rail-tag {
+      font-size: 11px;
+      letter-spacing: .08em;
+      color: #9FB0BC;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .rail-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: #fff;
+      margin-top: 4px;
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      font-size: 14px;
+      color: #D9DEE2;
+      text-decoration: none;
+      cursor: pointer;
+      border: 0;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+      transition: background 0.15s ease;
+    }
+    .nav:hover {
+      background: #232F3E;
+      color: #fff;
+    }
+    .nav.on {
+      background: #0F4C5C;
+      color: #fff;
+      font-weight: 600;
+    }
+    .nav-badge {
+      margin-left: auto;
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: #2E3A46;
+      color: #D9DEE2;
+    }
+    .nav.on .nav-badge {
+      background: #09343F;
+      color: #fff;
+    }
+    .nav-badge.alert {
+      background: #A8470A;
+      color: #fff;
+    }
+
+    /* Content Area */
+    .main-wrapper {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      background: #F0F1EE;
+    }
+
+    /* Header */
+    header.top-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 28px;
+      border-bottom: 1px solid #D5D8D3;
+      background: #fff;
+      flex-wrap: wrap;
+    }
+    .header-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      flex: 1;
+      min-width: 220px;
+    }
+    .header-info {
+      font-size: 13px;
+      color: #5B6670;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sync-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #0F4C5C;
+    }
+    .sync-indicator.warn { background: #A8470A; }
+
+    /* Buttons & Inputs */
+    .btn {
+      font: inherit;
+      font-size: 14px;
+      min-height: 44px;
+      padding: 0 16px;
+      border-radius: 2px;
+      box-sizing: border-box;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .btn-primary {
+      background: #0F4C5C;
+      color: #fff;
+      border: 0;
+      font-weight: 600;
+    }
+    .btn-primary:hover { background: #0b3a47; }
+    .btn-secondary {
+      background: #fff;
+      color: #17202A;
+      border: 1px solid #B9BEB8;
+      font-weight: 500;
+    }
+    .btn-secondary:hover { background: #F8F9F7; border-color: #17202A; }
+    .btn-danger {
+      background: #A8470A;
+      color: #fff;
+      border: 0;
+      font-weight: 600;
+    }
+    .btn-danger:hover { background: #883907; }
+
+    .chip {
+      font: inherit;
+      font-size: 13px;
+      padding: 7px 12px;
+      min-height: 40px;
+      box-sizing: border-box;
+      border: 1px solid #B9BEB8;
+      background: #fff;
+      color: #17202A;
+      border-radius: 2px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .chip:hover { border-color: #17202A; }
+    .chip.on {
+      background: #17202A;
+      color: #fff;
+      border-color: #17202A;
+    }
+    .chip.on .chip-count { background: #354251; color: #fff; }
+    .chip-count {
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      padding: 1px 5px;
+      background: #ECEEEA;
+      color: #5B6670;
+      border-radius: 8px;
+    }
+
+    input[type="text"], input[type="search"], input[type="date"], select, textarea {
+      font: inherit;
+      font-size: 14px;
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid #B9BEB8;
+      background: #fff;
+      color: #17202A;
+      border-radius: 2px;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid #0F4C5C;
+      outline-offset: -1px;
+      border-color: #0F4C5C;
+    }
+    textarea { padding: 10px 12px; min-height: 80px; resize: vertical; }
+
+    /* KPI Top Summary Cards */
+    .kpis {
+      display: flex;
+      background: #fff;
+      border-bottom: 1px solid #D5D8D3;
+    }
+    .kpi-card {
+      flex: 1;
+      min-width: 200px;
+      padding: 18px 24px;
+      border-right: 1px solid #D5D8D3;
+    }
+    .kpi-card:last-child { border-right: 0; }
+    .kpi-label { font-size: 12px; color: #5B6670; font-weight: 500; }
+    .kpi-val {
+      font-size: 28px;
+      font-weight: 600;
+      margin-top: 2px;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .kpi-sub { font-size: 14px; font-weight: 400; color: #5B6670; }
+    .kpi-sub.alert { color: #A8470A; font-weight: 500; }
+    .kpi-bar {
+      height: 6px;
+      background: #E3E5E1;
+      margin-top: 8px;
+      position: relative;
+      border-radius: 1px;
+      overflow: hidden;
+    }
+    .kpi-bar-fill {
+      height: 6px;
+      background: #0F4C5C;
+      transition: width 0.3s ease;
+    }
+    .kpi-bar-fill.alert { background: #A8470A; }
+
+    /* Content Body Grid */
+    .cols {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+    main.content-main {
+      flex: 1;
+      min-width: 0;
+      padding: 20px 28px;
+      overflow-y: auto;
+    }
+
+    /* Aside Panel */
+    aside.side-panel {
+      width: 390px;
+      flex: none;
+      background: #fff;
+      border-left: 1px solid #D5D8D3;
+      padding: 20px 24px;
+      box-sizing: border-box;
+      overflow-y: auto;
+      max-height: calc(100vh - 150px);
+    }
+
+    /* Table Styles con ENCABEZADO FIJO (STICKY HEADER) */
+    .table-container {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: calc(100vh - 310px);
+      background: #fff;
+      border: 1px solid #D5D8D3;
+      margin-top: 14px;
+      position: relative;
+    }
+    .t {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 13px;
+    }
+    .t thead th {
+      position: sticky;
+      top: 0;
+      background: #FFFFFF;
+      z-index: 10;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: #5B6670;
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 2px solid #17202A;
+      white-space: nowrap;
+      user-select: none;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+    .t td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #D5D8D3;
+      vertical-align: middle;
+      background: #fff;
+    }
+    .t tr.clickable { cursor: pointer; transition: background 0.1s ease; }
+    .t tr.clickable:hover td { background: #F8F9F7; }
+    .t tr.sel td { background: #E3EDEF !important; }
+    .t th.m, .t td.m { text-align: center; padding: 10px 4px; }
+    .m { font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+
+    /* Status Indicators */
+    .ok { color: #0F4C5C; font-weight: 600; }
+    .no { color: #A8470A; font-weight: 600; }
+    .na { color: #8A949C; }
+    
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 2px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .badge-ok { background: #E3EDEF; color: #0F4C5C; border: 1px solid #C4DDE2; }
+    .badge-warn { background: #FEF6EC; color: #B35806; border: 1px solid #FADCB6; }
+    .badge-alert { background: #FBEFE6; color: #A8470A; border: 1px solid #F2D2BE; font-weight: 600; }
+    .badge-neutral { background: #ECEEEA; color: #5B6670; border: 1px solid #D5D8D3; }
+
+    /* Dropzone */
+    .dropzone {
+      margin-top: 6px;
+      border: 1.5px dashed #8A949C;
+      padding: 20px 16px;
+      text-align: center;
+      background: #FAFAFA;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .dropzone:hover, .dropzone.dragover {
+      border-color: #0F4C5C;
+      background: #E3EDEF;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(23, 32, 42, 0.65);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-box {
+      background: #fff;
+      max-width: 800px;
+      width: 100%;
+      border-radius: 2px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #D5D8D3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-body {
+      padding: 20px 24px;
+      overflow-y: auto;
+    }
+    .modal-footer {
+      padding: 14px 24px;
+      border-top: 1px solid #D5D8D3;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      background: #FAFAFA;
+    }
+
+    
+    /* Cohort Badges & Trimestres */
+    .badge-cohort {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 2px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .02em;
+    }
+    .badge-cohort.residual {
+      background: #E3EDEF;
+      color: #0F4C5C;
+      border: 1px solid #C4DDE2;
+    }
+    .badge-cohort.altas {
+      background: #EAECEF;
+      color: #17202A;
+      border: 1px solid #D0D5DD;
+    }
+    .badge-sin-plazo {
+      background: #FFF3CD;
+      color: #856404;
+      border: 1px solid #FFEEBA;
+    }
+
+    /* Mini Grid Trimestral */
+    .trimestre-card {
+      background: #F8F9F7;
+      border: 1px solid #D5D8D3;
+      padding: 10px 12px;
+      border-radius: 2px;
+      font-size: 12px;
+    }
+    .trimestre-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .trimestre-bar {
+      height: 6px;
+      background: #E3E5E1;
+      border-radius: 1px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .trimestre-bar-fill {
+      height: 6px;
+      background: #0F4C5C;
+      transition: width 0.3s ease;
+    }
+
+    /* KPI Analytics View Specific Styles */
+    .kpi-view-container {
+      padding: 24px 28px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .stat-card {
+      background: #fff;
+      border: 1px solid #D5D8D3;
+      padding: 20px;
+      border-radius: 2px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+    .stat-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: #5B6670;
+      font-weight: 600;
+    }
+    .stat-number {
+      font-size: 32px;
+      font-weight: 700;
+      color: #17202A;
+      line-height: 1.1;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .stat-callout {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 2px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 10px;
+      width: fit-content;
+    }
+    .stat-callout.ok { background: #E3EDEF; color: #0F4C5C; border: 1px solid #C4DDE2; }
+    .stat-callout.alert { background: #FBEFE6; color: #A8470A; border: 1px solid #F2D2BE; }
+    .stat-callout.warn { background: #FEF6EC; color: #B35806; border: 1px solid #FADCB6; }
+    .stat-meta {
+      font-size: 12px;
+      color: #5B6670;
+      margin-top: 8px;
+    }
+
+    .chart-panel {
+      background: #fff;
+      border: 1px solid #D5D8D3;
+      padding: 20px 24px;
+      border-radius: 2px;
+      margin-bottom: 24px;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #17202A;
+    }
+    .chart-subtitle {
+      font-size: 12px;
+      color: #5B6670;
+      margin-top: 2px;
+    }
+    .chart-canvas-box {
+      position: relative;
+      width: 100%;
+      height: 280px;
+    }
+
+    @media (max-width: 1024px) {
+      .shell { flex-direction: column; }
+      .rail { width: 100%; }
+      .cols { flex-direction: column; }
+      aside.side-panel { width: 100%; border-left: 0; border-top: 1px solid #D5D8D3; max-height: none; }
+      .kpis { flex-wrap: wrap; }
+      .kpi-card { border-bottom: 1px solid #D5D8D3; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- SIDEBAR / RAIL -->
+  <nav class="rail" aria-label="Navegación principal">
+    <div class="rail-header">
+      <div class="rail-tag">IAPSER ART</div>
+      <div class="rail-title">Legajo digital HyS</div>
+      <div style="font-size:12px; color:#9FB0BC; margin-top:2px;">IAPSER Gerenciadas</div>
+    </div>
+
+    <div style="padding: 12px 0; flex: 1;">
+      <button type="button" class="nav on" id="btnNavTodas" onclick="setMainView('sedes')">
+        <span>Sedes y Visitas</span>
+        <span class="nav-badge" id="badgeNavTodas">925</span>
+      </button>
+
+      <button type="button" class="nav" id="btnNavKpis" onclick="setMainView('kpis')">
+        <span>Plan y Métricas (KPIs)</span>
+        <span style="font-size: 10px; font-weight: bold; background: #0F4C5C; color:#fff; padding: 2px 6px; border-radius:2px;">SEP=M0</span>
+      </button>
+
+      <button type="button" class="nav" id="btnNavProximas" onclick="setMainView('sedes'); setNavTab('proximas');">
+        <span>Próximas y Vencidas</span>
+        <span class="nav-badge alert" id="badgeNavProximas">0</span>
+      </button>
+
+      <button type="button" class="nav" id="btnNavFallidas" onclick="setMainView('sedes'); setNavTab('fallidas');">
+        <span>Fallidas a evaluar</span>
+        <span class="nav-badge" id="badgeNavFallidas">0</span>
+      </button>
+
+      <button type="button" class="nav" id="btnNavMasiva" onclick="abrirModalAltaMasiva()">
+        <span>Alta masiva (OCR)</span>
+        <span style="font-size: 10px; font-weight: bold; background: #2E3A46; color:#D9DEE2; padding: 2px 5px; border-radius:2px;">LOTE</span>
+      </button>
+    </div>
+
+    <div style="padding: 12px 0; border-top: 1px solid #2E3A46;">
+      <div style="padding: 6px 20px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #9FB0BC;">
+        Planilla & Tareas
+      </div>
+      <a class="nav" href="https://docs.google.com/spreadsheets/d/1xXEmPqATmcMR0JpO2IuTmf1YZ6fMRxyeAc9avbfDRqI/edit?usp=drive_link" target="_blank" style="color:#56D4E8; font-weight:600;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+        <span>+ Alta en Sheets ↗</span>
+      </a>
+      <button type="button" class="nav" onclick="abrirModalNuevaTarea()">
+        <span>+ Nueva Tarea (App)</span>
+      </button>
+      <button type="button" class="nav" onclick="abrirModalConfig()">
+        <span>Configurar Sheets & Drive</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN WRAPPER -->
+  <div class="main-wrapper">
+    <!-- TOP HEADER -->
+    <header class="top-header">
+      <div style="flex:1; min-width:280px;">
+        <h1 class="header-title" id="pageTitle" style="display:flex; align-items:center; gap:10px; margin:0;">
+          Plan y Avance Anual HyS
+          <span class="badge" style="background:#FEF6EC; color:#B35806; border:1px solid #FADCB6; font-size:12px; font-weight:600;">Ciclo Sep 2026 – Ago 2027</span>
+        </h1>
+        <div style="font-size:12px; color:#5B6670; margin-top:2px;">
+          Monitoreo Contractual Prestador (100 visitas/mes mínimas) y Stock Residual 2026 (925 visitas)
+        </div>
+      </div>
+
+      <div class="header-info">
+        <span class="sync-indicator" id="syncDot"></span>
+        <span id="syncText">Datos locales sincronizados</span>
+      </div>
+
+      <button type="button" class="btn btn-secondary" onclick="sincronizarConBackend()" style="min-height:38px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Sincronizar
+      </button>
+
+      <a href="https://docs.google.com/spreadsheets/d/1xXEmPqATmcMR0JpO2IuTmf1YZ6fMRxyeAc9avbfDRqI/edit?usp=drive_link" target="_blank" class="btn btn-secondary" style="min-height:38px; color:#0F4C5C; border-color:#0F4C5C; font-weight:600; display:inline-flex; align-items:center; gap:6px;" title="Acceso directo a la planilla de Google Sheets para el alta de tareas">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+        + Alta en Sheets ↗
+      </a>
+
+      <button type="button" class="btn btn-secondary" onclick="abrirModalNuevaTarea()" style="min-height:38px; font-weight:600;">
+        + Nueva Tarea
+      </button>
+
+      <button type="button" class="btn btn-primary" onclick="abrirModalAltaMasiva()" style="min-height:38px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Cargar documentos
+      </button>
+    </header>
+
+    <!-- VISTA 1: TABLA Y FICHA DE SEDES -->
+    <div id="viewSedes" style="display:flex; flex-direction:column; flex:1;">
+      <!-- KPIS TOP SUMMARY SECTION -->
+      <section aria-label="Avance y Semáforos" class="kpis">
+        <!-- Card 1: Control Prestador 1.200 Anual -->
+        <div class="kpi-card">
+          <div class="kpi-label" style="display:flex; justify-content:space-between;">
+            <span>CONTROL PRESTADOR · META 1.200</span>
+            <span style="color:#0F4C5C; font-weight:600;">Sep 26 – Ago 27</span>
+          </div>
+          <div class="kpi-val">
+            <span id="kpiRealizadasProv">0</span>
+            <span class="kpi-sub">/ 1.200 acordadas (<span id="kpiPctProv">0.0%</span>)</span>
+          </div>
+          <div class="kpi-bar">
+            <div class="kpi-bar-fill" id="kpiBarProv" style="width: 0%;"></div>
+          </div>
+          <div style="font-size:11px; color:#5B6670; margin-top:6px;" id="kpiSubCadenciaProv">
+            Cadencia: 100/mes · Meta acum: <strong id="kpiMetaAcumProv">200</strong>
+          </div>
+        </div>
+
+        <!-- Card 2: Cortes Trimestrales (Compensación de Desvíos) -->
+        <div class="kpi-card">
+          <div class="kpi-label" style="display:flex; justify-content:space-between;">
+            <span>CORTES TRIMESTRALES (300/Q)</span>
+            <span style="color:#0F4C5C; font-weight:600;" id="lblTrimestreActualBadge">Q1 En curso</span>
+          </div>
+          <div class="kpi-val">
+            <span id="kpiQActualVal">0</span>
+            <span class="kpi-sub">/ 300 meta Q1 (<span id="kpiQPctVal">0.0%</span>)</span>
+          </div>
+          <div class="kpi-bar">
+            <div class="kpi-bar-fill" id="kpiBarQActual" style="width: 0%;"></div>
+          </div>
+          <div style="font-size:11px; color:#5B6670; margin-top:6px;">
+            Q1: <strong id="lblValQ1">0</strong> · Q2: <strong id="lblValQ2">0</strong> · Q3: <strong id="lblValQ3">0</strong> · Q4: <strong id="lblValQ4">0</strong>
+          </div>
+        </div>
+
+        <!-- Card 3: Stock Plan Residual 2026 -->
+        <div class="kpi-card">
+          <div class="kpi-label" style="display:flex; justify-content:space-between;">
+            <span>STOCK PLAN RESIDUAL 2026</span>
+            <span style="color:#0F4C5C; font-weight:600;">Tabla Base</span>
+          </div>
+          <div class="kpi-val">
+            <span id="kpiRealizadasResid">0</span>
+            <span class="kpi-sub">de 925 tareas (<span id="kpiPctResid">0.0%</span>)</span>
+          </div>
+          <div class="kpi-bar">
+            <div class="kpi-bar-fill" id="kpiBarResid" style="width: 0%;"></div>
+          </div>
+          <div style="font-size:11px; color:#5B6670; margin-top:6px;">
+            736 Visitas Técnicas (01/01 al 31/12) · 189 Especiales
+          </div>
+        </div>
+
+        <!-- Card 4: Semáforos y Alertas Operativas -->
+        <div class="kpi-card">
+          <div class="kpi-label" style="display:flex; justify-content:space-between;">
+            <span>ALERTAS & CALIDAD OPERATIVA</span>
+            <span style="color:#A8470A; font-weight:600;" id="kpiVencidasSub">En mora</span>
+          </div>
+          <div class="kpi-val">
+            <span id="kpiVencidas" style="color:#A8470A;">0</span>
+            <span class="kpi-sub alert">vencidas</span>
+            <span style="font-size:18px; color:#D5D8D3; margin:0 4px;">|</span>
+            <span id="kpiProximas" style="color:#B35806; font-size:24px;">0</span>
+            <span class="kpi-sub" style="color:#B35806;">próx. ≤7d</span>
+          </div>
+          <div class="kpi-bar">
+            <div class="kpi-bar-fill alert" id="kpiBarVencidas" style="width: 0%;"></div>
+          </div>
+          <div style="font-size:11px; color:#5B6670; margin-top:6px;">
+            Fallidas a evaluar: <strong id="kpiFallidas" style="color:#A8470A;">0</strong> · Sin doc: <strong id="kpiPendienteDocTop">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONTENT BODY (MAIN + ASIDE) -->
+      <div class="cols">
+        <!-- MAIN TABLE COLUMN -->
+        <main class="content-main">
+          <!-- BUSCADOR Y FILTROS RÁPIDOS -->
+          <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+            <label style="flex:1; min-width:260px; font-size:12px; color:#5B6670;">
+              Buscar sede o empresa
+              <input type="search" id="txtBuscar" placeholder="Razón social, CUIT, Establecimiento, Siniestro..." oninput="filtrarYRenderizar()">
+            </label>
+            <label style="font-size:12px; color:#5B6670; min-width:180px;">
+              Tarea
+              <select id="selTareaFiltro" onchange="filtrarYRenderizar()">
+                <option value="todas">Todas las tareas</option>
+                <option value="Visita tecnica">Visita tecnica</option>
+                <option value="Investigacion AT">Investigacion AT</option>
+                <option value="Investigacion EP">Investigacion EP</option>
+                <option value="Seguimiento AT">Seguimiento AT</option>
+                <option value="Seguimiento EP">Seguimiento EP</option>
+                <option value="Visita obra">Visita obra</option>
+                <option value="Visita Agro">Visita Agro</option>
+                <option value="Verosimilitud">Verosimilitud</option>
+                <option value="Visita inicial">Visita inicial</option>
+                <option value="Pese">Pese</option>
+              </select>
+            </label>
+            <label style="font-size:12px; color:#5B6670; min-width:160px;">
+              Localidad
+              <select id="selLocalidadFiltro" onchange="filtrarYRenderizar()">
+                <option value="todas">Todas las localidades</option>
+              </select>
+            </label>
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="btn btn-secondary" onclick="abrirModalNuevaTarea()" style="min-height:44px; white-space:nowrap; font-weight:600;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+                + Nueva Tarea
+              </button>
+              <a href="https://docs.google.com/spreadsheets/d/1xXEmPqATmcMR0JpO2IuTmf1YZ6fMRxyeAc9avbfDRqI/edit?usp=drive_link" target="_blank" class="btn btn-secondary" style="min-height:44px; color:#0F4C5C; border-color:#0F4C5C; font-weight:600; white-space:nowrap;" title="Abrir planilla de Google Sheets para el alta de tareas">
+                + Alta en Sheets ↗
+              </a>
+            </div>
+          </div>
+
+          <!-- SELECTOR DE COHORTE / ORIGEN -->
+          <div style="display:flex; gap:8px; align-items:center; margin:14px 0 6px; flex-wrap:wrap; background:#fff; padding:10px 14px; border:1px solid #D5D8D3; border-radius:2px;">
+            <span style="font-size:12px; font-weight:600; color:#17202A;">Cohorte / Origen del Plan:</span>
+            <button type="button" class="chip on" id="chipCohorteTodos" onclick="setFiltroCohorte('todos')">
+              Todas las tareas <span class="chip-count" id="countCohorteTodos">925</span>
+            </button>
+            <button type="button" class="chip" id="chipCohorteResidual" onclick="setFiltroCohorte('residual')">
+              Plan Residual 2026 (Base) <span class="chip-count" id="countCohorteResidual">925</span>
+            </button>
+            <button type="button" class="chip" id="chipCohorteAltas" onclick="setFiltroCohorte('altas_sep')">
+              Altas Nuevas Sep 2026 (Proveedor) <span class="chip-count" id="countCohorteAltas">0</span>
+            </button>
+          </div>
+
+          <!-- CHIPS DE SEMÁFORO / ESTADO -->
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:14px 0 6px;">
+            <span style="font-size:12px; color:#5B6670; margin-right:4px;">Filtrar por estado:</span>
+            <button type="button" class="chip on" id="chipTodos" onclick="setFiltroEstado('todos')">
+              Todos <span class="chip-count" id="countChipTodos">0</span>
+            </button>
+            <button type="button" class="chip" id="chipProximas" onclick="setFiltroEstado('proximas')">
+              Próximas a vencer (≤7d) <span class="chip-count" id="countChipProximas">0</span>
+            </button>
+            <button type="button" class="chip" id="chipVencidas" onclick="setFiltroEstado('vencidas')">
+              Vencidas <span class="chip-count" id="countChipVencidas">0</span>
+            </button>
+            <button type="button" class="chip" id="chipTermino" onclick="setFiltroEstado('termino')">
+              En término <span class="chip-count" id="countChipTermino">0</span>
+            </button>
+            <button type="button" class="chip" id="chipPendienteDoc" onclick="setFiltroEstado('pendienteDoc')">
+              Realizada sin doc <span class="chip-count" id="countChipPendienteDoc">0</span>
+            </button>
+            <button type="button" class="chip" id="chipTerminadas" onclick="setFiltroEstado('terminadas')">
+              Terminadas <span class="chip-count" id="countChipTerminadas">0</span>
+            </button>
+            <button type="button" class="chip" id="chipFallidas" onclick="setFiltroEstado('fallidas')">
+              Fallidas <span class="chip-count" id="countChipFallidas">0</span>
+            </button>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin:12px 0 8px; font-size:13px; color:#5B6670;">
+            <span id="txtResultadosConteo">Mostrando 0 de 0 registros</span>
+            <span>● Con documento adjunto &nbsp; ○ Pendiente documento &nbsp; – Sin visita realizada</span>
+          </div>
+
+          <!-- TABLA PRINCIPAL CON ENCABEZADO FIJO (STICKY HEADER) -->
+          <div class="table-container">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th style="width: 45px;">Fila</th>
+                  <th style="width: 110px;">Origen Plan</th>
+                  <th>Establecimiento / Razón Social</th>
+                  <th>CUIT</th>
+                  <th>Tarea</th>
+                  <th class="m" title="Documento adjunto">Doc</th>
+                  <th>Estado</th>
+                  <!-- NUEVAS COLUMNAS AL FINAL DE LA TABLA -->
+                  <th class="m" title="Fecha inicio de vigencia de la tarea">Fecha Desde</th>
+                  <th class="m" title="Fecha límite de cumplimiento">Fecha Hasta</th>
+                  <th class="m" style="background:#EBF3F5; color:#0F4C5C; font-weight:700;" title="Fecha efectiva en que se realizó la visita">Fecha Realizada</th>
+                  <th class="m" title="Resultado de la visita: Efectiva o Fallida">Resultado</th>
+                  <th class="m" title="N° de Siniestro (obligatorio para Investigaciones y Seguimientos AT/EP)">N° Siniestro</th>
+                  <th title="Observaciones de la tarea">Observaciones</th>
+                </tr>
+              </thead>
+              <tbody id="tablaBody">
+                <!-- Renderizado dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+
+          <div id="paginacionControls" style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:13px; color:#5B6670;">
+            <button type="button" class="btn btn-secondary" id="btnPagAnt" onclick="cambiarPagina(-1)" style="min-height:36px;">← Anterior</button>
+            <span id="txtPaginacion">Página 1 de 1</span>
+            <button type="button" class="btn btn-secondary" id="btnPagSig" onclick="cambiarPagina(1)" style="min-height:36px;">Siguiente →</button>
+          </div>
+        </main>
+
+        <!-- ASIDE PANEL: FICHA Y CARGA DIRECTA -->
+        <aside class="side-panel" aria-label="Ficha de tarea seleccionada">
+          <div style="font-size:12px; color:#5B6670; font-weight:600; letter-spacing:.04em; text-transform:uppercase;">
+            Ficha de Tarea y Carga de Nuevas Fechas
+          </div>
+
+          <div id="asideDetalleVacio" style="margin-top:20px; padding:24px 16px; border:1px dashed #B9BEB8; text-align:center; color:#5B6670;">
+            Seleccioná una fila de la tabla para ver su detalle, asignar las nuevas columnas de fecha, registrar la visita y subir el documento asociado.
+          </div>
+
+          <div id="asideDetalleActivo" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span class="badge-cohort residual" id="detOrigenBadge">Plan Residual 2026</span>
+              <span id="detBadgeEstado" class="badge badge-neutral">En término</span>
+            </div>
+            <h2 style="margin:4px 0 2px; font-size:18px; font-weight:600;" id="detEstablecimiento">Nombre Establecimiento</h2>
+            <div style="font-size:13px; color:#5B6670;" id="detEmpleadorYCuit">Empresa · CUIT</div>
+            <div style="font-size:12px; color:#5B6670; margin-top:2px;" id="detLocalidadYContrato">Localidad · Contrato</div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin:14px 0; padding:10px 0; border-top:1px solid #D5D8D3; border-bottom:1px solid #D5D8D3;">
+              <span>Tarea: <strong id="detTarea">Visita tecnica</strong></span>
+              <span id="detBadgeEstado" class="badge badge-neutral">En término</span>
+            </div>
+
+            <!-- AVISO TAREA ESPECIAL SIN PLAZO -->
+            <div id="boxAvisoSinPlazo" style="display:none; background:#FFF3CD; border:1px solid #FFEEBA; color:#856404; padding:8px 10px; font-size:12px; border-radius:2px; margin-bottom:10px;">
+              ⚠️ <strong>Tarea sin plazo definido:</strong> Ingresá Fecha Desde y Fecha Hasta para fijar su vencimiento operativo.
+            </div>
+
+            <!-- DETALLE DE FECHAS OPERATIVAS -->
+            <div style="background:#F8F9F7; border:1px solid #D5D8D3; padding:10px 12px; margin-bottom:12px; font-size:12px;">
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:6px;">
+                <div><span style="color:#5B6670;">Fecha Desde:</span> <strong class="m" id="detFechaDesde">--</strong></div>
+                <div><span style="color:#5B6670;">Fecha Hasta (Vence):</span> <strong class="m" id="detFechaHasta">--</strong></div>
+              </div>
+              <div style="padding-top:6px; border-top:1px dashed #D5D8D3; display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:#0F4C5C; font-weight:600;">Fecha Realizada:</span>
+                <strong class="m" id="detFechaRealizadaLabel" style="color:#0F4C5C; font-size:14px;">--</strong>
+              </div>
+            </div>
+
+            <!-- ALERTA SI ES FALLIDA PENDIENTE -->
+            <div id="boxAlertaFallida" style="display:none; border:1px solid #A8470A; background:#FBEFE6; padding:12px 14px; font-size:13px; margin-bottom:14px;">
+              <strong style="color:#A8470A;">Visita Fallida Registrada</strong><br>
+              <span id="detObsFallida" style="display:block; margin:4px 0; font-size:12px;"></span>
+              <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+                <button type="button" class="btn btn-secondary" onclick="gestionarFallidaActual('cerrar')" style="min-height:36px; font-size:12px;">
+                  ✓ Marcar como Cerrada Definitivamente
+                </button>
+                <button type="button" class="btn btn-primary" onclick="gestionarFallidaActual('reprogramar')" style="min-height:36px; font-size:12px;">
+                  + Generar Nueva Visita Extemporánea
+                </button>
+              </div>
+            </div>
+
+            <!-- DOCUMENTO YA SUBIDO (SI TIENE) -->
+            <div id="boxDocExistente" style="display:none; background:#E3EDEF; border:1px solid #C4DDE2; padding:10px 12px; margin-bottom:14px; font-size:12px;">
+              <div style="font-weight:600; color:#0F4C5C;">Documento registrado en Drive:</div>
+              <a href="#" target="_blank" id="linkDocExistente" style="color:#0F4C5C; word-break:break-all; text-decoration:underline;">Ver documento ↗</a>
+            </div>
+
+            <!-- FORMULARIO DE CARGA DE VISITA Y NUEVAS FECHAS -->
+            <form id="formCargaVisita" onsubmit="guardarVisitaActual(event)">
+              <div style="font-size:13px; font-weight:600; margin-bottom:8px; color:#17202A;">Cargar resultado y nuevas columnas:</div>
+
+              <div style="margin-bottom:10px;">
+                <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Resultado de la visita:</label>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                  <button type="button" class="chip on" id="btnResEfectiva" onclick="setResultadoForm('Efectiva')" style="justify-content:center;">
+                    ✓ Efectiva
+                  </button>
+                  <button type="button" class="chip" id="btnResFallida" onclick="setResultadoForm('Fallida')" style="justify-content:center;">
+                    ✕ Fallida
+                  </button>
+                </div>
+              </div>
+
+              <!-- CAMPOS DE NUEVAS FECHAS -->
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                <div>
+                  <label style="font-size:11px; color:#5B6670; display:block; margin-bottom:3px;">Nueva Fecha Desde:</label>
+                  <input type="date" id="txtInputFechaDesde">
+                </div>
+                <div>
+                  <label style="font-size:11px; color:#5B6670; display:block; margin-bottom:3px;">Nueva Fecha Hasta:</label>
+                  <input type="date" id="txtInputFechaHasta">
+                </div>
+              </div>
+
+              <div style="margin-bottom:10px;">
+                <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Nueva Fecha Realizada:</label>
+                <input type="date" id="txtFechaRealizada" required>
+              </div>
+
+              <div id="boxNroSiniestro" style="margin-bottom:10px; display:none;">
+                <label style="font-size:12px; color:#A8470A; font-weight:600; display:block; margin-bottom:4px;">
+                  N.º de Siniestro (Obligatorio para AT/EP):
+                </label>
+                <input type="text" id="txtNroSiniestro" placeholder="Ej: SIN-2026-98124">
+              </div>
+
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Observaciones:</label>
+                <textarea id="txtObservaciones" placeholder="Detalles de la visita, motivos de fallida o acuerdos..."></textarea>
+              </div>
+
+              <!-- DROPZONE DE ARCHIVO -->
+              <div style="margin-bottom:12px;">
+                <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">
+                  Adjuntar Documento (Requerido para terminar):
+                </label>
+                <div class="dropzone" id="dropzoneAside" onclick="document.getElementById('fileInputAside').click()">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F4C5C" stroke-width="1.8">
+                    <path d="M12 16V5m0 0-4 4m4-4 4 4M5 19h14"/>
+                  </svg>
+                  <div style="font-weight:600; margin-top:4px;">Soltá el archivo acá</div>
+                  <div style="font-size:11px; color:#5B6670; margin-top:2px;">PDF o imagen. Se renombrará automáticamente según el estándar.</div>
+                </div>
+                <input type="file" id="fileInputAside" style="display:none;" accept=".pdf,image/*" onchange="manejarArchivoAside(event)">
+
+                <!-- PREVIEW DE ARCHIVO CARGADO -->
+                <div id="boxPreviewArchivo" style="display:none; margin-top:8px; padding:10px; border:1px solid #D5D8D3; background:#FAFAFA; font-size:12px;">
+                  <div style="font-weight:600; color:#17202A;" id="lblNombreOriginal">archivo.pdf</div>
+                  <div style="font-size:11px; color:#0F4C5C; font-family:'IBM Plex Mono', monospace; margin-top:4px;" id="lblNombreEstandarizado">
+                    CUIT_ESTAB_TAREA_FECHA.pdf
+                  </div>
+                  <div style="margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
+                    <span id="lblTamanoArchivo" style="color:#5B6670; font-size:11px;">0 KB</span>
+                    <a href="javascript:void(0)" onclick="quitarArchivoAside()" style="color:#A8470A; text-decoration:none;">Quitar</a>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary" style="width:100%;" id="btnGuardarVisita">
+                Guardar Nuevas Columnas y Documento
+              </button>
+            </form>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- VISTA 2: PLAN Y MÉTRICAS (PROYECTO INICIADO EN SEPTIEMBRE 2026 = MES 0) -->
+    <div id="viewKpis" style="display:none; flex-direction:column; flex:1; overflow-y:auto;">
+      <div class="kpi-view-container">
+
+        <!-- FILA DE ENCABEZADO Y FILTROS DEL TABLERO -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <div style="font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:#0F4C5C; font-weight:600;">
+              Línea Base · Proyecto Iniciado en Septiembre 2026 (Mes 0)
+            </div>
+            <h2 style="font-size:24px; font-weight:700; margin-top:2px;">Tablero de Cumplimiento Anual (1 Año de Plan)</h2>
+            <div style="font-size:13px; color:#5B6670;">Presupuesto de referencia: <strong>100 visitas efectivas mensuales</strong> (1.200 anuales entre Sep 2026 y Ago 2027)</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="chip on" id="btnToggleChartMensual" onclick="toggleModoPresupuesto('mensual')">Visión Mensual</button>
+            <button type="button" class="chip" id="btnToggleChartAcumulado" onclick="toggleModoPresupuesto('acumulado')">Curva Acumulada</button>
+          </div>
+        </div>
+
+        <!-- FILA 1: DATOS FUERTES EN ETIQUETAS (STAT CARDS EJECUTIVAS) -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:24px;">
+          
+          <!-- Stat 1: Control Prestador - Meta Anual 1.200 -->
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Stock Visitas Contratadas</span>
+              <span class="badge" style="background:#E3EDEF; color:#0F4C5C; border:1px solid #C4DDE2; font-size:11px; font-weight:600;">Sep 26 – Ago 27</span>
+            </div>
+            <div class="stat-number">
+              <span id="kpiDashEfectivasTotal">0</span>
+              <span style="font-size:18px; font-weight:400; color:#5B6670;">/ <span id="kpiDashMetaTotal">1.200</span></span>
+            </div>
+            <div class="stat-callout ok" id="calloutCumplimientoTotal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Consumido: <span id="kpiDashPctTotal">0.0%</span>
+            </div>
+            <div class="stat-meta">
+              Residual contratado: <strong id="kpiDashResidualProv">1.200 visitas</strong> (100 efectivas/mes)
+            </div>
+          </div>
+
+          <!-- Stat 2: Cortes Trimestrales (Compensación de Desvíos) -->
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Cortes Trimestrales (300/Q)</span>
+              <span class="m" style="color:#0F4C5C; font-weight:600; font-size:12px;" id="lblDashQActualBadge">Q1 En curso</span>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin: 6px 0;">
+              <div class="trimestre-card">
+                <div class="trimestre-header">
+                  <span>Q1 (Sep-Nov)</span>
+                  <span class="m" id="dashQ1Val">0/300</span>
+                </div>
+                <div class="trimestre-bar"><div class="trimestre-bar-fill" id="dashQ1Bar" style="width:0%;"></div></div>
+              </div>
+              <div class="trimestre-card">
+                <div class="trimestre-header">
+                  <span>Q2 (Dic-Feb)</span>
+                  <span class="m" id="dashQ2Val">0/300</span>
+                </div>
+                <div class="trimestre-bar"><div class="trimestre-bar-fill" id="dashQ2Bar" style="width:0%;"></div></div>
+              </div>
+              <div class="trimestre-card">
+                <div class="trimestre-header">
+                  <span>Q3 (Mar-May)</span>
+                  <span class="m" id="dashQ3Val">0/300</span>
+                </div>
+                <div class="trimestre-bar"><div class="trimestre-bar-fill" id="dashQ3Bar" style="width:0%;"></div></div>
+              </div>
+              <div class="trimestre-card">
+                <div class="trimestre-header">
+                  <span>Q4 (Jun-Ago)</span>
+                  <span class="m" id="dashQ4Val">0/300</span>
+                </div>
+                <div class="trimestre-bar"><div class="trimestre-bar-fill" id="dashQ4Bar" style="width:0%;"></div></div>
+              </div>
+            </div>
+            <div class="stat-meta" id="lblCompensacionTrimestral">
+              Ventana trimestral para absorber y corregir desvíos mensuales.
+            </div>
+          </div>
+
+          <!-- Stat 3: Stock Plan Residual 2026 (Tabla Base) -->
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Stock Plan Residual 2026</span>
+              <span class="badge" style="background:#ECEEEA; color:#5B6670; border:1px solid #D5D8D3; font-size:11px; font-weight:600;">925 Base</span>
+            </div>
+            <div class="stat-number">
+              <span id="kpiDashRealizadasResid">0</span>
+              <span style="font-size:18px; font-weight:400; color:#5B6670;">/ 925</span>
+            </div>
+            <div class="stat-callout ok" id="calloutResidualStock">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Avance residual: <span id="kpiDashPctResid">0.0%</span>
+            </div>
+            <div class="stat-meta">
+              736 Técnicas (01/01/26 – 31/12/26) · 189 Especiales (Plazo manual)
+            </div>
+          </div>
+
+          <!-- Stat 4: Ritmo & Cadencia (Control de Desvíos) -->
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Ritmo & Cadencia</span>
+              <span class="m" style="font-size:12px; color:#5B6670;">Inicio Sep 2026</span>
+            </div>
+            <div class="stat-number" id="boxRitmoNumero">
+              <span id="kpiDashRitmoEfectivas">0</span>
+              <span style="font-size:18px; font-weight:400; color:#5B6670;">visitas en período</span>
+            </div>
+            <div class="stat-callout alert" id="calloutRitmoAlerta">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span id="kpiDashDesvioBadge">Con retraso (-200 vs meta acum.)</span>
+            </div>
+            <div class="stat-meta">
+              Cadencia prevista: <strong>100 visitas / mes</strong> · Efectividad: <strong id="kpiDashTasaEfSmall">100%</strong>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- FILA 2: GRÁFICO 1: REALIZADAS VS PRESUPUESTADAS (MES 0 A MES 12) -->
+        <div class="chart-panel">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title" id="lblTituloChart1">Visitas Efectivas Realizadas vs Presupuestadas (Meta: 100/mes)</div>
+              <div class="chart-subtitle" id="lblSubtituloChart1">Línea de tiempo del año de proyecto iniciando en Septiembre 2026 (Mes 0)</div>
+            </div>
+            <div style="font-size:12px; color:#5B6670; font-family:'IBM Plex Mono', monospace;">
+              Ejecutadas Proyecto: <strong id="lblTotalEfectivasBox" style="color:#0F4C5C;">0</strong> / 1.200 Presupuesto Anual
+            </div>
+          </div>
+
+          <div class="chart-canvas-box">
+            <canvas id="chartPresupuesto"></canvas>
+          </div>
+
+          <div style="display:flex; gap:24px; margin-top:16px; padding-top:14px; border-top:1px solid #D5D8D3; flex-wrap:wrap; font-size:12px; color:#5B6670;">
+            <div>Mes cerrado M0 (Sep 26): <strong style="color:#0F4C5C;" id="lblMejorMes">92 visitas efectivas (92% de la meta)</strong></div>
+            <div>Mes en curso M1 (Oct 26): <strong id="lblPromedioMensual">57 visitas (al día 22/10)</strong></div>
+            <div>Desvío acumulado a la fecha: <strong style="color:#A8470A;" id="lblDesvioMensual">-51 visitas vs meta de 200</strong></div>
+          </div>
+        </div>
+
+        <!-- FILA 3: DOS COLUMNAS DE GRÁFICOS (VENCIDAS ACUMULADAS + PARTICIPACIÓN FALLIDAS) -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap:24px; margin-bottom:24px;">
+
+          <!-- Gráfico 2: Evolución de Vencidas Barras Acumuladas Desde Mes 0 -->
+          <div class="chart-panel" style="margin-bottom:0;">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">Evolución de Visitas Vencidas (Barras Acumuladas)</div>
+                <div class="chart-subtitle">Acumulación de deuda operativa mes a mes desde el inicio en Septiembre (Mes 0)</div>
+              </div>
+              <span class="badge badge-alert" id="badgeStockVencidas">20 acumuladas</span>
+            </div>
+
+            <div class="chart-canvas-box">
+              <canvas id="chartVencidas"></canvas>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid #D5D8D3; font-size:12px; color:#5B6670;">
+              <div>Vencidas en M0 (Sep 26): <strong>8 visitas</strong></div>
+              <div>Nuevas vencidas en M1 (Oct 26): <strong>12 visitas</strong></div>
+              <div>Stock total en mora: <strong style="color:#A8470A;">20 vencidas</strong></div>
+            </div>
+          </div>
+
+          <!-- Gráfico 3: Participación y Evolución Fallidas vs Efectivas -->
+          <div class="chart-panel" style="margin-bottom:0;">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">Participación y Evolución: Fallidas vs Efectivas</div>
+                <div class="chart-subtitle">Volumen total de salidas a terreno desde el inicio del proyecto</div>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button type="button" class="chip on" id="btnToggleFallidasStack" onclick="toggleModoFallidas('stack')" style="min-height:30px; font-size:11px; padding:2px 8px;">Evolución</button>
+                <button type="button" class="chip" id="btnToggleFallidasDonut" onclick="toggleModoFallidas('donut')" style="min-height:30px; font-size:11px; padding:2px 8px;">Distribución</button>
+              </div>
+            </div>
+
+            <div class="chart-canvas-box" id="boxChartFallidasStack">
+              <canvas id="chartFallidasStack"></canvas>
+            </div>
+            <div class="chart-canvas-box" id="boxChartFallidasDonut" style="display:none;">
+              <canvas id="chartFallidasDonut"></canvas>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid #D5D8D3; font-size:12px; color:#5B6670;">
+              <div>Efectivas: <strong style="color:#0F4C5C;" id="lblTotEfPie">149 (89.8%)</strong></div>
+              <div>Fallidas: <strong style="color:#A8470A;" id="lblTotFaPie">17 (10.2%)</strong></div>
+              <div>Gestionadas: <strong id="lblTotFaGest">11</strong> | Pendientes: <strong style="color:#A8470A;" id="lblTotFaPend">6</strong></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- FILA 4: TABLA DE RESUMEN EJECUTIVO MENSUAL DEL PROYECTO (1 AÑO) -->
+        <div class="chart-panel">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Resumen Mensual del Año de Proyecto (Septiembre 2026 = Mes 0)</div>
+              <div class="chart-subtitle">Detalle numérico mes a mes de visitas presupuestadas (100/mes), efectivas logradas, fallidas y stock acumulado</div>
+            </div>
+          </div>
+
+          <div class="table-container" style="margin-top:0;">
+            <table class="t">
+              <thead>
+                <tr>
+                  <th>Período del Proyecto</th>
+                  <th class="m" style="text-align:right;">Meta Presup.</th>
+                  <th class="m" style="text-align:right;">Efectivas</th>
+                  <th class="m" style="text-align:right;">Fallidas</th>
+                  <th class="m" style="text-align:right;">Total Salidas</th>
+                  <th class="m" style="text-align:right;">Cumplimiento vs 100</th>
+                  <th class="m" style="text-align:right;">% Efectividad</th>
+                  <th class="m" style="text-align:right;">Vencidas Acum.</th>
+                  <th>Semáforo</th>
+                </tr>
+              </thead>
+              <tbody id="tablaResumenMensualBody">
+                <!-- Generado dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ALTA MASIVA CON OCR -->
+<div class="modal-backdrop" id="modalAltaMasiva" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 style="font-size:18px; font-weight:600;">Alta Masiva de Documentos con OCR</h2>
+      <button type="button" class="chip" onclick="cerrarModalAltaMasiva()" style="min-height:32px; padding:2px 10px;">✕ Cerrar</button>
+    </div>
+
+    <div class="modal-body">
+      <p style="font-size:13px; color:#5B6670; margin-bottom:14px;">
+        Arrastrá o seleccioná múltiples actas o constancias en PDF/imagen. El sistema leerá el texto del documento (CUIT, fechas y palabras clave) para sugerir automáticamente el establecimiento y la tarea correspondiente.
+      </p>
+
+      <div class="dropzone" id="dropzoneMasiva" onclick="document.getElementById('fileInputMasivo').click()" style="padding:32px 16px;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0F4C5C" stroke-width="2">
+          <path d="M12 16V5m0 0-4 4m4-4 4 4M5 19h14"/>
+        </svg>
+        <div style="font-size:16px; font-weight:600; margin-top:8px;">Arrastrá varios archivos acá</div>
+        <div style="font-size:12px; color:#5B6670; margin-top:4px;">Formatos admitidos: PDF, JPG, PNG (hasta 25 MB por archivo)</div>
+      </div>
+      <input type="file" id="fileInputMasivo" multiple style="display:none;" accept=".pdf,image/*" onchange="procesarArchivosMasivos(event)">
+
+      <!-- LISTA DE DETECCIONES -->
+      <div id="listaDetecciones" style="margin-top:18px; display:none;">
+        <div style="font-size:12px; font-weight:600; color:#5B6670; margin-bottom:8px;" id="lblConteoMasivo">
+          Documentos procesados (0):
+        </div>
+        <div id="contenedorItemsMasivos" style="display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto;">
+          <!-- Items generados dinámicamente -->
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="cerrarModalAltaMasiva()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="btnConfirmarLote" onclick="confirmarSubidaLote()" disabled>
+        Confirmar y Subir Todo
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ALTA DE NUEVA TAREA -->
+<div class="modal-backdrop" id="modalNuevaTarea" style="display:none;">
+  <div class="modal-box" style="max-width:680px;">
+    <div class="modal-header">
+      <div>
+        <h2 style="font-size:18px; font-weight:600;">Alta de Nueva Tarea</h2>
+        <div style="font-size:12px; color:#5B6670;">Ingresá los datos de la tarea o abrí directamente la planilla de Google Sheets</div>
+      </div>
+      <button type="button" class="chip" onclick="cerrarModalNuevaTarea()" style="min-height:32px; padding:2px 10px;">✕ Cerrar</button>
+    </div>
+
+    <form id="formNuevaTarea" onsubmit="guardarNuevaTarea(event)">
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
+        <!-- Banner de acceso directo a Sheets -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#E3EDEF; border:1px solid #C4DDE2; padding:10px 14px; border-radius:2px;">
+          <div>
+            <strong style="color:#0F4C5C;">¿Preferís cargar varias filas en Google Sheets?</strong>
+            <div style="font-size:12px; color:#5B6670;">Podés abrir la planilla directamente y cargar o pegar masivamente.</div>
+          </div>
+          <a href="https://docs.google.com/spreadsheets/d/1xXEmPqATmcMR0JpO2IuTmf1YZ6fMRxyeAc9avbfDRqI/edit?usp=drive_link" target="_blank" class="btn btn-secondary" style="min-height:34px; font-size:12px; color:#0F4C5C; border-color:#0F4C5C; font-weight:600; white-space:nowrap;">
+            Abrir Sheets ↗
+          </a>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div>
+            <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Razón Social / Empleador:</label>
+            <input type="text" id="newTareaEmpleador" placeholder="Ej: COPELCO LTDA." required>
+          </div>
+          <div>
+            <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">CUIT (11 dígitos):</label>
+            <input type="text" id="newTareaCuit" placeholder="Ej: 30545756710" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:2fr 1fr; gap:12px;">
+          <div>
+            <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Establecimiento:</label>
+            <input type="text" id="newTareaEstablecimiento" placeholder="Ej: CENTRAL OBERA" required>
+          </div>
+          <div>
+            <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">N.º Estab:</label>
+            <input type="text" id="newTareaNroEstab" placeholder="1" value="1">
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div>
+            <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Localidad:</label>
+            <input type="text" id="newTareaLocalidad" placeholder="Ej: Cutral-Co / Oberá">
+          </div>
+          <div>
+            <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Tarea:</label>
+            <select id="newTareaTipo" onchange="verificarTipoTareaNueva(this.value)">
+              <option value="Visita tecnica">Visita tecnica</option>
+              <option value="Investigacion AT">Investigacion AT</option>
+              <option value="Investigacion EP">Investigacion EP</option>
+              <option value="Seguimiento AT">Seguimiento AT</option>
+              <option value="Seguimiento EP">Seguimiento EP</option>
+              <option value="Visita obra">Visita obra</option>
+              <option value="Visita Agro">Visita Agro</option>
+              <option value="Verosimilitud">Verosimilitud</option>
+              <option value="Visita inicial">Visita inicial</option>
+              <option value="Seguimiento Verosimilitud">Seguimiento Verosimilitud</option>
+              <option value="Pese">Pese</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="newTareaBoxSiniestro" style="display:none;">
+          <label style="font-size:12px; color:#A8470A; font-weight:600; display:block; margin-bottom:4px;">
+            N.º de Siniestro (Requerido para AT/EP):
+          </label>
+          <input type="text" id="newTareaNroSiniestro" placeholder="Ej: SIN-2026-99120">
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div>
+            <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Fecha Desde:</label>
+            <input type="date" id="newTareaFechaDesde" required>
+          </div>
+          <div>
+            <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Fecha Hasta (Vencimiento):</label>
+            <input type="date" id="newTareaFechaHasta" required>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Observaciones:</label>
+          <textarea id="newTareaObs" placeholder="Observaciones adicionales o instrucciones para el preventor..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalNuevaTarea()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnGuardarNuevaTarea">
+          + Guardar Tarea en Google Sheets
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: CONFIGURACIÓN Y CONEXIÓN CON APPS SCRIPT -->
+<div class="modal-backdrop" id="modalConfig" style="display:none;">
+  <div class="modal-box" style="max-width:600px;">
+    <div class="modal-header">
+      <h2 style="font-size:18px; font-weight:600;">Configuración de Google Sheets & Drive</h2>
+      <button type="button" class="chip" onclick="cerrarModalConfig()" style="min-height:32px; padding:2px 10px;">✕ Cerrar</button>
+    </div>
+
+    <div class="modal-body">
+      <div style="font-size:13px; color:#5B6670; margin-bottom:14px;">
+        Para conectar la interfaz en tiempo real con tu planilla y tu carpeta de Google Drive, desplegá el script <code>codigo_apps_script.js</code> como <strong>Aplicación Web</strong> y pegá la URL resultante a continuación:
+      </div>
+
+      <label style="font-size:12px; font-weight:600; color:#17202A; display:block; margin-bottom:4px;">
+        URL de la Aplicación Web (Google Apps Script):
+      </label>
+      <input type="text" id="txtWebAppUrl" placeholder="https://script.google.com/macros/s/AKfycbx.../exec">
+
+      <div style="margin-top:14px; padding:12px; background:#FAFAFA; border:1px solid #D5D8D3; font-size:12px;">
+        <strong>Estado actual:</strong> <span id="txtEstadoConexion">Trabajando con datos locales y almacenamiento sincronizado.</span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="probarConexionBackend()">Probar Conexión</button>
+      <button type="button" class="btn btn-primary" onclick="guardarConfig()">Guardar y Sincronizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CARGA DE DATOS PRECARGADOS -->
+<script src="datos_precargados.js"></script>
+
+<!-- LÓGICA DE LA APLICACIÓN -->
+<script>
+// ESTADO GLOBAL
+let TASKS = [];
+let TAREA_SELECCIONADA = null;
+let FILTRO_ESTADO = 'todos';
+let FILTRO_COHORTE = 'todos'; // 'todos', 'residual', 'altas_sep'
+let NAV_TAB_ACTIVA = 'todas';
+let VISTA_ACTIVA = 'sedes'; // 'sedes' o 'kpis'
+let PAGINA_ACTUAL = 1;
+const ITEMS_POR_PAGINA = 30;
+
+let ARCHIVO_ASIDE_BASE64 = null;
+let ARCHIVO_ASIDE_NOMBRE = null;
+let ARCHIVO_ASIDE_MIME = null;
+
+let LOTE_MASIVO = [];
+
+// Instancias de Chart.js
+let chartPresupuestoInstance = null;
+let chartVencidasInstance = null;
+let chartFallidasStackInstance = null;
+let chartFallidasDonutInstance = null;
+let modoChartPresupuesto = 'mensual';
+let modoChartFallidas = 'stack';
+
+// Claves LocalStorage (V4: Baseline limpio con nuevas columnas vacías)
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V5';
+const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
+
+// LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
+const PROYECTO_TIMELINE = [
+  { clave: '2026-09', numMes: 0, label: 'M0 (Sep 26)', nombreCompleto: 'Septiembre 2026 (Mes 0)', cerrado: true },
+  { clave: '2026-10', numMes: 1, label: 'M1 (Oct 26)', nombreCompleto: 'Octubre 2026 (Mes 1)', enCurso: true },
+  { clave: '2026-11', numMes: 2, label: 'M2 (Nov 26)', nombreCompleto: 'Noviembre 2026 (Mes 2)', futuro: true },
+  { clave: '2026-12', numMes: 3, label: 'M3 (Dic 26)', nombreCompleto: 'Diciembre 2026 (Mes 3)', futuro: true },
+  { clave: '2027-01', numMes: 4, label: 'M4 (Ene 27)', nombreCompleto: 'Enero 2027 (Mes 4)', futuro: true },
+  { clave: '2027-02', numMes: 5, label: 'M5 (Feb 27)', nombreCompleto: 'Febrero 2027 (Mes 5)', futuro: true },
+  { clave: '2027-03', numMes: 6, label: 'M6 (Mar 27)', nombreCompleto: 'Marzo 2027 (Mes 6)', futuro: true },
+  { clave: '2027-04', numMes: 7, label: 'M7 (Abr 27)', nombreCompleto: 'Abril 2027 (Mes 7)', futuro: true },
+  { clave: '2027-05', numMes: 8, label: 'M8 (May 27)', nombreCompleto: 'Mayo 2027 (Mes 8)', futuro: true },
+  { clave: '2027-06', numMes: 9, label: 'M9 (Jun 27)', nombreCompleto: 'Junio 2027 (Mes 9)', futuro: true },
+  { clave: '2027-07', numMes: 10, label: 'M10 (Jul 27)', nombreCompleto: 'Julio 2027 (Mes 10)', futuro: true },
+  { clave: '2027-08', numMes: 11, label: 'M11 (Ago 27)', nombreCompleto: 'Agosto 2027 (Mes 11)', futuro: true },
+  { clave: '2027-09', numMes: 12, label: 'M12 (Sep 27)', nombreCompleto: 'Septiembre 2027 (Cierre)', futuro: true }
+];
+
+// INICIALIZACIÓN
+document.addEventListener('DOMContentLoaded', () => {
+  cargarConfig();
+  inicializarDatos();
+  llenarFiltroLocalidades();
+  configurarDragAndDrop();
+  filtrarYRenderizar();
+  actualizarKpis();
+});
+
+function cargarConfig() {
+  const savedUrl = localStorage.getItem(LS_CONFIG_URL);
+  if (savedUrl) {
+    document.getElementById('txtWebAppUrl').value = savedUrl;
+    document.getElementById('syncText').textContent = 'Conectado a Google Apps Script';
+  }
+}
+
+function inicializarDatos() {
+  const cached = localStorage.getItem(LS_TASKS_KEY);
+  if (cached) {
+    try {
+      TASKS = JSON.parse(cached);
+    } catch(e) {
+      console.warn("Error leyendo cache local:", e);
+    }
+  }
+
+  if (!TASKS || TASKS.length === 0) {
+    if (window.DATOS_INICIALES_IAPSER && window.DATOS_INICIALES_IAPSER.length > 0) {
+      TASKS = JSON.parse(JSON.stringify(window.DATOS_INICIALES_IAPSER));
+      guardarEnCacheLocal();
+    }
+  }
+
+  // Asegurar migración de cohortes y fechas en cualquier versión de datos cargada
+  if (TASKS && TASKS.length > 0) {
+    let huboCambios = false;
+    TASKS.forEach(t => {
+      if (!t.origenPlan) {
+        t.origenPlan = 'Residual 2026';
+        huboCambios = true;
+      }
+      const esVT = (t.tarea || '').toLowerCase().includes('visita tecnica');
+      if (esVT) {
+        if (!t.fechaDesde) { t.fechaDesde = '01/01/2026'; huboCambios = true; }
+        if (!t.fechaHasta) { t.fechaHasta = '31/12/2026'; huboCambios = true; }
+        if (!t.estadoTarea || t.estadoTarea === 'Pendiente plazo') {
+          t.estadoTarea = t.fechaRealizada ? (t.documentoAdjunto ? 'Terminada' : 'Realizada sin documento') : 'En término';
+          huboCambios = true;
+        }
+      } else {
+        if (!t.fechaHasta && (!t.fechaRealizada) && t.estadoTarea !== 'Pendiente plazo') {
+          t.estadoTarea = 'Pendiente plazo';
+          huboCambios = true;
+        }
+      }
+    });
+    if (huboCambios) guardarEnCacheLocal();
+  }
+}
+
+function guardarEnCacheLocal() {
+  try {
+    localStorage.setItem(LS_TASKS_KEY, JSON.stringify(TASKS));
+  } catch(e) {
+    console.warn("Storage quota o error guardando localmente:", e);
+  }
+}
+
+function llenarFiltroLocalidades() {
+  const sel = document.getElementById('selLocalidadFiltro');
+  const locs = new Set();
+  TASKS.forEach(t => {
+    if (t.localidad && t.localidad.trim()) locs.add(t.localidad.trim());
+  });
+  
+  Array.from(locs).sort().forEach(loc => {
+    const opt = document.createElement('option');
+    opt.value = loc;
+    opt.textContent = loc;
+    sel.appendChild(opt);
+  });
+}
+
+// CAMBIO DE VISTA PRINCIPAL (SEDES VS KPIS)
+function setMainView(view) {
+  VISTA_ACTIVA = view;
+  const viewSedesEl = document.getElementById('viewSedes');
+  const viewKpisEl = document.getElementById('viewKpis');
+  const btnNavTodas = document.getElementById('btnNavTodas');
+  const btnNavKpis = document.getElementById('btnNavKpis');
+  const pageTitle = document.getElementById('pageTitle');
+
+  if (view === 'sedes') {
+    viewSedesEl.style.display = 'flex';
+    viewKpisEl.style.display = 'none';
+    btnNavTodas.classList.add('on');
+    btnNavKpis.classList.remove('on');
+    pageTitle.textContent = 'Sedes · Visitas y Tareas';
+    filtrarYRenderizar();
+  } else if (view === 'kpis') {
+    viewSedesEl.style.display = 'none';
+    viewKpisEl.style.display = 'flex';
+    btnNavTodas.classList.remove('on');
+    btnNavKpis.classList.add('on');
+    pageTitle.textContent = 'Plan y Métricas · Tablero Ejecutivo (Inicio Sep 2026 = M0)';
+    renderizarTableroKPIs();
+  }
+}
+
+// ACTUALIZACIÓN DE RESUMEN SUPERIOR
+
+
+function setFiltroCohorte(cohorte) {
+  FILTRO_COHORTE = cohorte;
+  PAGINA_ACTUAL = 1;
+  document.getElementById('chipCohorteTodos').classList.toggle('on', cohorte === 'todos');
+  document.getElementById('chipCohorteResidual').classList.toggle('on', cohorte === 'residual');
+  document.getElementById('chipCohorteAltas').classList.toggle('on', cohorte === 'altas_sep');
+  filtrarYRenderizar();
+}
+
+function actualizarKpis() {
+  const total = TASKS.length;
+  let totalResidual = 0;
+  let totalAltas = 0;
+  let realizadasTotal = 0;
+  let realizadasResidual = 0;
+  let realizadasAltas = 0;
+  let efectivasTotal = 0;
+  let fallidasTotal = 0;
+  let proximas = 0;
+  let vencidas = 0;
+  let enTermino = 0;
+  let pendientePlazo = 0;
+  let pendienteDoc = 0;
+  let terminadas = 0;
+
+  // Trimestres sobre Sep 26 a Ago 27
+  const efectivasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
+  const fallidasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
+
+  TASKS.forEach(t => {
+    const origen = (t.origenPlan || 'Residual 2026').toLowerCase();
+    const esResidual = origen.includes('residual');
+    if (esResidual) totalResidual++; else totalAltas++;
+
+    const estado = (t.estadoTarea || '').toLowerCase();
+    const resultado = (t.resultadoVisita || '').toLowerCase();
+    const tieneRealizada = !!(t.fechaRealizada && t.fechaRealizada.trim());
+
+    if (tieneRealizada) {
+      realizadasTotal++;
+      if (esResidual) realizadasResidual++; else realizadasAltas++;
+      if (resultado === 'fallida') {
+        fallidasTotal++;
+      } else {
+        efectivasTotal++;
+      }
+
+      // Mapear al timeline
+      const parts = t.fechaRealizada.split('/');
+      if (parts.length === 3) {
+        const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+        const m = parts[1].padStart(2, '0');
+        const claveYM = `${y}-${m}`;
+        const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
+        if (idxTimeline !== -1) {
+          if (resultado === 'fallida') fallidasPorMes[idxTimeline]++;
+          else efectivasPorMes[idxTimeline]++;
+        }
+      }
+    }
+
+    if (estado.includes('próxima') || estado.includes('proxima')) {
+      proximas++;
+    } else if (estado.includes('vencida')) {
+      vencidas++;
+    } else if (estado.includes('pendiente plazo')) {
+      pendientePlazo++;
+    } else if (estado.includes('término') || estado.includes('termino')) {
+      enTermino++;
+    } else if (estado.includes('sin documento')) {
+      pendienteDoc++;
+    } else if (estado.includes('terminada')) {
+      terminadas++;
+    }
+  });
+
+  // Cortes Trimestrales (300 por trimestre)
+  const q1 = (efectivasPorMes[0] || 0) + (efectivasPorMes[1] || 0) + (efectivasPorMes[2] || 0);
+  const q2 = (efectivasPorMes[3] || 0) + (efectivasPorMes[4] || 0) + (efectivasPorMes[5] || 0);
+  const q3 = (efectivasPorMes[6] || 0) + (efectivasPorMes[7] || 0) + (efectivasPorMes[8] || 0);
+  const q4 = (efectivasPorMes[9] || 0) + (efectivasPorMes[10] || 0) + (efectivasPorMes[11] || 0);
+
+  // Meta del Proveedor (1.200 al año, 100/mes)
+  const metaTotalProv = 1200;
+  const pctProv = ((efectivasTotal / metaTotalProv) * 100).toFixed(1);
+  const metaAcumM1 = 200; // Mes 0 (Sep) + Mes 1 (Oct) = 200 visitas acumuladas
+  const desvioAcum = efectivasTotal - metaAcumM1;
+
+  // Actualizar Card 1: Control Prestador
+  const elRealProv = document.getElementById('kpiRealizadasProv');
+  if (elRealProv) elRealProv.textContent = efectivasTotal;
+  const elPctProv = document.getElementById('kpiPctProv');
+  if (elPctProv) elPctProv.textContent = pctProv + '%';
+  const elBarProv = document.getElementById('kpiBarProv');
+  if (elBarProv) elBarProv.style.width = Math.min(100, (efectivasTotal / metaTotalProv) * 100) + '%';
+
+  const elSubCad = document.getElementById('kpiSubCadenciaProv');
+  if (elSubCad) {
+    if (desvioAcum >= 0) {
+      elSubCad.innerHTML = `Cadencia: 100/mes · <strong style="color:#0F4C5C;">En meta (+${desvioAcum} visitas)</strong>`;
+    } else {
+      elSubCad.innerHTML = `Cadencia: 100/mes · <strong style="color:#A8470A;">Con retraso (${desvioAcum} vs meta acum de ${metaAcumM1})</strong>`;
+    }
+  }
+
+  // Actualizar Card 2: Cortes Trimestrales
+  const elQActVal = document.getElementById('kpiQActualVal');
+  if (elQActVal) elQActVal.textContent = q1;
+  const elQPctVal = document.getElementById('kpiQPctVal');
+  if (elQPctVal) elQPctVal.textContent = ((q1 / 300) * 100).toFixed(1) + '%';
+  const elBarQ = document.getElementById('kpiBarQActual');
+  if (elBarQ) elBarQ.style.width = Math.min(100, (q1 / 300) * 100) + '%';
+  if (document.getElementById('lblValQ1')) document.getElementById('lblValQ1').textContent = q1;
+  if (document.getElementById('lblValQ2')) document.getElementById('lblValQ2').textContent = q2;
+  if (document.getElementById('lblValQ3')) document.getElementById('lblValQ3').textContent = q3;
+  if (document.getElementById('lblValQ4')) document.getElementById('lblValQ4').textContent = q4;
+
+  // Actualizar Card 3: Stock Plan Residual 2026
+  const elRealResid = document.getElementById('kpiRealizadasResid');
+  if (elRealResid) elRealResid.textContent = realizadasResidual;
+  const pctResid = totalResidual > 0 ? ((realizadasResidual / totalResidual) * 100).toFixed(1) : '0.0';
+  const elPctResid = document.getElementById('kpiPctResid');
+  if (elPctResid) elPctResid.textContent = pctResid + '%';
+  const elBarResid = document.getElementById('kpiBarResid');
+  if (elBarResid) elBarResid.style.width = pctResid + '%';
+
+  // Actualizar Card 4: Semáforo y Alertas
+  const elVenc = document.getElementById('kpiVencidas');
+  if (elVenc) elVenc.textContent = vencidas;
+  const elProx = document.getElementById('kpiProximas');
+  if (elProx) elProx.textContent = proximas;
+  const elFall = document.getElementById('kpiFallidas');
+  if (elFall) elFall.textContent = fallidasTotal;
+  const elPendDocTop = document.getElementById('kpiPendienteDocTop');
+  if (elPendDocTop) elPendDocTop.textContent = pendienteDoc;
+  const elBarVenc = document.getElementById('kpiBarVencidas');
+  if (elBarVenc) elBarVenc.style.width = total > 0 ? Math.min(100, Math.round(((vencidas + proximas) / total) * 100) * 4) + '%' : '0%';
+
+  // Contadores de Selector de Cohorte
+  if (document.getElementById('countCohorteTodos')) document.getElementById('countCohorteTodos').textContent = total;
+  if (document.getElementById('countCohorteResidual')) document.getElementById('countCohorteResidual').textContent = totalResidual;
+  if (document.getElementById('countCohorteAltas')) document.getElementById('countCohorteAltas').textContent = totalAltas;
+
+  // Contadores de Chips de Estado
+  if (document.getElementById('countChipTodos')) document.getElementById('countChipTodos').textContent = total;
+  if (document.getElementById('countChipProximas')) document.getElementById('countChipProximas').textContent = proximas;
+  if (document.getElementById('countChipVencidas')) document.getElementById('countChipVencidas').textContent = vencidas;
+  if (document.getElementById('countChipTermino')) document.getElementById('countChipTermino').textContent = enTermino;
+  if (document.getElementById('countChipPendienteDoc')) document.getElementById('countChipPendienteDoc').textContent = pendienteDoc;
+  if (document.getElementById('countChipTerminadas')) document.getElementById('countChipTerminadas').textContent = terminadas;
+  if (document.getElementById('countChipFallidas')) document.getElementById('countChipFallidas').textContent = fallidasTotal;
+
+  // Badges en Sidebar Rail
+  if (document.getElementById('badgeNavTodas')) document.getElementById('badgeNavTodas').textContent = total;
+  if (document.getElementById('badgeNavProximas')) document.getElementById('badgeNavProximas').textContent = proximas + vencidas;
+  if (document.getElementById('badgeNavFallidas')) document.getElementById('badgeNavFallidas').textContent = fallidasTotal;
+}
+
+// =========================================================================
+// TABLERO DE KPIS Y GRÁFICOS (PROYECTO INICIADO EN SEPTIEMBRE 2026 = MES 0)
+// =========================================================================
+function renderizarTableroKPIs() {
+  const efectivasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
+  const fallidasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
+  const vencidasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
+
+  let totalResidual = 0;
+  let realizadasResidual = 0;
+  let totalAltas = 0;
+  let realizadasAltas = 0;
+
+  TASKS.forEach(t => {
+    const origen = (t.origenPlan || 'Residual 2026').toLowerCase();
+    const esResidual = origen.includes('residual');
+    if (esResidual) totalResidual++; else totalAltas++;
+
+    if (t.fechaRealizada && t.fechaRealizada.trim()) {
+      if (esResidual) realizadasResidual++; else realizadasAltas++;
+
+      const parts = t.fechaRealizada.split('/');
+      if (parts.length === 3) {
+        const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+        const m = parts[1].padStart(2, '0');
+        const claveYM = `${y}-${m}`;
+        const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
+        if (idxTimeline !== -1) {
+          if ((t.resultadoVisita || '').toLowerCase() === 'fallida') {
+            fallidasPorMes[idxTimeline]++;
+          } else {
+            efectivasPorMes[idxTimeline]++;
+          }
+        }
+      }
+    }
+
+    if ((t.estadoTarea || '').toLowerCase().includes('vencida')) {
+      const fh = t.fechaHasta;
+      if (fh) {
+        const parts = fh.split('/');
+        if (parts.length === 3) {
+          const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+          const m = parts[1].padStart(2, '0');
+          const claveYM = `${y}-${m}`;
+          const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
+          if (idxTimeline !== -1) {
+            vencidasPorMes[idxTimeline]++;
+          } else {
+            vencidasPorMes[0]++;
+          }
+        }
+      }
+    }
+  });
+
+  const metaMensual = 100;
+  const metaTotalAnual = 1200;
+  const mesActualIdx = 1; // Octubre 2026 es el mes en curso (Mes 1)
+  const metaYTD = (mesActualIdx + 1) * metaMensual; // 200
+
+  // Total efectivas del ciclo
+  let totalEfectivasCiclo = 0;
+  let totalFallidasCiclo = 0;
+  efectivasPorMes.forEach(v => totalEfectivasCiclo += v);
+  fallidasPorMes.forEach(v => totalFallidasCiclo += v);
+  const totalCampo = totalEfectivasCiclo + totalFallidasCiclo;
+  const tasaEfectividad = totalCampo > 0 ? ((totalEfectivasCiclo / totalCampo) * 100).toFixed(1) : '100.0';
+
+  // Trimestres
+  const q1 = (efectivasPorMes[0] || 0) + (efectivasPorMes[1] || 0) + (efectivasPorMes[2] || 0);
+  const q2 = (efectivasPorMes[3] || 0) + (efectivasPorMes[4] || 0) + (efectivasPorMes[5] || 0);
+  const q3 = (efectivasPorMes[6] || 0) + (efectivasPorMes[7] || 0) + (efectivasPorMes[8] || 0);
+  const q4 = (efectivasPorMes[9] || 0) + (efectivasPorMes[10] || 0) + (efectivasPorMes[11] || 0);
+
+  // Actualizar Stat Cards Ejecutivas
+  if (document.getElementById('kpiDashEfectivasTotal')) document.getElementById('kpiDashEfectivasTotal').textContent = totalEfectivasCiclo;
+  if (document.getElementById('kpiDashMetaTotal')) document.getElementById('kpiDashMetaTotal').textContent = metaTotalAnual;
+  const pctTotal = ((totalEfectivasCiclo / metaTotalAnual) * 100).toFixed(1);
+  if (document.getElementById('kpiDashPctTotal')) document.getElementById('kpiDashPctTotal').textContent = pctTotal + '%';
+  if (document.getElementById('kpiDashResidualProv')) document.getElementById('kpiDashResidualProv').textContent = `${Math.max(0, metaTotalAnual - totalEfectivasCiclo)} visitas`;
+
+  // Cortes Trimestrales
+  if (document.getElementById('dashQ1Val')) document.getElementById('dashQ1Val').textContent = `${q1}/300`;
+  if (document.getElementById('dashQ1Bar')) document.getElementById('dashQ1Bar').style.width = Math.min(100, (q1 / 300) * 100) + '%';
+  if (document.getElementById('dashQ2Val')) document.getElementById('dashQ2Val').textContent = `${q2}/300`;
+  if (document.getElementById('dashQ2Bar')) document.getElementById('dashQ2Bar').style.width = Math.min(100, (q2 / 300) * 100) + '%';
+  if (document.getElementById('dashQ3Val')) document.getElementById('dashQ3Val').textContent = `${q3}/300`;
+  if (document.getElementById('dashQ3Bar')) document.getElementById('dashQ3Bar').style.width = Math.min(100, (q3 / 300) * 100) + '%';
+  if (document.getElementById('dashQ4Val')) document.getElementById('dashQ4Val').textContent = `${q4}/300`;
+  if (document.getElementById('dashQ4Bar')) document.getElementById('dashQ4Bar').style.width = Math.min(100, (q4 / 300) * 100) + '%';
+
+  // Stock Residual 2026
+  if (document.getElementById('kpiDashRealizadasResid')) document.getElementById('kpiDashRealizadasResid').textContent = realizadasResidual;
+  const pctResid = totalResidual > 0 ? ((realizadasResidual / totalResidual) * 100).toFixed(1) : '0.0';
+  if (document.getElementById('kpiDashPctResid')) document.getElementById('kpiDashPctResid').textContent = pctResid + '%';
+
+  // Ritmo & Cadencia
+  if (document.getElementById('kpiDashRitmoEfectivas')) document.getElementById('kpiDashRitmoEfectivas').textContent = totalEfectivasCiclo;
+  const desvioRitmo = totalEfectivasCiclo - metaYTD;
+  const badgeDesvio = document.getElementById('kpiDashDesvioBadge');
+  const calloutRitmo = document.getElementById('calloutRitmoAlerta');
+  if (badgeDesvio && calloutRitmo) {
+    if (desvioRitmo >= 0) {
+      badgeDesvio.textContent = `En meta (+${desvioRitmo} vs meta acum.)`;
+      calloutRitmo.className = 'stat-callout ok';
+    } else {
+      badgeDesvio.textContent = `Con retraso (${desvioRitmo} vs meta acum. de ${metaYTD})`;
+      calloutRitmo.className = 'stat-callout alert';
+    }
+  }
+  if (document.getElementById('kpiDashTasaEfSmall')) document.getElementById('kpiDashTasaEfSmall').textContent = tasaEfectividad + '%';
+  if (document.getElementById('lblTotalEfectivasBox')) document.getElementById('lblTotalEfectivasBox').textContent = totalEfectivasCiclo;
+
+  document.getElementById('kpiDashVencidasStock').textContent = totalVencidasStock;
+  document.getElementById('kpiDashPctVencidas').textContent = ((totalVencidasStock / TASKS.length) * 100).toFixed(1) + '%';
+  document.getElementById('kpiDashProximasSemana').textContent = totalProximas;
+
+  document.getElementById('lblTotalEfectivasBox').textContent = totalEfectivasYTD;
+  document.getElementById('badgeStockVencidas').textContent = `${totalVencidasStock} acumuladas`;
+  document.getElementById('lblTotEfPie').textContent = `${totalEfectivasYTD} (${tasaEfectividad}%)`;
+  document.getElementById('lblTotFaPie').textContent = `${totalFallidasYTD} (${(100 - parseFloat(tasaEfectividad)).toFixed(1)}%)`;
+  document.getElementById('lblTotFaGest').textContent = fallidasGestionadas;
+  document.getElementById('lblTotFaPend').textContent = fallidasPendientes;
+
+  let mejorMesNombre = 'Sin visitas registradas aún';
+  let mejorMesVal = -1;
+  for (let i = 0; i <= 1; i++) {
+    if (efectivasPorMes[i] > 0 && efectivasPorMes[i] > mejorMesVal) {
+      mejorMesVal = efectivasPorMes[i];
+      mejorMesNombre = `${PROYECTO_TIMELINE[i].label} (${mejorMesVal} efectivas)`;
+    }
+  }
+  document.getElementById('lblMejorMes').textContent = mejorMesNombre;
+  document.getElementById('lblPromedioMensual').textContent = `${totalEfectivasYTD} visitas registradas a la fecha`;
+  document.getElementById('lblDesvioMensual').textContent = `${totalEfectivasYTD - metaYTD} visitas vs meta acumulada de 200`;
+
+  // Renderizar Gráficos con Chart.js
+  renderChartPresupuesto(efectivasPorMes, metaMensual);
+  renderChartVencidas(vencidasPorMes);
+  renderChartFallidas(efectivasPorMes, fallidasPorMes);
+
+  // Renderizar Tabla Resumen Mensual
+  renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidasPorMes, metaMensual);
+}
+
+// GRÁFICO 1: REALIZADAS VS PRESUPUESTADAS (1 AÑO DE PROYECTO INICIANDO EN M0 = SEP 26)
+function renderChartPresupuesto(efectivasPorMes, metaMensual) {
+  const ctx = document.getElementById('chartPresupuesto').getContext('2d');
+  if (chartPresupuestoInstance) chartPresupuestoInstance.destroy();
+
+  const labels = PROYECTO_TIMELINE.map(pt => pt.label);
+  const presupuestoMensualData = new Array(PROYECTO_TIMELINE.length).fill(metaMensual);
+
+  // Curvas acumuladas
+  const efectivasAcum = [];
+  const presupuestoAcum = [];
+  let sumEf = 0;
+  let sumPres = 0;
+
+  for (let i = 0; i < PROYECTO_TIMELINE.length; i++) {
+    sumPres += metaMensual;
+    presupuestoAcum.push(sumPres);
+
+    if (i <= 1) { // M0 y M1 transcurridos
+      sumEf += efectivasPorMes[i];
+      efectivasAcum.push(sumEf);
+    } else {
+      efectivasAcum.push(null);
+    }
+  }
+
+  let datasets = [];
+
+  if (modoChartPresupuesto === 'mensual') {
+    datasets = [
+      {
+        label: 'Visitas Efectivas Realizadas',
+        data: efectivasPorMes.map((val, idx) => idx <= 1 ? val : null),
+        backgroundColor: '#0F4C5C',
+        borderRadius: 2,
+        barPercentage: 0.65
+      },
+      {
+        label: 'Presupuesto Mensual (100 efectivas/mes)',
+        data: presupuestoMensualData,
+        type: 'line',
+        borderColor: '#A8470A',
+        borderWidth: 2.5,
+        borderDash: [5, 5],
+        pointRadius: 4,
+        pointBackgroundColor: '#A8470A',
+        fill: false
+      }
+    ];
+  } else {
+    datasets = [
+      {
+        label: 'Efectivas Acumuladas Proyecto',
+        data: efectivasAcum,
+        type: 'line',
+        borderColor: '#0F4C5C',
+        backgroundColor: 'rgba(15, 76, 92, 0.12)',
+        fill: true,
+        borderWidth: 3,
+        pointRadius: 5,
+        pointBackgroundColor: '#0F4C5C',
+        tension: 0.2
+      },
+      {
+        label: 'Presupuesto Acumulado (100/mes × 12)',
+        data: presupuestoAcum,
+        type: 'line',
+        borderColor: '#A8470A',
+        borderWidth: 2,
+        borderDash: [6, 4],
+        pointRadius: 3,
+        pointBackgroundColor: '#A8470A',
+        fill: false
+      }
+    ];
+  }
+
+  chartPresupuestoInstance = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { font: { family: 'IBM Plex Sans', size: 12 }, usePointStyle: true }
+        },
+        tooltip: {
+          titleFont: { family: 'IBM Plex Sans' },
+          bodyFont: { family: 'IBM Plex Mono' },
+          callbacks: {
+            label: function(context) {
+              return ` ${context.dataset.label}: ${context.parsed.y} visitas`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: '#E3E5E1' },
+          ticks: { font: { family: 'IBM Plex Mono', size: 11 } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'IBM Plex Sans', size: 11, weight: '500' } }
+        }
+      }
+    }
+  });
+}
+
+function toggleModoPresupuesto(modo) {
+  modoChartPresupuesto = modo;
+  document.getElementById('btnToggleChartMensual').classList.toggle('on', modo === 'mensual');
+  document.getElementById('btnToggleChartAcumulado').classList.toggle('on', modo === 'acumulado');
+
+  if (modo === 'mensual') {
+    document.getElementById('lblTituloChart1').textContent = 'Visitas Efectivas Realizadas vs Presupuestadas (Meta: 100/mes)';
+    document.getElementById('lblSubtituloChart1').textContent = 'Comparativa mensual de cumplimiento frente al presupuesto fijo de 100 visitas efectivas por mes (Sep 2026 = M0)';
+  } else {
+    document.getElementById('lblTituloChart1').textContent = 'Curva de Cumplimiento Acumulado del Proyecto (Inicio: Sep 2026)';
+    document.getElementById('lblSubtituloChart1').textContent = 'Evolución acumulativa (S-Curve) de visitas logradas frente al objetivo lineal presupuestado de 1.200';
+  }
+
+  renderizarTableroKPIs();
+}
+
+// GRÁFICO 2: EVOLUCIÓN DE VENCIDAS (BARRAS ACUMULADAS DESDE M0 = SEP 2026)
+function renderChartVencidas(vencidasPorMes) {
+  const ctx = document.getElementById('chartVencidas').getContext('2d');
+  if (chartVencidasInstance) chartVencidasInstance.destroy();
+
+  const labels = PROYECTO_TIMELINE.map(pt => pt.label);
+  const vencidasAcumuladas = [];
+  let sumVenc = 0;
+
+  for (let i = 0; i < PROYECTO_TIMELINE.length; i++) {
+    if (i <= 1) { // M0 y M1
+      sumVenc += vencidasPorMes[i];
+      vencidasAcumuladas.push(sumVenc);
+    } else {
+      vencidasAcumuladas.push(null);
+    }
+  }
+
+  chartVencidasInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Stock Acumulado de Vencidas',
+          data: vencidasAcumuladas,
+          backgroundColor: '#A8470A',
+          borderRadius: 2,
+          barPercentage: 0.65
+        },
+        {
+          label: 'Nuevas Vencidas del Período',
+          data: vencidasPorMes.map((v, i) => i <= 1 ? v : null),
+          type: 'line',
+          borderColor: '#17202A',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#17202A',
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { font: { family: 'IBM Plex Sans', size: 12 }, usePointStyle: true }
+        },
+        tooltip: {
+          titleFont: { family: 'IBM Plex Sans' },
+          bodyFont: { family: 'IBM Plex Mono' }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: '#E3E5E1' },
+          ticks: { font: { family: 'IBM Plex Mono', size: 11 } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'IBM Plex Sans', size: 11, weight: '500' } }
+        }
+      }
+    }
+  });
+}
+
+// GRÁFICO 3: PARTICIPACIÓN Y EVOLUCIÓN FALLIDAS VS EFECTIVAS
+function renderChartFallidas(efectivasPorMes, fallidasPorMes) {
+  const ctxStack = document.getElementById('chartFallidasStack').getContext('2d');
+  if (chartFallidasStackInstance) chartFallidasStackInstance.destroy();
+
+  // Solo meses transcurridos (M0 Sep y M1 Oct)
+  const labelsTranscurridos = [PROYECTO_TIMELINE[0].label, PROYECTO_TIMELINE[1].label];
+
+  chartFallidasStackInstance = new Chart(ctxStack, {
+    type: 'bar',
+    data: {
+      labels: labelsTranscurridos,
+      datasets: [
+        {
+          label: 'Visitas Efectivas',
+          data: [efectivasPorMes[0], efectivasPorMes[1]],
+          backgroundColor: '#0F4C5C',
+          borderRadius: 1,
+          barPercentage: 0.55
+        },
+        {
+          label: 'Visitas Fallidas',
+          data: [fallidasPorMes[0], fallidasPorMes[1]],
+          backgroundColor: '#A8470A',
+          borderRadius: 1,
+          barPercentage: 0.55
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'IBM Plex Sans', size: 12 } } },
+        y: { stacked: true, grid: { color: '#E3E5E1' }, ticks: { font: { family: 'IBM Plex Mono' } } }
+      },
+      plugins: {
+        legend: { position: 'top', labels: { font: { family: 'IBM Plex Sans', size: 12 }, usePointStyle: true } },
+        tooltip: {
+          callbacks: {
+            footer: (items) => {
+              const total = items.reduce((a, b) => a + b.parsed.y, 0);
+              return `Total salidas: ${total}`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const ctxDonut = document.getElementById('chartFallidasDonut').getContext('2d');
+  if (chartFallidasDonutInstance) chartFallidasDonutInstance.destroy();
+
+  let totEf = efectivasPorMes[0] + efectivasPorMes[1];
+  let totFa = fallidasPorMes[0] + fallidasPorMes[1];
+  const sinDatos = (totEf === 0 && totFa === 0);
+
+  chartFallidasDonutInstance = new Chart(ctxDonut, {
+    type: 'doughnut',
+    data: {
+      labels: sinDatos ? ['Sin visitas registradas'] : ['Visitas Efectivas', 'Visitas Fallidas'],
+      datasets: [{
+        data: sinDatos ? [1] : [totEf, totFa],
+        backgroundColor: sinDatos ? ['#E3E5E1'] : ['#0F4C5C', '#A8470A'],
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { family: 'IBM Plex Sans', size: 13 }, usePointStyle: true } }
+      },
+      cutout: '65%'
+    }
+  });
+}
+
+function toggleModoFallidas(modo) {
+  modoChartFallidas = modo;
+  document.getElementById('btnToggleFallidasStack').classList.toggle('on', modo === 'stack');
+  document.getElementById('btnToggleFallidasDonut').classList.toggle('on', modo === 'donut');
+
+  document.getElementById('boxChartFallidasStack').style.display = (modo === 'stack' ? 'block' : 'none');
+  document.getElementById('boxChartFallidasDonut').style.display = (modo === 'donut' ? 'block' : 'none');
+
+  if (modo === 'donut' && chartFallidasDonutInstance) {
+    chartFallidasDonutInstance.resize();
+  }
+}
+
+// TABLA RESUMEN CONSOLIDADO DEL AÑO DE PROYECTO (12 MESES INICIANDO EN M0)
+function renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidasPorMes, metaMensual) {
+  const tbody = document.getElementById('tablaResumenMensualBody');
+  tbody.innerHTML = '';
+
+  let sumMeta = 0;
+  let sumEf = 0;
+  let sumFa = 0;
+  let sumVencAcum = 0;
+
+  for (let m = 0; m < PROYECTO_TIMELINE.length; m++) {
+    const pt = PROYECTO_TIMELINE[m];
+    const meta = metaMensual;
+    const ef = efectivasPorMes[m];
+    const fa = fallidasPorMes[m];
+    const tot = ef + fa;
+    sumVencAcum += vencidasPorMes[m];
+
+    const esFuturo = (m > 1);
+    const cumplimientoPct = esFuturo ? '--' : `${((ef / meta) * 100).toFixed(1)}%`;
+    const efectividadPct = (tot > 0) ? `${((ef / tot) * 100).toFixed(1)}%` : '--';
+
+    let semaforoBadge = '<span class="badge badge-neutral">Planificado</span>';
+    if (!esFuturo) {
+      if (m === 0) {
+        semaforoBadge = '<span class="badge badge-ok">Mes 0 Cerrado</span>';
+      } else if (m === 1) {
+        semaforoBadge = '<span class="badge badge-warn">Mes 1 En curso</span>';
+      }
+    }
+
+    if (!esFuturo) {
+      sumMeta += meta;
+      sumEf += ef;
+      sumFa += fa;
+    }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${pt.nombreCompleto}</strong></td>
+      <td class="m" style="text-align:right;">${meta}</td>
+      <td class="m ok" style="text-align:right;">${esFuturo ? '<span class="na">--</span>' : ef}</td>
+      <td class="m no" style="text-align:right;">${esFuturo ? '<span class="na">--</span>' : fa}</td>
+      <td class="m" style="text-align:right; font-weight:600;">${esFuturo ? '<span class="na">--</span>' : tot}</td>
+      <td class="m" style="text-align:right;">${cumplimientoPct}</td>
+      <td class="m" style="text-align:right;">${efectividadPct}</td>
+      <td class="m" style="text-align:right; color:#A8470A;">${esFuturo ? '<span class="na">--</span>' : sumVencAcum}</td>
+      <td>${semaforoBadge}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  // Fila de Totales del Proyecto Acumulado a la fecha
+  const trTotal = document.createElement('tr');
+  trTotal.style.background = '#F8F9F7';
+  trTotal.style.fontWeight = '700';
+  const pctTotalYTD = sumMeta > 0 ? ((sumEf / sumMeta) * 100).toFixed(1) : '0';
+  const pctEfTotal = (sumEf + sumFa) > 0 ? ((sumEf / (sumEf + sumFa)) * 100).toFixed(1) : '0';
+
+  trTotal.innerHTML = `
+    <td>TOTAL ACUMULADO PROYECTO (M0 + M1)</td>
+    <td class="m" style="text-align:right;">${sumMeta}</td>
+    <td class="m ok" style="text-align:right;">${sumEf}</td>
+    <td class="m no" style="text-align:right;">${sumFa}</td>
+    <td class="m" style="text-align:right;">${sumEf + sumFa}</td>
+    <td class="m" style="text-align:right;">${pctTotalYTD}%</td>
+    <td class="m" style="text-align:right;">${pctEfTotal}%</td>
+    <td class="m" style="text-align:right; color:#A8470A;">${sumVencAcum}</td>
+    <td><span class="badge badge-ok">Ejecución a la fecha</span></td>
+  `;
+  tbody.appendChild(trTotal);
+}
+
+// FILTRADO Y RENDERIZADO DE TABLA (VISTA SEDES)
+function filtrarYRenderizar() {
+  const txt = document.getElementById('txtBuscar').value.toLowerCase().trim();
+  const filtroTarea = document.getElementById('selTareaFiltro').value;
+  const filtroLoc = document.getElementById('selLocalidadFiltro').value;
+
+  const filtrados = TASKS.filter(t => {
+    // Filtro por Tab de navegación
+    if (NAV_TAB_ACTIVA === 'proximas') {
+      const est = (t.estadoTarea || '').toLowerCase();
+      if (!est.includes('próxima') && !est.includes('proxima') && !est.includes('vencida')) return false;
+    } else if (NAV_TAB_ACTIVA === 'fallidas') {
+      if ((t.resultadoVisita || '').toLowerCase() !== 'fallida') return false;
+    }
+
+    // Filtro Cohorte / Origen del Plan
+    if (FILTRO_COHORTE !== 'todos') {
+      const orig = (t.origenPlan || 'Residual 2026').toLowerCase();
+      if (FILTRO_COHORTE === 'residual' && !orig.includes('residual')) return false;
+      if (FILTRO_COHORTE === 'altas_sep' && !orig.includes('alta')) return false;
+    }
+
+    // Filtro Chip Estado
+    if (FILTRO_ESTADO !== 'todos') {
+      const est = (t.estadoTarea || '').toLowerCase();
+      const res = (t.resultadoVisita || '').toLowerCase();
+      if (FILTRO_ESTADO === 'proximas' && !est.includes('próxima') && !est.includes('proxima')) return false;
+      if (FILTRO_ESTADO === 'vencidas' && !est.includes('vencida')) return false;
+      if (FILTRO_ESTADO === 'termino' && !est.includes('término') && !est.includes('termino')) return false;
+      if (FILTRO_ESTADO === 'pendienteDoc' && !est.includes('sin documento')) return false;
+      if (FILTRO_ESTADO === 'terminadas' && !est.includes('terminada')) return false;
+      if (FILTRO_ESTADO === 'fallidas' && res !== 'fallida') return false;
+    }
+
+    // Filtro Tarea
+    if (filtroTarea !== 'todas' && t.tarea !== filtroTarea) return false;
+
+    // Filtro Localidad
+    if (filtroLoc !== 'todas' && (t.localidad || '').trim() !== filtroLoc) return false;
+
+    // Filtro Texto Libre
+    if (txt) {
+      const haystack = [
+        t.empleador || '',
+        t.establecimiento || '',
+        t.cuit || '',
+        t.tarea || '',
+        t.nroSiniestro || '',
+        t.localidad || '',
+        t.preventor || ''
+      ].join(' ').toLowerCase();
+
+      if (!haystack.includes(txt)) return false;
+    }
+
+    return true;
+  });
+
+  // Paginación
+  const totalFiltrados = filtrados.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalFiltrados / ITEMS_POR_PAGINA));
+  if (PAGINA_ACTUAL > totalPaginas) PAGINA_ACTUAL = totalPaginas;
+
+  const inicio = (PAGINA_ACTUAL - 1) * ITEMS_POR_PAGINA;
+  const paginaItems = filtrados.slice(inicio, inicio + ITEMS_POR_PAGINA);
+
+  document.getElementById('txtResultadosConteo').textContent = 
+    `Mostrando ${paginaItems.length > 0 ? inicio + 1 : 0} a ${Math.min(inicio + ITEMS_POR_PAGINA, totalFiltrados)} de ${totalFiltrados} registros`;
+  document.getElementById('txtPaginacion').textContent = `Página ${PAGINA_ACTUAL} de ${totalPaginas}`;
+  document.getElementById('btnPagAnt').disabled = (PAGINA_ACTUAL <= 1);
+  document.getElementById('btnPagSig').disabled = (PAGINA_ACTUAL >= totalPaginas);
+
+  // Renderizar filas con las nuevas columnas explícitas
+  const tbody = document.getElementById('tablaBody');
+  tbody.innerHTML = '';
+
+  if (paginaItems.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:32px; color:#5B6670;">No se encontraron registros que coincidan con los filtros.</td></tr>`;
+    return;
+  }
+
+  paginaItems.forEach(t => {
+    const tr = document.createElement('tr');
+    tr.className = 'clickable' + (TAREA_SELECCIONADA && TAREA_SELECCIONADA.rowId === t.rowId ? ' sel' : '');
+    tr.onclick = () => seleccionarTarea(t);
+
+    const tieneDoc = !!(t.documentoAdjunto && t.documentoAdjunto.trim());
+    const docDot = tieneDoc 
+      ? `<span class="ok" title="Documento cargado">●</span>` 
+      : (t.fechaRealizada ? `<span class="no" title="Falta subir documento">○</span>` : `<span class="na" title="Sin visita realizada">–</span>`);
+
+    let badgeClass = 'badge-neutral';
+    const est = (t.estadoTarea || '').toLowerCase();
+    if (est.includes('terminada')) badgeClass = 'badge-ok';
+    else if (est.includes('vencida')) badgeClass = 'badge-alert';
+    else if (est.includes('próxima') || est.includes('proxima')) badgeClass = 'badge-warn';
+    else if (est.includes('fallida')) badgeClass = 'badge-alert';
+
+    const fechaDesdeDisplay = t.fechaDesde || '<span class="na">--</span>';
+    const fechaHastaDisplay = t.fechaHasta || '<span class="na">--</span>';
+    const fechaRealDisplay = t.fechaRealizada ? `<strong style="color:#0F4C5C;">${escapeHtml(t.fechaRealizada)}</strong>` : '<span class="na">--</span>';
+
+    const resBadge = t.resultadoVisita 
+      ? `<span class="badge ${t.resultadoVisita.toLowerCase() === 'efectiva' ? 'badge-ok' : 'badge-alert'}" style="font-size:11px;">${escapeHtml(t.resultadoVisita)}</span>`
+      : '<span class="na">--</span>';
+
+    const siniestroDisplay = t.nroSiniestro ? `<span class="m" style="color:#A8470A; font-weight:600; font-size:12px;">${escapeHtml(t.nroSiniestro)}</span>` : '<span class="na">--</span>';
+    const obsDisplay = t.observaciones ? `<span style="font-size:12px; color:#5B6670;" title="${escapeHtml(t.observaciones)}">${escapeHtml(t.observaciones.length > 25 ? t.observaciones.slice(0, 25) + '…' : t.observaciones)}</span>` : '<span class="na">--</span>';
+
+    const esAltaSep = (t.origenPlan || '').toLowerCase().includes('alta');
+    const badgeCohorte = esAltaSep 
+      ? `<span class="badge-cohort altas" title="Alta nueva creada desde Septiembre">Alta Sep 2026</span>`
+      : `<span class="badge-cohort residual" title="Plan base residual asignado a principio de año">Residual 2026</span>`;
+
+    tr.innerHTML = `
+      <td class="m">${t.rowId}</td>
+      <td class="m">${badgeCohorte}</td>
+      <td>
+        <strong>${escapeHtml(t.establecimiento || 'Establecimiento sin nombre')}</strong>
+        <div style="font-size:12px; color:#5B6670;">${escapeHtml(t.empleador || 'Sin razón social')} · ${escapeHtml(t.localidad || 'Sin localidad')}</div>
+      </td>
+      <td class="m">${escapeHtml(t.cuit || '--')}</td>
+      <td><span>${escapeHtml(t.tarea || 'Visita')}</span></td>
+      <td class="m">${docDot}</td>
+      <td><span class="badge ${badgeClass}">${escapeHtml(t.estadoTarea || 'Pendiente')}</span></td>
+      <td class="m">${fechaDesdeDisplay}</td>
+      <td class="m">${fechaHastaDisplay}</td>
+      <td class="m" style="background:#F4F8F9;">${fechaRealDisplay}</td>
+      <td class="m">${resBadge}</td>
+      <td class="m">${siniestroDisplay}</td>
+      <td>${obsDisplay}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function cambiarPagina(delta) {
+  PAGINA_ACTUAL += delta;
+  filtrarYRenderizar();
+}
+
+function setNavTab(tab) {
+  NAV_TAB_ACTIVA = tab;
+  PAGINA_ACTUAL = 1;
+
+  document.getElementById('btnNavTodas').classList.toggle('on', tab === 'todas');
+  document.getElementById('btnNavProximas').classList.toggle('on', tab === 'proximas');
+  document.getElementById('btnNavFallidas').classList.toggle('on', tab === 'fallidas');
+
+  if (tab === 'todas') {
+    document.getElementById('pageTitle').textContent = 'Sedes · Visitas y Tareas';
+    FILTRO_ESTADO = 'todos';
+  } else if (tab === 'proximas') {
+    document.getElementById('pageTitle').textContent = 'Control de Vencimientos · Próximas y Vencidas';
+    FILTRO_ESTADO = 'todos';
+  } else if (tab === 'fallidas') {
+    document.getElementById('pageTitle').textContent = 'Bandeja de Gestión · Visitas Fallidas';
+    FILTRO_ESTADO = 'fallidas';
+  }
+
+  actualizarBotonesChips();
+  filtrarYRenderizar();
+}
+
+function setFiltroEstado(estado) {
+  FILTRO_ESTADO = estado;
+  PAGINA_ACTUAL = 1;
+  actualizarBotonesChips();
+  filtrarYRenderizar();
+}
+
+function actualizarBotonesChips() {
+  const map = {
+    'todos': 'chipTodos',
+    'proximas': 'chipProximas',
+    'vencidas': 'chipVencidas',
+    'termino': 'chipTermino',
+    'pendienteDoc': 'chipPendienteDoc',
+    'terminadas': 'chipTerminadas',
+    'fallidas': 'chipFallidas'
+  };
+
+  Object.keys(map).forEach(k => {
+    const el = document.getElementById(map[k]);
+    if (el) el.classList.toggle('on', FILTRO_ESTADO === k);
+  });
+}
+
+// SELECCIÓN DE TAREA Y ASIDE
+function seleccionarTarea(tarea) {
+  TAREA_SELECCIONADA = tarea;
+
+  document.querySelectorAll('#tablaBody tr').forEach(r => r.classList.remove('sel'));
+  filtrarYRenderizar();
+
+  document.getElementById('asideDetalleVacio').style.display = 'none';
+  document.getElementById('asideDetalleActivo').style.display = 'block';
+
+  const elDetOrigen = document.getElementById('detOrigenBadge');
+  if (elDetOrigen) {
+    const esAlta = (tarea.origenPlan || '').toLowerCase().includes('alta');
+    elDetOrigen.textContent = esAlta ? 'Alta Sep 2026' : 'Plan Residual 2026';
+    elDetOrigen.className = 'badge-cohort ' + (esAlta ? 'altas' : 'residual');
+  }
+
+  // Aviso de tarea sin plazo asignado
+  const elAvisoSinPlazo = document.getElementById('boxAvisoSinPlazo');
+  if (elAvisoSinPlazo) {
+    elAvisoSinPlazo.style.display = (!tarea.fechaHasta && !tarea.fechaRealizada) ? 'block' : 'none';
+  }
+
+  document.getElementById('detEstablecimiento').textContent = tarea.establecimiento || 'Establecimiento';
+  document.getElementById('detEmpleadorYCuit').textContent = `${tarea.empleador || 'Empresa'} · CUIT [${tarea.cuit || '--'}]`;
+  document.getElementById('detLocalidadYContrato').textContent = `Loc: ${tarea.localidad || 'S/D'} · Contrato IAPSER: ${tarea.contrato || '--'} · N° Estab: ${tarea.nroEstab || '1'}`;
+  document.getElementById('detTarea').textContent = tarea.tarea || 'Visita';
+  
+  document.getElementById('detFechaDesde').textContent = tarea.fechaDesde || '--';
+  document.getElementById('detFechaHasta').textContent = tarea.fechaHasta || '--';
+  document.getElementById('detFechaRealizadaLabel').textContent = tarea.fechaRealizada || 'Pendiente';
+
+  const badge = document.getElementById('detBadgeEstado');
+  badge.textContent = tarea.estadoTarea || 'En término';
+  badge.className = 'badge ' + (
+    (tarea.estadoTarea || '').includes('Terminada') ? 'badge-ok' :
+    (tarea.estadoTarea || '').includes('Vencida') ? 'badge-alert' :
+    (tarea.estadoTarea || '').includes('Próxima') ? 'badge-warn' : 'badge-neutral'
+  );
+
+  const esAT_EP = (tarea.tarea || '').includes('AT') || (tarea.tarea || '').includes('EP');
+  document.getElementById('boxNroSiniestro').style.display = esAT_EP ? 'block' : 'none';
+  document.getElementById('txtNroSiniestro').required = esAT_EP;
+  document.getElementById('txtNroSiniestro').value = tarea.nroSiniestro || '';
+
+  setResultadoForm(tarea.resultadoVisita || 'Efectiva');
+
+  // Input Nueva Fecha Desde
+  if (tarea.fechaDesde) {
+    const parts = tarea.fechaDesde.split('/');
+    if (parts.length === 3) {
+      document.getElementById('txtInputFechaDesde').value = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  } else {
+    document.getElementById('txtInputFechaDesde').value = '';
+  }
+
+  // Input Nueva Fecha Hasta
+  if (tarea.fechaHasta) {
+    const parts = tarea.fechaHasta.split('/');
+    if (parts.length === 3) {
+      document.getElementById('txtInputFechaHasta').value = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  } else {
+    document.getElementById('txtInputFechaHasta').value = '';
+  }
+
+  // Input Fecha Realizada
+  if (tarea.fechaRealizada) {
+    const parts = tarea.fechaRealizada.split('/');
+    if (parts.length === 3) {
+      document.getElementById('txtFechaRealizada').value = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    } else {
+      document.getElementById('txtFechaRealizada').value = tarea.fechaRealizada;
+    }
+  } else {
+    const hoy = new Date();
+    document.getElementById('txtFechaRealizada').value = hoy.toISOString().split('T')[0];
+  }
+
+  document.getElementById('txtObservaciones').value = tarea.observaciones || '';
+
+  if (tarea.documentoAdjunto && tarea.documentoAdjunto.trim()) {
+    document.getElementById('boxDocExistente').style.display = 'block';
+    document.getElementById('linkDocExistente').href = tarea.documentoAdjunto;
+  } else {
+    document.getElementById('boxDocExistente').style.display = 'none';
+  }
+
+  if ((tarea.resultadoVisita || '').toLowerCase() === 'fallida') {
+    document.getElementById('boxAlertaFallida').style.display = 'block';
+    document.getElementById('detObsFallida').textContent = `Motivo registrado: "${tarea.observaciones || 'Sin observaciones'}"`;
+  } else {
+    document.getElementById('boxAlertaFallida').style.display = 'none';
+  }
+
+  quitarArchivoAside();
+}
+
+function setResultadoForm(res) {
+  const btnEf = document.getElementById('btnResEfectiva');
+  const btnFa = document.getElementById('btnResFallida');
+  if (res === 'Fallida') {
+    btnEf.classList.remove('on');
+    btnFa.classList.add('on');
+  } else {
+    btnEf.classList.add('on');
+    btnFa.classList.remove('on');
+  }
+  actualizarPreviewNombreArchivo();
+}
+
+function configurarDragAndDrop() {
+  const dzAside = document.getElementById('dropzoneAside');
+  ['dragenter', 'dragover'].forEach(name => {
+    dzAside.addEventListener(name, (e) => { e.preventDefault(); dzAside.classList.add('dragover'); });
+  });
+  ['dragleave', 'drop'].forEach(name => {
+    dzAside.addEventListener(name, (e) => { e.preventDefault(); dzAside.classList.remove('dragover'); });
+  });
+  dzAside.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      procesarArchivoSeleccionadoAside(e.dataTransfer.files[0]);
+    }
+  });
+
+  const dzMasiva = document.getElementById('dropzoneMasiva');
+  ['dragenter', 'dragover'].forEach(name => {
+    dzMasiva.addEventListener(name, (e) => { e.preventDefault(); dzMasiva.classList.add('dragover'); });
+  });
+  ['dragleave', 'drop'].forEach(name => {
+    dzMasiva.addEventListener(name, (e) => { e.preventDefault(); dzMasiva.classList.remove('dragover'); });
+  });
+  dzMasiva.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      cargarArchivosLote(Array.from(e.dataTransfer.files));
+    }
+  });
+}
+
+function manejarArchivoAside(e) {
+  if (e.target.files && e.target.files.length > 0) {
+    procesarArchivoSeleccionadoAside(e.target.files[0]);
+  }
+}
+
+function procesarArchivoSeleccionadoAside(file) {
+  ARCHIVO_ASIDE_NOMBRE = file.name;
+  ARCHIVO_ASIDE_MIME = file.type || 'application/pdf';
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    ARCHIVO_ASIDE_BASE64 = evt.target.result;
+    document.getElementById('boxPreviewArchivo').style.display = 'block';
+    document.getElementById('lblNombreOriginal').textContent = file.name;
+    document.getElementById('lblTamanoArchivo').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+    actualizarPreviewNombreArchivo();
+  };
+  reader.readAsDataURL(file);
+}
+
+function actualizarPreviewNombreArchivo() {
+  if (!TAREA_SELECCIONADA || !ARCHIVO_ASIDE_NOMBRE) return;
+
+  const cuit = (TAREA_SELECCIONADA.cuit || '00000000000').replace(/\D/g, '');
+  const estab = (TAREA_SELECCIONADA.nroEstab || '1').replace(/[^a-zA-Z0-9]/g, '');
+  const tareaStr = (TAREA_SELECCIONADA.tarea || 'VISITA').toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 18);
+  
+  const fechaVal = document.getElementById('txtFechaRealizada').value;
+  const fechaYMD = fechaVal ? fechaVal.replace(/-/g, '') : '20261022';
+  
+  const ext = ARCHIVO_ASIDE_NOMBRE.split('.').pop().toLowerCase() || 'pdf';
+  const nombreEstandar = `${cuit}_${estab}_${tareaStr}_${fechaYMD}.${ext}`;
+
+  document.getElementById('lblNombreEstandarizado').textContent = nombreEstandar;
+}
+
+function quitarArchivoAside() {
+  ARCHIVO_ASIDE_BASE64 = null;
+  ARCHIVO_ASIDE_NOMBRE = null;
+  ARCHIVO_ASIDE_MIME = null;
+  document.getElementById('fileInputAside').value = '';
+  document.getElementById('boxPreviewArchivo').style.display = 'none';
+}
+
+// GUARDAR VISITA (INDIVIDUAL)
+async function guardarVisitaActual(e) {
+  e.preventDefault();
+  if (!TAREA_SELECCIONADA) return;
+
+  const resultado = document.getElementById('btnResFallida').classList.contains('on') ? 'Fallida' : 'Efectiva';
+  const fechaVal = document.getElementById('txtFechaRealizada').value;
+  if (!fechaVal) {
+    alert("Por favor ingresá la fecha realizada.");
+    return;
+  }
+  const parts = fechaVal.split('-');
+  const fechaRealizadaStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+  // Capturar nuevas fechas desde y hasta si se completaron en el formulario
+  const valDesde = document.getElementById('txtInputFechaDesde').value;
+  if (valDesde) {
+    const pD = valDesde.split('-');
+    TAREA_SELECCIONADA.fechaDesde = `${pD[2]}/${pD[1]}/${pD[0]}`;
+  }
+
+  const valHasta = document.getElementById('txtInputFechaHasta').value;
+  if (valHasta) {
+    const pH = valHasta.split('-');
+    TAREA_SELECCIONADA.fechaHasta = `${pH[2]}/${pH[1]}/${pH[0]}`;
+  }
+
+  const esAT_EP = (TAREA_SELECCIONADA.tarea || '').includes('AT') || (TAREA_SELECCIONADA.tarea || '').includes('EP');
+  const nroSiniestro = document.getElementById('txtNroSiniestro').value.trim();
+  if (esAT_EP && !nroSiniestro) {
+    alert("Las tareas de Investigación o Seguimiento AT/EP requieren obligatoriamente el N° de Siniestro.");
+    document.getElementById('txtNroSiniestro').focus();
+    return;
+  }
+
+  const observaciones = document.getElementById('txtObservaciones').value.trim();
+
+  TAREA_SELECCIONADA.fechaRealizada = fechaRealizadaStr;
+  TAREA_SELECCIONADA.resultadoVisita = resultado;
+  TAREA_SELECCIONADA.nroSiniestro = nroSiniestro;
+  TAREA_SELECCIONADA.observaciones = observaciones;
+
+  const btn = document.getElementById('btnGuardarVisita');
+  btn.disabled = true;
+  btn.textContent = 'Guardando en Drive y Planilla...';
+
+  let fileUrl = TAREA_SELECCIONADA.documentoAdjunto;
+  const webAppUrl = localStorage.getItem(LS_CONFIG_URL);
+
+  if (ARCHIVO_ASIDE_BASE64 && ARCHIVO_ASIDE_NOMBRE) {
+    if (webAppUrl && webAppUrl.startsWith('http')) {
+      try {
+        const payload = {
+          action: 'saveVisit',
+          rowId: TAREA_SELECCIONADA.rowId,
+          fechaDesde: TAREA_SELECCIONADA.fechaDesde,
+          fechaHasta: TAREA_SELECCIONADA.fechaHasta,
+          fechaRealizada: fechaRealizadaStr,
+          resultadoVisita: resultado,
+          nroSiniestro: nroSiniestro,
+          observaciones: observaciones,
+          fileBase64: ARCHIVO_ASIDE_BASE64,
+          fileName: ARCHIVO_ASIDE_NOMBRE,
+          mimeType: ARCHIVO_ASIDE_MIME
+        };
+
+        const res = await fetch(webAppUrl, {
+          method: 'POST',
+          mode: 'cors',
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.status === 'success' && json.documentoAdjunto) {
+          fileUrl = json.documentoAdjunto;
+        }
+      } catch(err) {
+        console.warn("Fallo en sincronización online con Web App, guardando local:", err);
+        const nombreStd = document.getElementById('lblNombreEstandarizado').textContent;
+        fileUrl = `https://drive.google.com/drive/folders/iapser_visitas_2026-10/${nombreStd}`;
+      }
+    } else {
+      const nombreStd = document.getElementById('lblNombreEstandarizado').textContent;
+      fileUrl = `https://drive.google.com/drive/folders/iapser_visitas_2026-10/${nombreStd}`;
+    }
+    TAREA_SELECCIONADA.documentoAdjunto = fileUrl;
+  }
+
+  if (resultado === 'Fallida') {
+    TAREA_SELECCIONADA.estadoTarea = fileUrl ? 'Fallida con documento' : 'Fallida sin documento';
+    TAREA_SELECCIONADA.gestionFallida = 'Pendiente evaluacion';
+  } else {
+    TAREA_SELECCIONADA.estadoTarea = fileUrl ? 'Terminada' : 'Realizada sin documento';
+    TAREA_SELECCIONADA.gestionFallida = '';
+  }
+
+  guardarEnCacheLocal();
+  actualizarKpis();
+  filtrarYRenderizar();
+  seleccionarTarea(TAREA_SELECCIONADA);
+
+  btn.disabled = false;
+  btn.textContent = 'Guardar Nuevas Columnas y Documento';
+
+  alert(`✓ Tarea registrada con éxito.\nNuevas Fechas: Desde ${TAREA_SELECCIONADA.fechaDesde || '--'} | Hasta ${TAREA_SELECCIONADA.fechaHasta || '--'}\nRealizada: ${fechaRealizadaStr}\nEstado: ${TAREA_SELECCIONADA.estadoTarea}\nDocumento: ${fileUrl ? 'Vinculado a Google Drive' : 'Pendiente'}`);
+}
+
+// GESTIÓN DE FALLIDA: CERRAR O REPROGRAMAR
+async function gestionarFallidaActual(decision) {
+  if (!TAREA_SELECCIONADA) return;
+
+  if (decision === 'cerrar') {
+    if (!confirm("¿Confirmás que la visita fallida no requiere nueva visita y queda cerrada definitivamente?")) return;
+    TAREA_SELECCIONADA.gestionFallida = 'Cerrada sin nueva visita';
+    TAREA_SELECCIONADA.estadoTarea = 'Cerrada por fallida';
+    guardarEnCacheLocal();
+    actualizarKpis();
+    filtrarYRenderizar();
+    seleccionarTarea(TAREA_SELECCIONADA);
+    alert("✓ Visita fallida cerrada definitivamente.");
+  } else if (decision === 'reprogramar') {
+    const nuevaHasta = prompt("Ingresá la nueva Fecha Límite (Hasta) para la visita extemporánea (DD/MM/YYYY):", "10/11/2026");
+    if (!nuevaHasta) return;
+
+    TAREA_SELECCIONADA.gestionFallida = 'Reprogramada en nueva visita';
+
+    const nuevaFila = {
+      rowId: TASKS.length + 2,
+      cuit: TAREA_SELECCIONADA.cuit,
+      empleador: TAREA_SELECCIONADA.empleador,
+      contrato: TAREA_SELECCIONADA.contrato,
+      establecimiento: TAREA_SELECCIONADA.establecimiento,
+      nroEstab: TAREA_SELECCIONADA.nroEstab,
+      localidad: TAREA_SELECCIONADA.localidad,
+      preventor: TAREA_SELECCIONADA.preventor,
+      capitas: TAREA_SELECCIONADA.capitas,
+      tarea: TAREA_SELECCIONADA.tarea,
+      fechaDesde: Utilities_formatDate(new Date()),
+      fechaHasta: nuevaHasta,
+      fechaRealizada: '',
+      resultadoVisita: '',
+      nroSiniestro: TAREA_SELECCIONADA.nroSiniestro || '',
+      observaciones: `Reprogramación extemporánea de visita previa fallida (Fila ${TAREA_SELECCIONADA.rowId})`,
+      documentoAdjunto: '',
+      estadoTarea: 'En término',
+      gestionFallida: ''
+    };
+
+    TASKS.unshift(nuevaFila);
+    guardarEnCacheLocal();
+    actualizarKpis();
+    filtrarYRenderizar();
+    seleccionarTarea(nuevaFila);
+
+    alert(`✓ Nueva visita extemporánea generada (Fila ${nuevaFila.rowId}) con vencimiento el ${nuevaHasta}.`);
+  }
+}
+
+function Utilities_formatDate(dt) {
+  const d = String(dt.getDate()).padStart(2, '0');
+  const m = String(dt.getMonth() + 1).padStart(2, '0');
+  const y = dt.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
+// MODAL: ALTA DE NUEVA TAREA
+function abrirModalNuevaTarea() {
+  document.getElementById('modalNuevaTarea').style.display = 'flex';
+  const hoy = new Date();
+  const dStr = hoy.toISOString().split('T')[0];
+  const en30dias = new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const hStr = en30dias.toISOString().split('T')[0];
+
+  document.getElementById('newTareaFechaDesde').value = dStr;
+  document.getElementById('newTareaFechaHasta').value = hStr;
+  document.getElementById('newTareaTipo').value = 'Visita tecnica';
+  verificarTipoTareaNueva('Visita tecnica');
+}
+
+function cerrarModalNuevaTarea() {
+  document.getElementById('modalNuevaTarea').style.display = 'none';
+}
+
+function verificarTipoTareaNueva(tipo) {
+  const esAT_EP = tipo.includes('AT') || tipo.includes('EP');
+  document.getElementById('newTareaBoxSiniestro').style.display = esAT_EP ? 'block' : 'none';
+  document.getElementById('newTareaNroSiniestro').required = esAT_EP;
+}
+
+async function guardarNuevaTarea(e) {
+  e.preventDefault();
+  const empleador = document.getElementById('newTareaEmpleador').value.trim();
+  const cuit = document.getElementById('newTareaCuit').value.trim().replace(/\D/g, '');
+  const estab = document.getElementById('newTareaEstablecimiento').value.trim();
+  const nroEstab = document.getElementById('newTareaNroEstab').value.trim() || '1';
+  const localidad = document.getElementById('newTareaLocalidad').value.trim();
+  const tarea = document.getElementById('newTareaTipo').value;
+  const nroSiniestro = document.getElementById('newTareaNroSiniestro').value.trim();
+  const fDesdeVal = document.getElementById('newTareaFechaDesde').value;
+  const fHastaVal = document.getElementById('newTareaFechaHasta').value;
+  const obs = document.getElementById('newTareaObs').value.trim();
+
+  if (cuit.length < 10) {
+    alert("El CUIT debe contener 11 dígitos numéricos.");
+    return;
+  }
+
+  const esAT_EP = tarea.includes('AT') || tarea.includes('EP');
+  if (esAT_EP && !nroSiniestro) {
+    alert("Para tareas de Investigación o Seguimiento AT/EP el N° de Siniestro es obligatorio.");
+    return;
+  }
+
+  const pD = fDesdeVal.split('-');
+  const fDesdeStr = `${pD[2]}/${pD[1]}/${pD[0]}`;
+  const pH = fHastaVal.split('-');
+  const fHastaStr = `${pH[2]}/${pH[1]}/${pH[0]}`;
+
+  const btn = document.getElementById('btnGuardarNuevaTarea');
+  btn.disabled = true;
+  btn.textContent = 'Guardando tarea en Sheets...';
+
+  const nuevaFila = {
+    rowId: TASKS.length + 2,
+    cuit: cuit,
+    empleador: empleador,
+    contrato: '',
+    establecimiento: estab,
+    nroEstab: nroEstab,
+    localidad: localidad,
+    preventor: '',
+    capitas: '',
+    tarea: tarea,
+    fechaDesde: fDesdeStr,
+    fechaHasta: fHastaStr,
+    fechaRealizada: '',
+    resultadoVisita: '',
+    nroSiniestro: nroSiniestro,
+    observaciones: obs,
+    documentoAdjunto: '',
+    estadoTarea: 'En término',
+    gestionFallida: ''
+  };
+
+  // Enviar a Apps Script si está configurado
+  const webAppUrl = localStorage.getItem(LS_CONFIG_URL);
+  if (webAppUrl && webAppUrl.startsWith('http')) {
+    try {
+      const res = await fetch(webAppUrl, {
+        method: 'POST',
+        mode: 'cors',
+        body: JSON.stringify({
+          action: 'createTask',
+          cuit: cuit,
+          empleador: empleador,
+          establecimiento: estab,
+          nroEstab: nroEstab,
+          localidad: localidad,
+          tarea: tarea,
+          fechaDesde: fDesdeStr,
+          fechaHasta: fHastaStr,
+          nroSiniestro: nroSiniestro,
+          observaciones: obs
+        })
+      });
+      const json = await res.json();
+      if (json.status === 'success' && json.newRowId) {
+        nuevaFila.rowId = json.newRowId;
+      }
+    } catch (err) {
+      console.warn("Fallo en sincronización online de nueva tarea, agregando local:", err);
+    }
+  }
+
+  TASKS.unshift(nuevaFila);
+  guardarEnCacheLocal();
+  actualizarKpis();
+  filtrarYRenderizar();
+  seleccionarTarea(nuevaFila);
+
+  btn.disabled = false;
+  btn.textContent = '+ Guardar Tarea en Google Sheets';
+  cerrarModalNuevaTarea();
+
+  alert(`✓ Nueva tarea dada de alta exitosamente (Fila ${nuevaFila.rowId}).\nEmpresa: ${empleador}\nEstablecimiento: ${estab}\nTarea: ${tarea}\nPeríodo: ${fDesdeStr} al ${fHastaStr}`);
+}
+
+// ALTA MASIVA Y OCR
+function abrirModalAltaMasiva() {
+  document.getElementById('modalAltaMasiva').style.display = 'flex';
+  LOTE_MASIVO = [];
+  document.getElementById('listaDetecciones').style.display = 'none';
+  document.getElementById('btnConfirmarLote').disabled = true;
+}
+
+function cerrarModalAltaMasiva() {
+  document.getElementById('modalAltaMasiva').style.display = 'none';
+}
+
+function procesarArchivosMasivos(e) {
+  if (e.target.files && e.target.files.length > 0) {
+    cargarArchivosLote(Array.from(e.target.files));
+  }
+}
+
+async function cargarArchivosLote(archivos) {
+  LOTE_MASIVO = [];
+  document.getElementById('listaDetecciones').style.display = 'block';
+  const contenedor = document.getElementById('contenedorItemsMasivos');
+  contenedor.innerHTML = '<div style="color:#5B6670; font-size:12px;">Analizando documentos con OCR...</div>';
+
+  for (let i = 0; i < archivos.length; i++) {
+    const file = archivos[i];
+    const detection = await analizarDocumentoOCR(file);
+    LOTE_MASIVO.push(detection);
+  }
+
+  renderizarItemsLote();
+  document.getElementById('btnConfirmarLote').disabled = (LOTE_MASIVO.length === 0);
+}
+
+async function analizarDocumentoOCR(file) {
+  let textoExtraido = '';
+
+  if (file.type === 'application/pdf' && window.pdfjsLib) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const maxPages = Math.min(pdf.numPages, 3);
+      for (let p = 1; p <= maxPages; p++) {
+        const page = await pdf.getPage(p);
+        const textContent = await page.getTextContent();
+        textoExtraido += textContent.items.map(s => s.str).join(' ') + ' ';
+      }
+    } catch(err) {
+      console.warn("PDF.js text extraction error:", err);
+    }
+  }
+
+  const corpus = (textoExtraido + ' ' + file.name).toUpperCase();
+
+  let cuitDetectado = null;
+  const matchCuit = corpus.match(/\b(20|23|24|27|30|33|34)[-]?\d{8}[-]?\d\b/);
+  if (matchCuit) {
+    cuitDetectado = matchCuit[0].replace(/\D/g, '');
+  }
+
+  let fechaDetectada = Utilities_formatDate(new Date());
+  const matchFecha = corpus.match(/\b([0-2]?[0-9]|3[01])[\/\-\.](0?[1-9]|1[0-2])[\/\-\.](202[4-7])\b/);
+  if (matchFecha) {
+    fechaDetectada = `${matchFecha[1].padStart(2, '0')}/${matchFecha[2].padStart(2, '0')}/${matchFecha[3]}`;
+  }
+
+  let tareaDetectada = 'Visita tecnica';
+  if (corpus.includes('ACCIDENTE') || corpus.includes('INV AT') || corpus.includes('SINIESTRO')) {
+    tareaDetectada = 'Investigacion AT';
+  } else if (corpus.includes('ENFERMEDAD') || corpus.includes('INV EP')) {
+    tareaDetectada = 'Investigacion EP';
+  } else if (corpus.includes('SEGUIMIENTO')) {
+    tareaDetectada = corpus.includes('EP') ? 'Seguimiento EP' : 'Seguimiento AT';
+  } else if (corpus.includes('OBRA') || corpus.includes('CONSTRUCCION')) {
+    tareaDetectada = 'Visita obra';
+  } else if (corpus.includes('AGRO') || corpus.includes('RURAL')) {
+    tareaDetectada = 'Visita Agro';
+  } else if (corpus.includes('VERO') || corpus.includes('RGRL')) {
+    tareaDetectada = 'Verosimilitud';
+  }
+
+  let candidatoTarea = null;
+  if (cuitDetectado) {
+    candidatoTarea = TASKS.find(t => t.cuit === cuitDetectado && (!t.documentoAdjunto || t.documentoAdjunto === ''));
+    if (!candidatoTarea) {
+      candidatoTarea = TASKS.find(t => t.cuit === cuitDetectado);
+    }
+  }
+
+  if (!candidatoTarea) {
+    candidatoTarea = TASKS.find(t => {
+      const estabClean = (t.establecimiento || '').toUpperCase().slice(0, 10);
+      return estabClean && corpus.includes(estabClean);
+    });
+  }
+
+  const cuitFinal = candidatoTarea ? candidatoTarea.cuit : (cuitDetectado || '00000000000');
+  const estabFinal = candidatoTarea ? (candidatoTarea.nroEstab || '1') : '1';
+  const tareaFinal = candidatoTarea ? candidatoTarea.tarea : tareaDetectada;
+  const fechaYMD = fechaDetectada.split('/').reverse().join('');
+  const ext = file.name.split('.').pop().toLowerCase() || 'pdf';
+  const nombreEstandarizado = `${cuitFinal}_${estabFinal}_${tareaFinal.toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 16)}_${fechaYMD}.${ext}`;
+
+  return {
+    file: file,
+    fileName: file.name,
+    cuitDetectado: cuitDetectado,
+    fechaDetectada: fechaDetectada,
+    tareaDetectada: tareaDetectada,
+    candidatoTarea: candidatoTarea,
+    nombreEstandarizado: nombreEstandarizado,
+    resultado: 'Efectiva'
+  };
+}
+
+function renderizarItemsLote() {
+  const contenedor = document.getElementById('contenedorItemsMasivos');
+  contenedor.innerHTML = '';
+  document.getElementById('lblConteoMasivo').textContent = `Documentos procesados (${LOTE_MASIVO.length}):`;
+
+  LOTE_MASIVO.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'border: 1px solid #D5D8D3; padding: 10px 14px; background: #fff; display: flex; justify-content: space-between; align-items: center; gap: 12px;';
+
+    const matchBadge = item.candidatoTarea 
+      ? `<span class="badge badge-ok">Match sugerido: Fila ${item.candidatoTarea.rowId} (${item.candidatoTarea.establecimiento.slice(0, 20)})</span>`
+      : `<span class="badge badge-warn">Sin match exacto (Asignación manual)</span>`;
+
+    div.innerHTML = `
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-weight: 600; font-size: 13px;">${escapeHtml(item.fileName)}</div>
+        <div style="font-size: 11px; color: #5B6670; margin-top: 2px;">
+          CUIT detectado: <strong>${item.cuitDetectado || 'No detectado'}</strong> · Fecha: <strong>${item.fechaDetectada}</strong> · Tarea: <strong>${item.tareaDetectada}</strong>
+        </div>
+        <div style="font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: #0F4C5C; margin-top: 4px;">
+          → ${item.nombreEstandarizado}
+        </div>
+        <div style="margin-top: 4px;">${matchBadge}</div>
+      </div>
+      <div>
+        <select onchange="cambiarAsignacionLote(${idx}, this.value)" style="min-height: 32px; font-size: 12px; padding: 0 6px; width: 170px;">
+          ${TASKS.slice(0, 40).map(t => `<option value="${t.rowId}" ${item.candidatoTarea && item.candidatoTarea.rowId === t.rowId ? 'selected' : ''}>Fila ${t.rowId}: ${t.establecimiento.slice(0, 16)}</option>`).join('')}
+        </select>
+      </div>
+    `;
+    contenedor.appendChild(div);
+  });
+}
+
+function cambiarAsignacionLote(index, rowIdStr) {
+  const rowId = parseInt(rowIdStr, 10);
+  const target = TASKS.find(t => t.rowId === rowId);
+  if (target && LOTE_MASIVO[index]) {
+    LOTE_MASIVO[index].candidatoTarea = target;
+    renderizarItemsLote();
+  }
+}
+
+async function confirmarSubidaLote() {
+  const btn = document.getElementById('btnConfirmarLote');
+  btn.disabled = true;
+  btn.textContent = 'Subiendo lote a Google Drive...';
+
+  let cargados = 0;
+  for (let i = 0; i < LOTE_MASIVO.length; i++) {
+    const item = LOTE_MASIVO[i];
+    if (item.candidatoTarea) {
+      item.candidatoTarea.fechaRealizada = item.fechaDetectada;
+      item.candidatoTarea.resultadoVisita = item.resultado;
+      item.candidatoTarea.documentoAdjunto = `https://drive.google.com/drive/folders/iapser_visitas_2026-10/${item.nombreEstandarizado}`;
+      item.candidatoTarea.estadoTarea = 'Terminada';
+      cargados++;
+    }
+  }
+
+  guardarEnCacheLocal();
+  actualizarKpis();
+  filtrarYRenderizar();
+
+  btn.disabled = false;
+  btn.textContent = 'Confirmar y Subir Todo';
+  cerrarModalAltaMasiva();
+
+  alert(`✓ Lote procesado exitosamente: ${cargados} documentos vinculados a Google Drive y planillas.`);
+}
+
+// CONFIGURACIÓN Y SINCRONIZACIÓN CON BACKEND
+function abrirModalConfig() {
+  document.getElementById('modalConfig').style.display = 'flex';
+}
+
+function cerrarModalConfig() {
+  document.getElementById('modalConfig').style.display = 'none';
+}
+
+function guardarConfig() {
+  const url = document.getElementById('txtWebAppUrl').value.trim();
+  localStorage.setItem(LS_CONFIG_URL, url);
+  cerrarModalConfig();
+  if (url) {
+    document.getElementById('syncText').textContent = 'Conectado a Google Apps Script';
+    sincronizarConBackend();
+  }
+}
+
+async function probarConexionBackend() {
+  const url = document.getElementById('txtWebAppUrl').value.trim();
+  if (!url) {
+    alert("Por favor ingresá la URL del Web App de Apps Script.");
+    return;
+  }
+
+  const lbl = document.getElementById('txtEstadoConexion');
+  lbl.textContent = "Probando conexión con Google Apps Script...";
+
+  try {
+    const res = await fetch(url + '?action=ping', { mode: 'cors' });
+    const json = await res.json();
+    if (json.status === 'ok') {
+      lbl.textContent = `✓ Conexión exitosa. Respuesta del servidor: ${json.time}`;
+      lbl.style.color = '#0F4C5C';
+    } else {
+      lbl.textContent = "Respuesta inesperada del servidor.";
+    }
+  } catch(e) {
+    lbl.textContent = "Nota: Al llamar desde archivo local o navegador sin CORS, verificá que el Web App tenga acceso 'Cualquiera' (Anyone).";
+    lbl.style.color = '#A8470A';
+  }
+}
+
+async function sincronizarConBackend() {
+  const url = localStorage.getItem(LS_CONFIG_URL);
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncText');
+
+  if (!url) {
+    abrirModalConfig();
+    return;
+  }
+
+  dot.classList.add('warn');
+  txt.textContent = 'Sincronizando con Google Sheets...';
+
+  try {
+    const res = await fetch(url + '?action=getData', { mode: 'cors' });
+    const json = await res.json();
+    if (json.status === 'success' && json.data) {
+      TASKS = json.data;
+      guardarEnCacheLocal();
+      actualizarKpis();
+      filtrarYRenderizar();
+      if (VISTA_ACTIVA === 'kpis') renderizarTableroKPIs();
+      dot.classList.remove('warn');
+      txt.textContent = 'Sincronizado hoy ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      alert(`✓ Sincronización exitosa: ${json.count} registros actualizados desde Google Sheets.`);
+    }
+  } catch(err) {
+    dot.classList.remove('warn');
+    txt.textContent = 'Modo local activo (sin conexión directa)';
+    console.warn("Error en sync:", err);
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+</script>
+
+</body>
+</html>
