@@ -920,7 +920,28 @@
 
             <!-- FORMULARIO DE CARGA DE VISITA Y NUEVAS FECHAS -->
             <form id="formCargaVisita" onsubmit="guardarVisitaActual(event)">
-              <div style="font-size:13px; font-weight:600; margin-bottom:8px; color:#17202A;">Cargar resultado y nuevas columnas:</div>
+              <!-- SECCIÓN 1: PLAZOS OPERATIVOS (DESDE / HASTA) -->
+              <div style="background:#F0F4F5; border:1px solid #D1DFE2; padding:10px 12px; margin-bottom:12px; border-radius:2px;">
+                <div style="font-size:12px; font-weight:600; color:#0F4C5C; margin-bottom:6px;">
+                  📅 Plazo de Vigencia (Desde / Hasta):
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                  <div>
+                    <label style="font-size:11px; color:#5B6670; display:block; margin-bottom:3px;">Nueva Fecha Desde:</label>
+                    <input type="date" id="txtInputFechaDesde">
+                  </div>
+                  <div>
+                    <label style="font-size:11px; color:#5B6670; display:block; margin-bottom:3px;">Nueva Fecha Hasta (Vence):</label>
+                    <input type="date" id="txtInputFechaHasta">
+                  </div>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="guardarSoloPlazos()" id="btnGuardarSoloPlazos" style="width:100%; min-height:34px; font-size:12px; border-color:#0F4C5C; color:#0F4C5C; font-weight:600;">
+                  📅 Guardar Plazos (Desde / Hasta)
+                </button>
+              </div>
+
+              <!-- SECCIÓN 2: REGISTRO DE EJECUCIÓN DE VISITA -->
+              <div style="font-size:13px; font-weight:600; margin-bottom:8px; color:#17202A;">Registrar resultado de visita:</div>
 
               <div style="margin-bottom:10px;">
                 <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Resultado de la visita:</label>
@@ -934,21 +955,9 @@
                 </div>
               </div>
 
-              <!-- CAMPOS DE NUEVAS FECHAS -->
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
-                <div>
-                  <label style="font-size:11px; color:#5B6670; display:block; margin-bottom:3px;">Nueva Fecha Desde:</label>
-                  <input type="date" id="txtInputFechaDesde">
-                </div>
-                <div>
-                  <label style="font-size:11px; color:#5B6670; display:block; margin-bottom:3px;">Nueva Fecha Hasta:</label>
-                  <input type="date" id="txtInputFechaHasta">
-                </div>
-              </div>
-
               <div style="margin-bottom:10px;">
                 <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Nueva Fecha Realizada:</label>
-                <input type="date" id="txtFechaRealizada" required>
+                <input type="date" id="txtFechaRealizada">
               </div>
 
               <div id="boxNroSiniestro" style="margin-bottom:10px; display:none;">
@@ -991,7 +1000,7 @@
               </div>
 
               <button type="submit" class="btn btn-primary" style="width:100%;" id="btnGuardarVisita">
-                Guardar Nuevas Columnas y Documento
+                ✓ Guardar Visita Realizada y Documento
               </button>
             </form>
           </div>
@@ -2643,6 +2652,97 @@ function quitarArchivoAside() {
 }
 
 // GUARDAR VISITA (INDIVIDUAL)
+// ASIGNACIÓN Y GUARDADO DE PLAZOS (DESDE / HASTA)
+async function guardarSoloPlazos() {
+  if (!TAREA_SELECCIONADA) return;
+
+  const valHasta = document.getElementById('txtInputFechaHasta').value;
+  if (!valHasta) {
+    alert("Por favor ingresá al menos la Fecha Hasta (Vencimiento) para guardar el plazo.");
+    document.getElementById('txtInputFechaHasta').focus();
+    return;
+  }
+
+  const valDesde = document.getElementById('txtInputFechaDesde').value;
+  let fechaDesdeStr = '';
+  if (valDesde) {
+    const pD = valDesde.split('-');
+    fechaDesdeStr = `${pD[2]}/${pD[1]}/${pD[0]}`;
+  } else {
+    fechaDesdeStr = TAREA_SELECCIONADA.fechaDesde || Utilities_formatDate(new Date());
+  }
+
+  const pH = valHasta.split('-');
+  const fechaHastaStr = `${pH[2]}/${pH[1]}/${pH[0]}`;
+
+  TAREA_SELECCIONADA.fechaDesde = fechaDesdeStr;
+  TAREA_SELECCIONADA.fechaHasta = fechaHastaStr;
+
+  // Recalcular estado operativo
+  TAREA_SELECCIONADA.estadoTarea = calcularEstadoParaPlazo(
+    fechaHastaStr,
+    TAREA_SELECCIONADA.fechaRealizada || '',
+    TAREA_SELECCIONADA.documentoAdjunto || ''
+  );
+
+  const btn = document.getElementById('btnGuardarSoloPlazos');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Guardando plazos en Sheets...';
+  }
+
+  const webAppUrl = localStorage.getItem(LS_CONFIG_URL);
+  if (webAppUrl && webAppUrl.startsWith('http') && TAREA_SELECCIONADA.rowId) {
+    try {
+      await fetch(webAppUrl, {
+        method: 'POST',
+        mode: 'cors',
+        body: JSON.stringify({
+          action: 'saveVisit',
+          rowId: TAREA_SELECCIONADA.rowId,
+          fechaDesde: fechaDesdeStr,
+          fechaHasta: fechaHastaStr,
+          fechaRealizada: TAREA_SELECCIONADA.fechaRealizada || ''
+        })
+      });
+    } catch(err) {
+      console.warn("Fallo sincronizando plazos online:", err);
+    }
+  }
+
+  guardarEnCacheLocal();
+  actualizarKpis();
+  filtrarYRenderizar();
+  seleccionarTarea(TAREA_SELECCIONADA);
+
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = '📅 Guardar Plazos (Desde / Hasta)';
+  }
+
+  alert(`✓ Plazo asignado correctamente:\nDesde: ${fechaDesdeStr}\nHasta: ${fechaHastaStr}\nEstado actual: ${TAREA_SELECCIONADA.estadoTarea}`);
+}
+
+function calcularEstadoParaPlazo(fechaHastaStr, fechaRealizadaStr, docAdjunto) {
+  if (fechaRealizadaStr) {
+    return docAdjunto ? 'Terminada' : 'Realizada sin documento';
+  }
+  if (!fechaHastaStr) {
+    return 'Pendiente plazo';
+  }
+  const parts = fechaHastaStr.split('/');
+  if (parts.length === 3) {
+    const fHasta = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+    const hoy = new Date();
+    hoy.setHours(0,0,0,0);
+    const diffDias = Math.round((fHasta - hoy) / (1000 * 60 * 60 * 24));
+    if (diffDias < 0) return 'Vencida';
+    if (diffDias <= 7) return 'Próxima a vencer';
+    return 'En término';
+  }
+  return 'En término';
+}
+
 async function guardarVisitaActual(e) {
   e.preventDefault();
   if (!TAREA_SELECCIONADA) return;
@@ -2650,7 +2750,7 @@ async function guardarVisitaActual(e) {
   const resultado = document.getElementById('btnResFallida').classList.contains('on') ? 'Fallida' : 'Efectiva';
   const fechaVal = document.getElementById('txtFechaRealizada').value;
   if (!fechaVal) {
-    alert("Por favor ingresá la fecha realizada.");
+    alert("Por favor ingresá la fecha realizada para completar el registro de la visita.");
     return;
   }
   const parts = fechaVal.split('-');
@@ -2691,41 +2791,44 @@ async function guardarVisitaActual(e) {
   let fileUrl = TAREA_SELECCIONADA.documentoAdjunto;
   const webAppUrl = localStorage.getItem(LS_CONFIG_URL);
 
-  if (ARCHIVO_ASIDE_BASE64 && ARCHIVO_ASIDE_NOMBRE) {
-    if (webAppUrl && webAppUrl.startsWith('http')) {
-      try {
-        const payload = {
-          action: 'saveVisit',
-          rowId: TAREA_SELECCIONADA.rowId,
-          fechaDesde: TAREA_SELECCIONADA.fechaDesde,
-          fechaHasta: TAREA_SELECCIONADA.fechaHasta,
-          fechaRealizada: fechaRealizadaStr,
-          resultadoVisita: resultado,
-          nroSiniestro: nroSiniestro,
-          observaciones: observaciones,
-          fileBase64: ARCHIVO_ASIDE_BASE64,
-          fileName: ARCHIVO_ASIDE_NOMBRE,
-          mimeType: ARCHIVO_ASIDE_MIME
-        };
+  if (webAppUrl && webAppUrl.startsWith('http') && TAREA_SELECCIONADA.rowId) {
+    try {
+      const payload = {
+        action: 'saveVisit',
+        rowId: TAREA_SELECCIONADA.rowId,
+        fechaDesde: TAREA_SELECCIONADA.fechaDesde,
+        fechaHasta: TAREA_SELECCIONADA.fechaHasta,
+        fechaRealizada: fechaRealizadaStr,
+        resultadoVisita: resultado,
+        nroSiniestro: nroSiniestro,
+        observaciones: observaciones,
+        fileBase64: ARCHIVO_ASIDE_BASE64,
+        fileName: ARCHIVO_ASIDE_NOMBRE,
+        mimeType: ARCHIVO_ASIDE_MIME
+      };
 
-        const res = await fetch(webAppUrl, {
-          method: 'POST',
-          mode: 'cors',
-          body: JSON.stringify(payload)
-        });
-        const json = await res.json();
-        if (json.status === 'success' && json.documentoAdjunto) {
-          fileUrl = json.documentoAdjunto;
-        }
-      } catch(err) {
-        console.warn("Fallo en sincronización online con Web App, guardando local:", err);
+      const res = await fetch(webAppUrl, {
+        method: 'POST',
+        mode: 'cors',
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (json.status === 'success' && json.documentoAdjunto) {
+        fileUrl = json.documentoAdjunto;
+      }
+    } catch(err) {
+      console.warn("Fallo en sincronización online con Web App, guardando local:", err);
+      if (ARCHIVO_ASIDE_NOMBRE) {
         const nombreStd = document.getElementById('lblNombreEstandarizado').textContent;
         fileUrl = `https://drive.google.com/drive/folders/iapser_visitas_2026-10/${nombreStd}`;
       }
-    } else {
-      const nombreStd = document.getElementById('lblNombreEstandarizado').textContent;
-      fileUrl = `https://drive.google.com/drive/folders/iapser_visitas_2026-10/${nombreStd}`;
     }
+  } else if (ARCHIVO_ASIDE_NOMBRE) {
+    const nombreStd = document.getElementById('lblNombreEstandarizado').textContent;
+    fileUrl = `https://drive.google.com/drive/folders/iapser_visitas_2026-10/${nombreStd}`;
+  }
+
+  if (fileUrl) {
     TAREA_SELECCIONADA.documentoAdjunto = fileUrl;
   }
 
@@ -2743,7 +2846,7 @@ async function guardarVisitaActual(e) {
   seleccionarTarea(TAREA_SELECCIONADA);
 
   btn.disabled = false;
-  btn.textContent = 'Guardar Nuevas Columnas y Documento';
+  btn.textContent = '✓ Guardar Visita Realizada y Documento';
 
   alert(`✓ Tarea registrada con éxito.\nNuevas Fechas: Desde ${TAREA_SELECCIONADA.fechaDesde || '--'} | Hasta ${TAREA_SELECCIONADA.fechaHasta || '--'}\nRealizada: ${fechaRealizadaStr}\nEstado: ${TAREA_SELECCIONADA.estadoTarea}\nDocumento: ${fileUrl ? 'Vinculado a Google Drive' : 'Pendiente'}`);
 }

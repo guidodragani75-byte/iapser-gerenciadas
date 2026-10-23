@@ -236,10 +236,10 @@ function procesarGuardarVisita(sheet, colMap, payload) {
     throw new Error("Fila inválida: " + payload.rowId);
   }
 
-  var fechaRealizada = payload.fechaRealizada || "";
-  var resultadoVisita = payload.resultadoVisita || "Efectiva";
-  var nroSiniestro = payload.nroSiniestro || "";
-  var observaciones = payload.observaciones || "";
+  var fechaRealizada = (payload.fechaRealizada !== undefined && payload.fechaRealizada !== null) ? payload.fechaRealizada : (colMap["Fecha Realizada"] ? sheet.getRange(rowId, colMap["Fecha Realizada"]).getValue() : "");
+  var resultadoVisita = payload.resultadoVisita || (colMap["Resultado Visita"] ? sheet.getRange(rowId, colMap["Resultado Visita"]).getValue() : "Efectiva");
+  var nroSiniestro = payload.nroSiniestro || (colMap["Nro Siniestro"] ? sheet.getRange(rowId, colMap["Nro Siniestro"]).getValue() : "");
+  var observaciones = payload.observaciones || (colMap["Observaciones"] ? sheet.getRange(rowId, colMap["Observaciones"]).getValue() : "");
   var archivoSubidoUrl = payload.documentoAdjuntoUrl || "";
 
   // 1. Si viene un archivo en Base64, guardarlo en Google Drive (Doble guardado: Por Empresa y Por Mes)
@@ -274,7 +274,7 @@ function procesarGuardarVisita(sheet, colMap, payload) {
   if (colMap["Origen Plan"] && payload.origenPlan) sheet.getRange(rowId, colMap["Origen Plan"]).setValue(payload.origenPlan);
   if (colMap["Fecha Desde"] && payload.fechaDesde) sheet.getRange(rowId, colMap["Fecha Desde"]).setValue(payload.fechaDesde);
   if (colMap["Fecha Hasta"] && payload.fechaHasta) sheet.getRange(rowId, colMap["Fecha Hasta"]).setValue(payload.fechaHasta);
-  if (colMap["Fecha Realizada"]) sheet.getRange(rowId, colMap["Fecha Realizada"]).setValue(fechaRealizada);
+  if (colMap["Fecha Realizada"] && payload.fechaRealizada !== undefined) sheet.getRange(rowId, colMap["Fecha Realizada"]).setValue(fechaRealizada);
   if (colMap["Resultado Visita"]) sheet.getRange(rowId, colMap["Resultado Visita"]).setValue(resultadoVisita);
   if (colMap["Nro Siniestro"]) sheet.getRange(rowId, colMap["Nro Siniestro"]).setValue(nroSiniestro);
   if (colMap["Observaciones"]) sheet.getRange(rowId, colMap["Observaciones"]).setValue(observaciones);
