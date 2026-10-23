@@ -285,21 +285,22 @@
 
     /* Aside Panel */
     aside.side-panel {
-      width: 390px;
+      width: 420px;
       flex: none;
       background: #fff;
       border-left: 1px solid #D5D8D3;
-      padding: 20px 24px;
+      padding: 16px 20px;
       box-sizing: border-box;
       overflow-y: auto;
-      max-height: calc(100vh - 150px);
+      max-height: calc(100vh - 65px);
+      box-shadow: -2px 0 10px rgba(0,0,0,0.04);
     }
 
     /* Table Styles con ENCABEZADO FIJO (STICKY HEADER) */
     .table-container {
       overflow-x: auto;
       overflow-y: auto;
-      max-height: calc(100vh - 310px);
+      max-height: calc(100vh - 185px);
       background: #fff;
       border: 1px solid #D5D8D3;
       margin-top: 14px;
@@ -635,6 +636,16 @@
         </div>
       </div>
 
+      <!-- CONMUTADOR RÁPIDO DE VISTAS EN CABECERA -->
+      <div style="display:inline-flex; background:#E5E8E4; padding:3px; border-radius:3px; gap:4px; margin-right:8px;">
+        <button type="button" class="chip on" id="btnHeaderSedes" onclick="setMainView('sedes')" style="min-height:32px; font-size:12px; padding:2px 12px; font-weight:600;" title="Ver tabla de tareas">
+          📋 Tareas (Tabla)
+        </button>
+        <button type="button" class="chip" id="btnHeaderKpis" onclick="setMainView('kpis')" style="min-height:32px; font-size:12px; padding:2px 12px; font-weight:600;" title="Ver métricas y KPIs">
+          📊 Plan & KPIs
+        </button>
+      </div>
+
       <div class="header-info">
         <span class="sync-indicator" id="syncDot"></span>
         <span id="syncText">Datos locales sincronizados</span>
@@ -663,83 +674,7 @@
 
     <!-- VISTA 1: TABLA Y FICHA DE SEDES -->
     <div id="viewSedes" style="display:flex; flex-direction:column; flex:1;">
-      <!-- KPIS TOP SUMMARY SECTION -->
-      <section aria-label="Avance y Semáforos" class="kpis">
-        <!-- Card 1: Control Prestador 1.200 Anual -->
-        <div class="kpi-card">
-          <div class="kpi-label" style="display:flex; justify-content:space-between;">
-            <span>CONTROL PRESTADOR · META 1.200</span>
-            <span style="color:#0F4C5C; font-weight:600;">Sep 26 – Ago 27</span>
-          </div>
-          <div class="kpi-val">
-            <span id="kpiRealizadasProv">0</span>
-            <span class="kpi-sub">/ 1.200 acordadas (<span id="kpiPctProv">0.0%</span>)</span>
-          </div>
-          <div class="kpi-bar">
-            <div class="kpi-bar-fill" id="kpiBarProv" style="width: 0%;"></div>
-          </div>
-          <div style="font-size:11px; color:#5B6670; margin-top:6px;" id="kpiSubCadenciaProv">
-            Cadencia: 100/mes · Meta acum: <strong id="kpiMetaAcumProv">200</strong>
-          </div>
-        </div>
-
-        <!-- Card 2: Cortes Trimestrales (Compensación de Desvíos) -->
-        <div class="kpi-card">
-          <div class="kpi-label" style="display:flex; justify-content:space-between;">
-            <span>CORTES TRIMESTRALES (300/Q)</span>
-            <span style="color:#0F4C5C; font-weight:600;" id="lblTrimestreActualBadge">Q1 En curso</span>
-          </div>
-          <div class="kpi-val">
-            <span id="kpiQActualVal">0</span>
-            <span class="kpi-sub">/ 300 meta Q1 (<span id="kpiQPctVal">0.0%</span>)</span>
-          </div>
-          <div class="kpi-bar">
-            <div class="kpi-bar-fill" id="kpiBarQActual" style="width: 0%;"></div>
-          </div>
-          <div style="font-size:11px; color:#5B6670; margin-top:6px;">
-            Q1: <strong id="lblValQ1">0</strong> · Q2: <strong id="lblValQ2">0</strong> · Q3: <strong id="lblValQ3">0</strong> · Q4: <strong id="lblValQ4">0</strong>
-          </div>
-        </div>
-
-        <!-- Card 3: Stock Plan Residual 2026 -->
-        <div class="kpi-card">
-          <div class="kpi-label" style="display:flex; justify-content:space-between;">
-            <span>STOCK PLAN RESIDUAL 2026</span>
-            <span style="color:#0F4C5C; font-weight:600;">Tabla Base</span>
-          </div>
-          <div class="kpi-val">
-            <span id="kpiRealizadasResid">0</span>
-            <span class="kpi-sub">de 925 tareas (<span id="kpiPctResid">0.0%</span>)</span>
-          </div>
-          <div class="kpi-bar">
-            <div class="kpi-bar-fill" id="kpiBarResid" style="width: 0%;"></div>
-          </div>
-          <div style="font-size:11px; color:#5B6670; margin-top:6px;">
-            736 Visitas Técnicas (01/01 al 31/12) · 189 Especiales
-          </div>
-        </div>
-
-        <!-- Card 4: Semáforos y Alertas Operativas -->
-        <div class="kpi-card">
-          <div class="kpi-label" style="display:flex; justify-content:space-between;">
-            <span>ALERTAS & CALIDAD OPERATIVA</span>
-            <span style="color:#A8470A; font-weight:600;" id="kpiVencidasSub">En mora</span>
-          </div>
-          <div class="kpi-val">
-            <span id="kpiVencidas" style="color:#A8470A;">0</span>
-            <span class="kpi-sub alert">vencidas</span>
-            <span style="font-size:18px; color:#D5D8D3; margin:0 4px;">|</span>
-            <span id="kpiProximas" style="color:#B35806; font-size:24px;">0</span>
-            <span class="kpi-sub" style="color:#B35806;">próx. ≤7d</span>
-          </div>
-          <div class="kpi-bar">
-            <div class="kpi-bar-fill alert" id="kpiBarVencidas" style="width: 0%;"></div>
-          </div>
-          <div style="font-size:11px; color:#5B6670; margin-top:6px;">
-            Fallidas a evaluar: <strong id="kpiFallidas" style="color:#A8470A;">0</strong> · Sin doc: <strong id="kpiPendienteDocTop">0</strong>
-          </div>
-        </div>
-      </section>
+      <!-- KPIS TRASLADADOS A LA VISTA DE KPIS PARA MAXIMIZAR EL ESPACIO DE LA TABLA -->
 
       <!-- CONTENT BODY (MAIN + ASIDE) -->
       <div class="cols">
@@ -776,6 +711,10 @@
                 <option value="todas">Todas las localidades</option>
               </select>
             </label>
+            <button type="button" class="btn btn-secondary" id="btnToggleFichaBar" onclick="togglePanelFicha()" style="min-height:36px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-left:auto; white-space:nowrap;" title="Mostrar u ocultar la ficha lateral">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span id="lblBtnToggleFicha">Ver Ficha</span>
+            </button>
           </div>
 
           <!-- SELECTOR DE COHORTE / ORIGEN -->
@@ -857,10 +796,15 @@
           </div>
         </main>
 
-        <!-- ASIDE PANEL: FICHA Y CARGA DIRECTA -->
-        <aside class="side-panel" aria-label="Ficha de tarea seleccionada">
-          <div style="font-size:12px; color:#5B6670; font-weight:600; letter-spacing:.04em; text-transform:uppercase;">
-            Ficha de Tarea y Carga de Nuevas Fechas
+        <!-- ASIDE PANEL: FICHA Y CARGA DIRECTA (COLAPSABLE) -->
+        <aside class="side-panel" id="panelFichaTarea" style="display:none;" aria-label="Ficha de tarea seleccionada">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #D5D8D3;">
+            <div style="font-size:12px; color:#5B6670; font-weight:700; letter-spacing:.04em; text-transform:uppercase;">
+              Ficha de Tarea y Nuevas Fechas
+            </div>
+            <button type="button" class="chip" onclick="cerrarPanelFicha()" style="min-height:28px; padding:0 8px; font-size:11px; cursor:pointer;" title="Ocultar ficha y ver tabla completa">
+              ✕ Ocultar
+            </button>
           </div>
 
           <div id="asideDetalleVacio" style="margin-top:20px; padding:24px 16px; border:1px dashed #B9BEB8; text-align:center; color:#5B6670;">
@@ -1026,6 +970,85 @@
             <button type="button" class="chip" id="btnToggleChartAcumulado" onclick="toggleModoPresupuesto('acumulado')">Curva Acumulada</button>
           </div>
         </div>
+
+        <!-- RESUMEN PRINCIPAL (LAS 4 CARDS TRASLADADAS DESDE LA VISTA DE TAREAS) -->
+        <section aria-label="Avance y Semáforos" class="kpis" style="margin-bottom:24px; border:1px solid #D5D8D3; border-radius:4px; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+
+        <!-- Card 1: Control Prestador 1.200 Anual -->
+        <div class="kpi-card">
+          <div class="kpi-label" style="display:flex; justify-content:space-between;">
+            <span>CONTROL PRESTADOR · META 1.200</span>
+            <span style="color:#0F4C5C; font-weight:600;">Sep 26 – Ago 27</span>
+          </div>
+          <div class="kpi-val">
+            <span id="kpiRealizadasProv">0</span>
+            <span class="kpi-sub">/ 1.200 acordadas (<span id="kpiPctProv">0.0%</span>)</span>
+          </div>
+          <div class="kpi-bar">
+            <div class="kpi-bar-fill" id="kpiBarProv" style="width: 0%;"></div>
+          </div>
+          <div style="font-size:11px; color:#5B6670; margin-top:6px;" id="kpiSubCadenciaProv">
+            Cadencia: 100/mes · Meta acum: <strong id="kpiMetaAcumProv">200</strong>
+          </div>
+        </div>
+
+        <!-- Card 2: Cortes Trimestrales (Compensación de Desvíos) -->
+        <div class="kpi-card">
+          <div class="kpi-label" style="display:flex; justify-content:space-between;">
+            <span>CORTES TRIMESTRALES (300/Q)</span>
+            <span style="color:#0F4C5C; font-weight:600;" id="lblTrimestreActualBadge">Q1 En curso</span>
+          </div>
+          <div class="kpi-val">
+            <span id="kpiQActualVal">0</span>
+            <span class="kpi-sub">/ 300 meta Q1 (<span id="kpiQPctVal">0.0%</span>)</span>
+          </div>
+          <div class="kpi-bar">
+            <div class="kpi-bar-fill" id="kpiBarQActual" style="width: 0%;"></div>
+          </div>
+          <div style="font-size:11px; color:#5B6670; margin-top:6px;">
+            Q1: <strong id="lblValQ1">0</strong> · Q2: <strong id="lblValQ2">0</strong> · Q3: <strong id="lblValQ3">0</strong> · Q4: <strong id="lblValQ4">0</strong>
+          </div>
+        </div>
+
+        <!-- Card 3: Stock Plan Residual 2026 -->
+        <div class="kpi-card">
+          <div class="kpi-label" style="display:flex; justify-content:space-between;">
+            <span>STOCK PLAN RESIDUAL 2026</span>
+            <span style="color:#0F4C5C; font-weight:600;">Tabla Base</span>
+          </div>
+          <div class="kpi-val">
+            <span id="kpiRealizadasResid">0</span>
+            <span class="kpi-sub">de 925 tareas (<span id="kpiPctResid">0.0%</span>)</span>
+          </div>
+          <div class="kpi-bar">
+            <div class="kpi-bar-fill" id="kpiBarResid" style="width: 0%;"></div>
+          </div>
+          <div style="font-size:11px; color:#5B6670; margin-top:6px;">
+            736 Visitas Técnicas (01/01 al 31/12) · 189 Especiales
+          </div>
+        </div>
+
+        <!-- Card 4: Semáforos y Alertas Operativas -->
+        <div class="kpi-card">
+          <div class="kpi-label" style="display:flex; justify-content:space-between;">
+            <span>ALERTAS & CALIDAD OPERATIVA</span>
+            <span style="color:#A8470A; font-weight:600;" id="kpiVencidasSub">En mora</span>
+          </div>
+          <div class="kpi-val">
+            <span id="kpiVencidas" style="color:#A8470A;">0</span>
+            <span class="kpi-sub alert">vencidas</span>
+            <span style="font-size:18px; color:#D5D8D3; margin:0 4px;">|</span>
+            <span id="kpiProximas" style="color:#B35806; font-size:24px;">0</span>
+            <span class="kpi-sub" style="color:#B35806;">próx. ≤7d</span>
+          </div>
+          <div class="kpi-bar">
+            <div class="kpi-bar-fill alert" id="kpiBarVencidas" style="width: 0%;"></div>
+          </div>
+          <div style="font-size:11px; color:#5B6670; margin-top:6px;">
+            Fallidas a evaluar: <strong id="kpiFallidas" style="color:#A8470A;">0</strong> · Sin doc: <strong id="kpiPendienteDocTop">0</strong>
+          </div>
+        </div>
+              </section>
 
         <!-- FILA 1: DATOS FUERTES EN ETIQUETAS (STAT CARDS EJECUTIVAS) -->
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:24px;">
@@ -1586,20 +1609,26 @@ function setMainView(view) {
   const btnNavTodas = document.getElementById('btnNavTodas');
   const btnNavKpis = document.getElementById('btnNavKpis');
   const pageTitle = document.getElementById('pageTitle');
+  const btnHeaderSedes = document.getElementById('btnHeaderSedes');
+  const btnHeaderKpis = document.getElementById('btnHeaderKpis');
 
   if (view === 'sedes') {
     viewSedesEl.style.display = 'flex';
     viewKpisEl.style.display = 'none';
     btnNavTodas.classList.add('on');
     btnNavKpis.classList.remove('on');
-    pageTitle.textContent = 'Sedes · Visitas y Tareas';
+    if (btnHeaderSedes) btnHeaderSedes.classList.add('on');
+    if (btnHeaderKpis) btnHeaderKpis.classList.remove('on');
+    pageTitle.innerHTML = 'Plan y Avance Anual HyS <span class="badge" style="background:#FEF6EC; color:#B35806; border:1px solid #FADCB6; font-size:12px; font-weight:600;">Ciclo Sep 2026 – Ago 2027</span>';
     filtrarYRenderizar();
   } else if (view === 'kpis') {
     viewSedesEl.style.display = 'none';
     viewKpisEl.style.display = 'flex';
     btnNavTodas.classList.remove('on');
     btnNavKpis.classList.add('on');
-    pageTitle.textContent = 'Plan y Métricas · Tablero Ejecutivo (Inicio Sep 2026 = M0)';
+    if (btnHeaderSedes) btnHeaderSedes.classList.remove('on');
+    if (btnHeaderKpis) btnHeaderKpis.classList.add('on');
+    pageTitle.innerHTML = 'Plan y Métricas · Tablero Ejecutivo <span class="badge" style="background:#E3EDEF; color:#0F4C5C; border:1px solid #C4DDE2; font-size:12px; font-weight:600;">Sep 2026 = Mes 0</span>';
     renderizarTableroKPIs();
   }
 }
@@ -2466,12 +2495,43 @@ function actualizarBotonesChips() {
   });
 }
 
+
+function abrirPanelFicha() {
+  const panel = document.getElementById('panelFichaTarea');
+  if (panel) panel.style.display = 'block';
+  const lbl = document.getElementById('lblBtnToggleFicha');
+  if (lbl) lbl.textContent = 'Ocultar Ficha';
+  const btn = document.getElementById('btnToggleFichaBar');
+  if (btn) btn.classList.add('on');
+}
+
+function cerrarPanelFicha() {
+  const panel = document.getElementById('panelFichaTarea');
+  if (panel) panel.style.display = 'none';
+  const lbl = document.getElementById('lblBtnToggleFicha');
+  if (lbl) lbl.textContent = 'Ver Ficha';
+  const btn = document.getElementById('btnToggleFichaBar');
+  if (btn) btn.classList.remove('on');
+}
+
+function togglePanelFicha() {
+  const panel = document.getElementById('panelFichaTarea');
+  if (!panel) return;
+  if (panel.style.display === 'none' || getComputedStyle(panel).display === 'none') {
+    abrirPanelFicha();
+  } else {
+    cerrarPanelFicha();
+  }
+}
+
 // SELECCIÓN DE TAREA Y ASIDE
 function seleccionarTarea(tarea) {
   TAREA_SELECCIONADA = tarea;
 
   document.querySelectorAll('#tablaBody tr').forEach(r => r.classList.remove('sel'));
   filtrarYRenderizar();
+
+  abrirPanelFicha();
 
   document.getElementById('asideDetalleVacio').style.display = 'none';
   document.getElementById('asideDetalleActivo').style.display = 'block';
