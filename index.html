@@ -2343,7 +2343,9 @@ function filtrarYRenderizar() {
     else if (est.includes('fallida')) badgeClass = 'badge-alert';
 
     const fechaDesdeDisplay = t.fechaDesde || '<span class="na">--</span>';
-    const fechaHastaDisplay = t.fechaHasta || '<span class="na">--</span>';
+    const fechaHastaDisplay = t.fechaHasta 
+      ? escapeHtml(t.fechaHasta) 
+      : `<span class="badge badge-warn" style="font-size:10px; cursor:pointer; font-weight:600;" title="Clic en la fila para asignar plazo Desde/Hasta">+ Asignar plazo</span>`;
     const fechaRealDisplay = t.fechaRealizada ? `<strong style="color:#0F4C5C;">${escapeHtml(t.fechaRealizada)}</strong>` : '<span class="na">--</span>';
 
     const resBadge = t.resultadoVisita 
