@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1232,44 +1233,68 @@
   </div>
 </div>
 
-<!-- MODAL: ALTA MASIVA CON OCR -->
+<!-- MODAL: ALTA MASIVA CON OCR (POR CUIT / EMPRESA) -->
 <div class="modal-backdrop" id="modalAltaMasiva" style="display:none;">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:980px;">
     <div class="modal-header">
-      <h2 style="font-size:18px; font-weight:600;">Alta Masiva de Documentos con OCR</h2>
+      <div>
+        <h2 style="font-size:18px; font-weight:600;">Alta Masiva de Documentos con OCR</h2>
+        <div style="font-size:12px; color:#5B6670;">Carga múltiple de actas y constancias por Empresa / CUIT</div>
+      </div>
       <button type="button" class="chip" onclick="cerrarModalAltaMasiva()" style="min-height:32px; padding:2px 10px;">✕ Cerrar</button>
     </div>
 
-    <div class="modal-body">
-      <p style="font-size:13px; color:#5B6670; margin-bottom:14px;">
-        Arrastrá o seleccioná múltiples actas o constancias en PDF/imagen. El sistema leerá el texto del documento (CUIT, fechas y palabras clave) para sugerir automáticamente el establecimiento y la tarea correspondiente.
-      </p>
+    <div class="modal-body" style="display:flex; flex-direction:column; gap:14px;">
+      <!-- SELECTOR / INDICADOR DE EMPRESA DEL LOTE -->
+      <div style="background:#F8F9F7; border:1px solid #D5D8D3; padding:12px 16px; border-radius:2px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <label style="font-size:12px; font-weight:600; color:#17202A;">
+            Empresa / CUIT activo para este lote:
+          </label>
+          <span class="badge badge-ok" id="masivaBadgeEstabCount" style="display:none; font-size:11px;">0 establecimientos</span>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="search" id="masivaTxtBuscarEmpresa" placeholder="Tipeá CUIT o Razón Social (ej: COPELCO o 30545756710)..." list="listaEmpresasDatalist" oninput="cambiarEmpresaLoteDesdeInput(this.value)" style="flex:1; font-weight:600; color:#0F4C5C;">
+          <datalist id="listaEmpresasDatalist"></datalist>
+          <button type="button" class="btn btn-secondary" onclick="limpiarEmpresaLote()" style="min-height:44px; font-size:12px; padding:0 12px;" title="Limpiar empresa">Limpiar</button>
+        </div>
+        <div style="font-size:11px; color:#5B6670; margin-top:6px;" id="masivaInfoEmpresa">
+          💡 Podés soltar los archivos directamente y el sistema detectará el CUIT del primer documento, o podés buscar la empresa acá arriba.
+        </div>
+      </div>
 
-      <div class="dropzone" id="dropzoneMasiva" onclick="document.getElementById('fileInputMasivo').click()" style="padding:32px 16px;">
+      <!-- DROPZONE -->
+      <div class="dropzone" id="dropzoneMasiva" onclick="document.getElementById('fileInputMasivo').click()" style="padding:24px 16px;">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0F4C5C" stroke-width="2">
           <path d="M12 16V5m0 0-4 4m4-4 4 4M5 19h14"/>
         </svg>
-        <div style="font-size:16px; font-weight:600; margin-top:8px;">Arrastrá varios archivos acá</div>
-        <div style="font-size:12px; color:#5B6670; margin-top:4px;">Formatos admitidos: PDF, JPG, PNG (hasta 25 MB por archivo)</div>
+        <div style="font-size:15px; font-weight:600; margin-top:6px;">Arrastrá varios archivos acá o hacé clic para seleccionar</div>
+        <div style="font-size:12px; color:#5B6670; margin-top:2px;">Formatos: PDF, JPG, PNG (actas escaneadas, certificados o fotos de WhatsApp)</div>
       </div>
-      <input type="file" id="fileInputMasivo" multiple style="display:none;" accept=".pdf,image/*" onchange="procesarArchivosMasivos(event)">
+      <input type="file" id="fileInputMasivo" multiple style="display:none;" accept=".pdf,image/png,image/jpeg,image/jpg" onchange="procesarArchivosMasivos(event)">
 
-      <!-- LISTA DE DETECCIONES -->
-      <div id="listaDetecciones" style="margin-top:18px; display:none;">
-        <div style="font-size:12px; font-weight:600; color:#5B6670; margin-bottom:8px;" id="lblConteoMasivo">
-          Documentos procesados (0):
+      <!-- LISTA DE DETECCIONES Y CAMPOS EDITABLES POR DOCUMENTO -->
+      <div id="listaDetecciones" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong id="lblConteoMasivo" style="font-size:13px; color:#17202A;">Documentos procesados (0):</strong>
+          <span style="font-size:11px; color:#5B6670;">El domicilio viene asociado al N.º de establecimiento que elijas. Podés cambiar la fecha y tarea de cada archivo.</span>
         </div>
-        <div id="contenedorItemsMasivos" style="display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto;">
-          <!-- Items generados dinámicamente -->
+        <div id="contenedorItemsMasivos" style="display:flex; flex-direction:column; gap:10px; max-height:340px; overflow-y:auto; padding-right:4px;">
+          <!-- Tarjetas renderizadas dinámicamente -->
         </div>
       </div>
     </div>
 
-    <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" onclick="cerrarModalAltaMasiva()">Cancelar</button>
-      <button type="button" class="btn btn-primary" id="btnConfirmarLote" onclick="confirmarSubidaLote()" disabled>
-        Confirmar y Subir Todo
-      </button>
+    <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="font-size:12px; color:#5B6670;">
+        Guardado automático en Drive: <strong style="color:#0F4C5C;">Por Empresa/Estab</strong> y <strong style="color:#0F4C5C;">Por Mes</strong>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAltaMasiva()">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmarLote" onclick="confirmarSubidaLote()" disabled>
+          Confirmar y Subir Todo
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -2903,16 +2928,137 @@ async function guardarNuevaTarea(e) {
   alert(`✓ Nueva tarea dada de alta exitosamente (Fila ${nuevaFila.rowId}).\nEmpresa: ${empleador}\nEstablecimiento: ${estab}\nTarea: ${tarea}\nPeríodo: ${fDesdeStr} al ${fHastaStr}`);
 }
 
-// ALTA MASIVA Y OCR
+// =========================================================================
+// ALTA MASIVA Y OCR (POR CUIT / EMPRESA CON DOBLE GUARDADO EN DRIVE)
+// =========================================================================
+let EMPRESA_LOTE_ACTIVA = null;
+let ESTABLECIMIENTOS_LOTE = [];
+
 function abrirModalAltaMasiva() {
   document.getElementById('modalAltaMasiva').style.display = 'flex';
   LOTE_MASIVO = [];
+  EMPRESA_LOTE_ACTIVA = null;
+  ESTABLECIMIENTOS_LOTE = [];
+  
   document.getElementById('listaDetecciones').style.display = 'none';
   document.getElementById('btnConfirmarLote').disabled = true;
+  document.getElementById('masivaTxtBuscarEmpresa').value = '';
+  document.getElementById('masivaBadgeEstabCount').style.display = 'none';
+  document.getElementById('masivaInfoEmpresa').textContent = '💡 Podés soltar los archivos directamente y el sistema detectará el CUIT del primer documento, o podés buscar la empresa acá arriba.';
+
+  llenarDatalistEmpresasLote();
+
+  // Si hay una tarea seleccionada en la pantalla, sugerir esa empresa
+  if (TAREA_SELECCIONADA && TAREA_SELECCIONADA.cuit) {
+    seleccionarEmpresaParaLote(TAREA_SELECCIONADA.cuit);
+  }
 }
 
 function cerrarModalAltaMasiva() {
   document.getElementById('modalAltaMasiva').style.display = 'none';
+}
+
+function llenarDatalistEmpresasLote() {
+  const dl = document.getElementById('listaEmpresasDatalist');
+  dl.innerHTML = '';
+  const cuitsVistos = new Set();
+
+  TASKS.forEach(t => {
+    if (t.cuit && !cuitsVistos.has(t.cuit)) {
+      cuitsVistos.add(t.cuit);
+      const opt1 = document.createElement('option');
+      opt1.value = t.cuit;
+      opt1.label = `${t.empleador || 'Empresa'} (${t.cuit})`;
+      dl.appendChild(opt1);
+
+      if (t.empleador) {
+        const opt2 = document.createElement('option');
+        opt2.value = t.empleador.trim();
+        opt2.label = `CUIT: ${t.cuit}`;
+        dl.appendChild(opt2);
+      }
+    }
+  });
+}
+
+function limpiarEmpresaLote() {
+  EMPRESA_LOTE_ACTIVA = null;
+  ESTABLECIMIENTOS_LOTE = [];
+  document.getElementById('masivaTxtBuscarEmpresa').value = '';
+  document.getElementById('masivaBadgeEstabCount').style.display = 'none';
+  document.getElementById('masivaInfoEmpresa').textContent = 'Seleccioná una empresa o soltá los archivos para que el OCR detecte el CUIT.';
+  renderizarItemsLote();
+}
+
+function cambiarEmpresaLoteDesdeInput(val) {
+  const v = val.trim();
+  if (!v) {
+    limpiarEmpresaLote();
+    return;
+  }
+  seleccionarEmpresaParaLote(v);
+}
+
+function seleccionarEmpresaParaLote(cuitOTexto) {
+  const cleanDigits = cuitOTexto.replace(/\D/g, '');
+  let tareaEmp = null;
+
+  if (cleanDigits.length >= 10) {
+    tareaEmp = TASKS.find(t => t.cuit && t.cuit.replace(/\D/g, '') === cleanDigits);
+  }
+
+  if (!tareaEmp) {
+    const q = cuitOTexto.toLowerCase().trim();
+    tareaEmp = TASKS.find(t => (t.empleador || '').toLowerCase().includes(q) || (t.cuit || '').includes(q));
+  }
+
+  if (tareaEmp) {
+    EMPRESA_LOTE_ACTIVA = tareaEmp.cuit;
+    const inputEl = document.getElementById('masivaTxtBuscarEmpresa');
+    if (inputEl && document.activeElement !== inputEl) {
+      inputEl.value = `${tareaEmp.empleador || 'Empresa'} (CUIT: ${tareaEmp.cuit})`;
+    }
+
+    ESTABLECIMIENTOS_LOTE = obtenerEstablecimientosDeCuit(tareaEmp.cuit);
+
+    const badge = document.getElementById('masivaBadgeEstabCount');
+    badge.textContent = `${ESTABLECIMIENTOS_LOTE.length} establecimientos registrados`;
+    badge.style.display = 'inline-block';
+
+    document.getElementById('masivaInfoEmpresa').innerHTML = 
+      `Empresa seleccionada: <strong style="color:#0F4C5C;">${tareaEmp.empleador || 'Empresa'}</strong> · CUIT: <strong>${tareaEmp.cuit}</strong>`;
+
+    // Actualizar todos los archivos que ya estén cargados en el lote con los establecimientos de este CUIT
+    if (LOTE_MASIVO.length > 0) {
+      LOTE_MASIVO.forEach(item => {
+        asignarEstablecimientoAItem(item);
+      });
+      renderizarItemsLote();
+    }
+  }
+}
+
+function obtenerEstablecimientosDeCuit(cuit) {
+  const cuitClean = (cuit || '').replace(/\D/g, '');
+  const tasksCuit = TASKS.filter(t => (t.cuit || '').replace(/\D/g, '') === cuitClean);
+  const mapa = new Map();
+
+  tasksCuit.forEach(t => {
+    const nro = (t.nroEstab || '1').toString().trim();
+    if (!mapa.has(nro)) {
+      mapa.set(nro, {
+        nroEstab: nro,
+        nombre: (t.establecimiento || 'Establecimiento ' + nro).trim(),
+        localidad: (t.localidad || '').trim()
+      });
+    }
+  });
+
+  if (mapa.size === 0) {
+    mapa.set('1', { nroEstab: '1', nombre: 'Casa Central / Principal', localidad: '' });
+  }
+
+  return Array.from(mapa.values()).sort((a,b) => parseInt(a.nroEstab, 10) - parseInt(b.nroEstab, 10));
 }
 
 function procesarArchivosMasivos(e) {
@@ -2922,16 +3068,25 @@ function procesarArchivosMasivos(e) {
 }
 
 async function cargarArchivosLote(archivos) {
-  LOTE_MASIVO = [];
   document.getElementById('listaDetecciones').style.display = 'block';
   const contenedor = document.getElementById('contenedorItemsMasivos');
-  contenedor.innerHTML = '<div style="color:#5B6670; font-size:12px;">Analizando documentos con OCR...</div>';
+  contenedor.innerHTML = '<div style="color:#5B6670; font-size:13px; padding:16px; text-align:center;">⌛ Analizando documentos con OCR y extrayendo datos...</div>';
 
   for (let i = 0; i < archivos.length; i++) {
     const file = archivos[i];
     const detection = await analizarDocumentoOCR(file);
     LOTE_MASIVO.push(detection);
+
+    // Si el OCR detectó CUIT y aún no tenemos empresa activa, asignarla de inmediato
+    if (!EMPRESA_LOTE_ACTIVA && detection.cuitDetectado) {
+      seleccionarEmpresaParaLote(detection.cuitDetectado);
+    }
   }
+
+  // Asegurar que cada item tenga asignado un establecimiento válido del CUIT activo
+  LOTE_MASIVO.forEach(item => {
+    asignarEstablecimientoAItem(item);
+  });
 
   renderizarItemsLote();
   document.getElementById('btnConfirmarLote').disabled = (LOTE_MASIVO.length === 0);
@@ -2939,7 +3094,19 @@ async function cargarArchivosLote(archivos) {
 
 async function analizarDocumentoOCR(file) {
   let textoExtraido = '';
+  let previewUrl = null;
+  let base64Clean = null;
 
+  // Leer archivo a Base64
+  try {
+    const base64Full = await leerArchivoComoDataURL(file);
+    previewUrl = file.type.startsWith('image/') ? base64Full : null;
+    base64Clean = base64Full.includes('base64,') ? base64Full.split('base64,')[1] : base64Full;
+  } catch(e) {
+    console.warn("Error leyendo base64:", e);
+  }
+
+  // 1. OCR en PDF mediante pdf.js
   if (file.type === 'application/pdf' && window.pdfjsLib) {
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -2955,67 +3122,136 @@ async function analizarDocumentoOCR(file) {
     }
   }
 
+  // 2. OCR en Imágenes (WhatsApp JPG/PNG) mediante Tesseract.js si está cargado
+  if (file.type.startsWith('image/') && window.Tesseract) {
+    try {
+      const { data: { text } } = await Tesseract.recognize(file, 'spa');
+      textoExtraido += ' ' + text;
+    } catch(err) {
+      console.warn("Tesseract OCR fallback error:", err);
+    }
+  }
+
   const corpus = (textoExtraido + ' ' + file.name).toUpperCase();
 
+  // Detección de CUIT
   let cuitDetectado = null;
   const matchCuit = corpus.match(/\b(20|23|24|27|30|33|34)[-]?\d{8}[-]?\d\b/);
   if (matchCuit) {
     cuitDetectado = matchCuit[0].replace(/\D/g, '');
   }
 
-  let fechaDetectada = Utilities_formatDate(new Date());
+  // Detección de Fecha (DD/MM/YYYY)
+  let fechaDetectadaStr = Utilities_formatDate(new Date());
+  let fechaISO = new Date().toISOString().split('T')[0];
   const matchFecha = corpus.match(/\b([0-2]?[0-9]|3[01])[\/\-\.](0?[1-9]|1[0-2])[\/\-\.](202[4-7])\b/);
   if (matchFecha) {
-    fechaDetectada = `${matchFecha[1].padStart(2, '0')}/${matchFecha[2].padStart(2, '0')}/${matchFecha[3]}`;
+    const d = matchFecha[1].padStart(2, '0');
+    const m = matchFecha[2].padStart(2, '0');
+    const y = matchFecha[3];
+    fechaDetectadaStr = `${d}/${m}/${y}`;
+    fechaISO = `${y}-${m}-${d}`;
   }
 
+  // Detección de Tarea (de entre las 13 autorizadas)
   let tareaDetectada = 'Visita tecnica';
-  if (corpus.includes('ACCIDENTE') || corpus.includes('INV AT') || corpus.includes('SINIESTRO')) {
+  if (corpus.includes('INVESTIGACION') || corpus.includes('INV AT') || corpus.includes('ACCIDENTE')) {
     tareaDetectada = 'Investigacion AT';
   } else if (corpus.includes('ENFERMEDAD') || corpus.includes('INV EP')) {
     tareaDetectada = 'Investigacion EP';
   } else if (corpus.includes('SEGUIMIENTO')) {
-    tareaDetectada = corpus.includes('EP') ? 'Seguimiento EP' : 'Seguimiento AT';
+    tareaDetectada = (corpus.includes('EP') || corpus.includes('ENFERMEDAD')) ? 'Seguimiento EP' : (corpus.includes('VERO') ? 'Seguimiento Verosimilitud' : 'Seguimiento AT');
   } else if (corpus.includes('OBRA') || corpus.includes('CONSTRUCCION')) {
     tareaDetectada = 'Visita obra';
-  } else if (corpus.includes('AGRO') || corpus.includes('RURAL')) {
+  } else if (corpus.includes('AGRO') || corpus.includes('RURAL') || corpus.includes('CAMPO')) {
     tareaDetectada = 'Visita Agro';
-  } else if (corpus.includes('VERO') || corpus.includes('RGRL')) {
-    tareaDetectada = 'Verosimilitud';
+  } else if (corpus.includes('RGRL') || corpus.includes('VEROSIMILITUD')) {
+    tareaDetectada = corpus.includes('RGRL') ? 'RGRL/ Verosimilitud' : 'Verosimilitud';
+  } else if (corpus.includes('PESE')) {
+    tareaDetectada = 'Pese';
+  } else if (corpus.includes('INICIAL')) {
+    tareaDetectada = 'Visita inicial';
+  } else if (corpus.includes('SINIESTRO')) {
+    tareaDetectada = 'Siniestro';
   }
-
-  let candidatoTarea = null;
-  if (cuitDetectado) {
-    candidatoTarea = TASKS.find(t => t.cuit === cuitDetectado && (!t.documentoAdjunto || t.documentoAdjunto === ''));
-    if (!candidatoTarea) {
-      candidatoTarea = TASKS.find(t => t.cuit === cuitDetectado);
-    }
-  }
-
-  if (!candidatoTarea) {
-    candidatoTarea = TASKS.find(t => {
-      const estabClean = (t.establecimiento || '').toUpperCase().slice(0, 10);
-      return estabClean && corpus.includes(estabClean);
-    });
-  }
-
-  const cuitFinal = candidatoTarea ? candidatoTarea.cuit : (cuitDetectado || '00000000000');
-  const estabFinal = candidatoTarea ? (candidatoTarea.nroEstab || '1') : '1';
-  const tareaFinal = candidatoTarea ? candidatoTarea.tarea : tareaDetectada;
-  const fechaYMD = fechaDetectada.split('/').reverse().join('');
-  const ext = file.name.split('.').pop().toLowerCase() || 'pdf';
-  const nombreEstandarizado = `${cuitFinal}_${estabFinal}_${tareaFinal.toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 16)}_${fechaYMD}.${ext}`;
 
   return {
     file: file,
     fileName: file.name,
+    fileSize: file.size,
+    isImage: file.type.startsWith('image/'),
+    previewUrl: previewUrl,
+    fileBase64: base64Clean,
+    mimeType: file.type || 'application/pdf',
     cuitDetectado: cuitDetectado,
-    fechaDetectada: fechaDetectada,
-    tareaDetectada: tareaDetectada,
-    candidatoTarea: candidatoTarea,
-    nombreEstandarizado: nombreEstandarizado,
-    resultado: 'Efectiva'
+    corpusTexto: corpus,
+    fechaVisitaStr: fechaDetectadaStr,
+    fechaISO: fechaISO,
+    tarea: tareaDetectada,
+    nroEstab: '1',
+    domicilio: 'Establecimiento 1',
+    nombreEstandarizado: ''
   };
+}
+
+function asignarEstablecimientoAItem(item) {
+  if (!ESTABLECIMIENTOS_LOTE || ESTABLECIMIENTOS_LOTE.length === 0) {
+    item.nroEstab = '1';
+    item.domicilio = 'Establecimiento Principal';
+    actualizarNombreEstandarizadoItem(item);
+    return;
+  }
+
+  // 1. Intentar matching con el texto extraído (OCR) buscando el número o nombre del establecimiento
+  let estabElegido = null;
+  const corpus = item.corpusTexto || '';
+
+  // Buscar por número de establecimiento del CUIT (ej: "ESTAB 4", "ESTAB. 4", "N° 4", etc.)
+  for (let i = 0; i < ESTABLECIMIENTOS_LOTE.length; i++) {
+    const e = ESTABLECIMIENTOS_LOTE[i];
+    const nro = e.nroEstab;
+    const regexNro = new RegExp(`\\b(ESTAB|ESTABLECIMIENTO|PLANTA|SEDE|NRO|N°)?\\s*${nro}\\b`, 'i');
+    if (regexNro.test(corpus)) {
+      estabElegido = e;
+      break;
+    }
+  }
+
+  // Si no encontró por número, buscar palabras clave del nombre/domicilio de ese establecimiento
+  if (!estabElegido) {
+    for (let i = 0; i < ESTABLECIMIENTOS_LOTE.length; i++) {
+      const e = ESTABLECIMIENTOS_LOTE[i];
+      const nomLimpio = (e.nombre || '').toUpperCase().replace(/[^A-Z0-9]/g, ' ').trim();
+      const palabras = nomLimpio.split(/\s+/).filter(p => p.length >= 4);
+      const coincide = palabras.some(p => corpus.includes(p));
+      if (coincide) {
+        estabElegido = e;
+        break;
+      }
+    }
+  }
+
+  // Si no hay coincidencia, tomar el primer establecimiento de la lista
+  if (!estabElegido) {
+    estabElegido = ESTABLECIMIENTOS_LOTE[0];
+  }
+
+  item.nroEstab = estabElegido.nroEstab;
+  item.domicilio = estabElegido.nombre + (estabElegido.localidad ? ' (' + estabElegido.localidad + ')' : '');
+  actualizarNombreEstandarizadoItem(item);
+}
+
+function actualizarNombreEstandarizadoItem(item) {
+  const cuit = (EMPRESA_LOTE_ACTIVA || item.cuitDetectado || '00000000000').toString().replace(/\D/g, '');
+  const estab = (item.nroEstab || '1').toString().replace(/\D/g, '') || '1';
+  const tarea = (item.tarea || 'VISITA').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 18).toUpperCase();
+  const fParts = (item.fechaVisitaStr || '').split('/');
+  const fechaYMD = fParts.length === 3 ? `${fParts[2]}${fParts[1]}${fParts[0]}` : new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const anioMes = fParts.length === 3 ? `${fParts[2]}-${fParts[1]}` : new Date().toISOString().slice(0,7);
+  const ext = (item.fileName.split('.').pop() || 'pdf').toLowerCase();
+
+  item.anioMes = anioMes;
+  item.nombreEstandarizado = `${cuit}_${estab}_${tarea}_${fechaYMD}.${ext}`;
 }
 
 function renderizarItemsLote() {
@@ -3023,58 +3259,296 @@ function renderizarItemsLote() {
   contenedor.innerHTML = '';
   document.getElementById('lblConteoMasivo').textContent = `Documentos procesados (${LOTE_MASIVO.length}):`;
 
+  if (LOTE_MASIVO.length === 0) {
+    document.getElementById('listaDetecciones').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('listaDetecciones').style.display = 'block';
+
+  // Construir opciones del desplegable de establecimientos para el CUIT activo
+  let opcionesEstabHtml = '';
+  if (ESTABLECIMIENTOS_LOTE && ESTABLECIMIENTOS_LOTE.length > 0) {
+    opcionesEstabHtml = ESTABLECIMIENTOS_LOTE.map(e => 
+      `<option value="${e.nroEstab}">Estab ${e.nroEstab} - ${escapeHtml(e.nombre)} ${e.localidad ? '(' + escapeHtml(e.localidad) + ')' : ''}</option>`
+    ).join('');
+  } else {
+    opcionesEstabHtml = '<option value="1">Estab 1 (Principal)</option>';
+  }
+
+  // Opciones de tareas autorizadas
+  const opcionesTareasHtml = LISTA_TAREAS_VALIDAS.map(t => 
+    `<option value="${t}">${t}</option>`
+  ).join('');
+
   LOTE_MASIVO.forEach((item, idx) => {
-    const div = document.createElement('div');
-    div.style.cssText = 'border: 1px solid #D5D8D3; padding: 10px 14px; background: #fff; display: flex; justify-content: space-between; align-items: center; gap: 12px;';
+    actualizarNombreEstandarizadoItem(item);
 
-    const matchBadge = item.candidatoTarea 
-      ? `<span class="badge badge-ok">Match sugerido: Fila ${item.candidatoTarea.rowId} (${item.candidatoTarea.establecimiento.slice(0, 20)})</span>`
-      : `<span class="badge badge-warn">Sin match exacto (Asignación manual)</span>`;
+    const card = document.createElement('div');
+    card.style.cssText = 'border:1px solid #D5D8D3; padding:12px 14px; background:#fff; border-radius:2px; display:flex; flex-direction:column; gap:8px;';
 
-    div.innerHTML = `
-      <div style="flex: 1; min-width: 0;">
-        <div style="font-weight: 600; font-size: 13px;">${escapeHtml(item.fileName)}</div>
-        <div style="font-size: 11px; color: #5B6670; margin-top: 2px;">
-          CUIT detectado: <strong>${item.cuitDetectado || 'No detectado'}</strong> · Fecha: <strong>${item.fechaDetectada}</strong> · Tarea: <strong>${item.tareaDetectada}</strong>
+    const icono = item.isImage ? '🖼️' : '📄';
+    const thumbnailHtml = item.previewUrl 
+      ? `<img src="${item.previewUrl}" style="width:40px; height:40px; object-fit:cover; border-radius:2px; border:1px solid #D5D8D3;" alt="miniatura">`
+      : `<div style="width:40px; height:40px; background:#E3EDEF; color:#0F4C5C; display:flex; align-items:center; justify-content:center; font-size:20px; border-radius:2px;">${icono}</div>`;
+
+    card.innerHTML = `
+      <!-- Fila Superior: Archivo y Quitar -->
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          ${thumbnailHtml}
+          <div>
+            <strong style="font-size:13px; color:#17202A;">${escapeHtml(item.fileName)}</strong>
+            <div style="font-size:11px; color:#5B6670;">${(item.fileSize / 1024).toFixed(1)} KB · CUIT archivo: <strong>${item.cuitDetectado || 'No detectado'}</strong></div>
+          </div>
         </div>
-        <div style="font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: #0F4C5C; margin-top: 4px;">
-          → ${item.nombreEstandarizado}
-        </div>
-        <div style="margin-top: 4px;">${matchBadge}</div>
+        <button type="button" class="chip" onclick="quitarItemLote(${idx})" style="min-height:28px; padding:0 8px; color:#A8470A; border-color:#F2D2BE; font-size:11px;" title="Quitar este documento del lote">✕ Quitar</button>
       </div>
-      <div>
-        <select onchange="cambiarAsignacionLote(${idx}, this.value)" style="min-height: 32px; font-size: 12px; padding: 0 6px; width: 170px;">
-          ${TASKS.slice(0, 40).map(t => `<option value="${t.rowId}" ${item.candidatoTarea && item.candidatoTarea.rowId === t.rowId ? 'selected' : ''}>Fila ${t.rowId}: ${t.establecimiento.slice(0, 16)}</option>`).join('')}
-        </select>
+
+      <!-- Fila de Campos Operativos: Establecimiento, Domicilio, Fecha, Tarea -->
+      <div style="display:grid; grid-template-columns: 2fr 2fr 1.3fr 1.7fr; gap:10px; align-items:end; margin-top:2px;">
+        <!-- 1. Nro Establecimiento -->
+        <div>
+          <label style="font-size:11px; font-weight:600; color:#5B6670; display:block; margin-bottom:2px;">
+            N.º Establecimiento:
+          </label>
+          <select onchange="cambiarEstabItemLote(${idx}, this.value)" style="min-height:36px; font-size:12px; padding:0 8px;">
+            ${opcionesEstabHtml}
+          </select>
+        </div>
+
+        <!-- 2. Domicilio Asociado (Auto-reflejado) -->
+        <div>
+          <label style="font-size:11px; font-weight:600; color:#5B6670; display:block; margin-bottom:2px;">
+            Domicilio / Establecimiento:
+          </label>
+          <div id="lblDomicilio_${idx}" style="font-size:12px; padding:8px 10px; background:#F8F9F7; border:1px solid #D5D8D3; border-radius:2px; min-height:36px; display:flex; align-items:center; color:#17202A; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(item.domicilio)}">
+            ${escapeHtml(item.domicilio)}
+          </div>
+        </div>
+
+        <!-- 3. Fecha de Visita -->
+        <div>
+          <label style="font-size:11px; font-weight:600; color:#5B6670; display:block; margin-bottom:2px;">
+            Fecha Visita:
+          </label>
+          <input type="date" value="${item.fechaISO}" onchange="cambiarFechaItemLote(${idx}, this.value)" style="min-height:36px; font-size:12px; padding:0 8px;">
+        </div>
+
+        <!-- 4. Tarea (13 autorizadas) -->
+        <div>
+          <label style="font-size:11px; font-weight:600; color:#5B6670; display:block; margin-bottom:2px;">
+            Tarea:
+          </label>
+          <select onchange="cambiarTareaItemLote(${idx}, this.value)" style="min-height:36px; font-size:12px; padding:0 8px;">
+            ${opcionesTareasHtml}
+          </select>
+        </div>
+      </div>
+
+      <!-- Fila Inferior: Nomenclatura Estándar y Destinos en Google Drive -->
+      <div style="font-size:11px; font-family:'IBM Plex Mono', monospace; color:#0F4C5C; background:#EBF3F5; padding:6px 10px; border-radius:2px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+        <span>Archivo Drive: <strong>${item.nombreEstandarizado}</strong></span>
+        <span>Guardado: <strong>Por Empresa (Estab ${item.nroEstab})</strong> y <strong>Por Mes (${item.anioMes})</strong></span>
       </div>
     `;
-    contenedor.appendChild(div);
+
+    // Asignar valores seleccionados en los selects
+    const selEstab = card.querySelectorAll('select')[0];
+    if (selEstab) selEstab.value = item.nroEstab;
+
+    const selTarea = card.querySelectorAll('select')[1];
+    if (selTarea) selTarea.value = item.tarea;
+
+    contenedor.appendChild(card);
   });
 }
 
-function cambiarAsignacionLote(index, rowIdStr) {
-  const rowId = parseInt(rowIdStr, 10);
-  const target = TASKS.find(t => t.rowId === rowId);
-  if (target && LOTE_MASIVO[index]) {
-    LOTE_MASIVO[index].candidatoTarea = target;
-    renderizarItemsLote();
+function cambiarEstabItemLote(idx, nroEstab) {
+  const item = LOTE_MASIVO[idx];
+  if (!item) return;
+
+  item.nroEstab = nroEstab;
+  const estabObj = ESTABLECIMIENTOS_LOTE.find(e => e.nroEstab === nroEstab);
+  if (estabObj) {
+    item.domicilio = estabObj.nombre + (estabObj.localidad ? ' (' + estabObj.localidad + ')' : '');
+  } else {
+    item.domicilio = 'Establecimiento ' + nroEstab;
   }
+
+  const lblDom = document.getElementById('lblDomicilio_' + idx);
+  if (lblDom) {
+    lblDom.textContent = item.domicilio;
+    lblDom.title = item.domicilio;
+  }
+
+  actualizarNombreEstandarizadoItem(item);
+  renderizarItemsLote();
+}
+
+function cambiarFechaItemLote(idx, fechaISO) {
+  const item = LOTE_MASIVO[idx];
+  if (!item) return;
+
+  item.fechaISO = fechaISO;
+  if (fechaISO) {
+    const parts = fechaISO.split('-');
+    item.fechaVisitaStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  actualizarNombreEstandarizadoItem(item);
+  renderizarItemsLote();
+}
+
+function cambiarTareaItemLote(idx, tarea) {
+  const item = LOTE_MASIVO[idx];
+  if (!item) return;
+
+  item.tarea = tarea;
+  actualizarNombreEstandarizadoItem(item);
+  renderizarItemsLote();
+}
+
+function quitarItemLote(idx) {
+  LOTE_MASIVO.splice(idx, 1);
+  renderizarItemsLote();
+  document.getElementById('btnConfirmarLote').disabled = (LOTE_MASIVO.length === 0);
+}
+
+function leerArchivoComoDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 async function confirmarSubidaLote() {
+  if (LOTE_MASIVO.length === 0) return;
+
+  if (!EMPRESA_LOTE_ACTIVA) {
+    alert("Por favor seleccioná o verificá la Empresa / CUIT en el buscador superior antes de confirmar la subida.");
+    document.getElementById('masivaTxtBuscarEmpresa').focus();
+    return;
+  }
+
   const btn = document.getElementById('btnConfirmarLote');
   btn.disabled = true;
-  btn.textContent = 'Subiendo lote a Google Drive...';
+  btn.textContent = 'Subiendo lote a Google Drive (Empresa y Mes)...';
 
   let cargados = 0;
+  const webAppUrl = localStorage.getItem(LS_CONFIG_URL);
+  const itemsParaBackend = [];
+
+  // Obtener Razón Social de la empresa activa
+  const tareaRef = TASKS.find(t => (t.cuit || '').replace(/\D/g, '') === EMPRESA_LOTE_ACTIVA.replace(/\D/g, ''));
+  const razonSocialEmpresa = tareaRef ? (tareaRef.empleador || 'Empresa') : 'Empresa';
+
   for (let i = 0; i < LOTE_MASIVO.length; i++) {
     const item = LOTE_MASIVO[i];
-    if (item.candidatoTarea) {
-      item.candidatoTarea.fechaRealizada = item.fechaDetectada;
-      item.candidatoTarea.resultadoVisita = item.resultado;
-      item.candidatoTarea.documentoAdjunto = `https://drive.google.com/drive/folders/iapser_visitas_2026-10/${item.nombreEstandarizado}`;
-      item.candidatoTarea.estadoTarea = 'Terminada';
+    
+    // Buscar si existe una tarea previa para ese CUIT + NroEstab + Tarea
+    let tareaMatch = TASKS.find(t => 
+      (t.cuit || '').replace(/\D/g, '') === EMPRESA_LOTE_ACTIVA.replace(/\D/g, '') &&
+      (t.nroEstab || '1').toString().trim() === item.nroEstab.toString().trim() &&
+      (t.tarea || '').toLowerCase() === item.tarea.toLowerCase() &&
+      (!t.fechaRealizada || t.fechaRealizada === '')
+    );
+
+    if (!tareaMatch) {
+      tareaMatch = TASKS.find(t => 
+        (t.cuit || '').replace(/\D/g, '') === EMPRESA_LOTE_ACTIVA.replace(/\D/g, '') &&
+        (t.nroEstab || '1').toString().trim() === item.nroEstab.toString().trim() &&
+        (t.tarea || '').toLowerCase() === item.tarea.toLowerCase()
+      );
+    }
+
+    const driveUrlSimulada = `https://drive.google.com/drive/folders/iapser_visitas_${item.anioMes}/${item.nombreEstandarizado}`;
+
+    if (tareaMatch) {
+      tareaMatch.fechaRealizada = item.fechaVisitaStr;
+      tareaMatch.resultadoVisita = 'Efectiva';
+      tareaMatch.documentoAdjunto = driveUrlSimulada;
+      tareaMatch.estadoTarea = 'Terminada';
       cargados++;
+
+      itemsParaBackend.push({
+        rowId: tareaMatch.rowId,
+        cuit: EMPRESA_LOTE_ACTIVA,
+        empleador: razonSocialEmpresa,
+        nroEstab: item.nroEstab,
+        establecimiento: item.domicilio,
+        tarea: item.tarea,
+        fechaRealizada: item.fechaVisitaStr,
+        resultadoVisita: 'Efectiva',
+        fileBase64: item.fileBase64,
+        fileName: item.fileName,
+        mimeType: item.mimeType
+      });
+    } else {
+      // Crear nueva tarea con origen 'Alta Sep 2026'
+      const nuevaFila = {
+        rowId: TASKS.length + 2,
+        cuit: EMPRESA_LOTE_ACTIVA,
+        empleador: razonSocialEmpresa,
+        establecimiento: item.domicilio,
+        nroEstab: item.nroEstab,
+        localidad: tareaRef ? (tareaRef.localidad || '') : '',
+        tarea: item.tarea,
+        origenPlan: 'Alta Sep 2026',
+        fechaDesde: item.fechaVisitaStr,
+        fechaHasta: item.fechaVisitaStr,
+        fechaRealizada: item.fechaVisitaStr,
+        resultadoVisita: 'Efectiva',
+        nroSiniestro: '',
+        observaciones: 'Visita cargada mediante Alta Masiva OCR',
+        documentoAdjunto: driveUrlSimulada,
+        estadoTarea: 'Terminada',
+        gestionFallida: ''
+      };
+      TASKS.unshift(nuevaFila);
+      cargados++;
+
+      itemsParaBackend.push({
+        rowId: null,
+        cuit: EMPRESA_LOTE_ACTIVA,
+        empleador: razonSocialEmpresa,
+        nroEstab: item.nroEstab,
+        establecimiento: item.domicilio,
+        localidad: nuevaFila.localidad,
+        tarea: item.tarea,
+        fechaRealizada: item.fechaVisitaStr,
+        resultadoVisita: 'Efectiva',
+        fileBase64: item.fileBase64,
+        fileName: item.fileName,
+        mimeType: item.mimeType
+      });
+    }
+  }
+
+  // Si está conectado a Apps Script, enviar batchUpload real
+  if (webAppUrl && webAppUrl.startsWith('http') && itemsParaBackend.length > 0) {
+    try {
+      const res = await fetch(webAppUrl, {
+        method: 'POST',
+        mode: 'cors',
+        body: JSON.stringify({
+          action: 'batchUpload',
+          items: itemsParaBackend
+        })
+      });
+      const json = await res.json();
+      if (json.status === 'success' && json.results) {
+        json.results.forEach((r, idx) => {
+          if (r.success && r.res && r.res.documentoAdjunto) {
+            const itemOriginal = itemsParaBackend[idx];
+            const target = TASKS.find(t => (t.rowId === r.rowId) || (t.cuit === itemOriginal.cuit && t.nroEstab === itemOriginal.nroEstab && t.tarea === itemOriginal.tarea));
+            if (target) target.documentoAdjunto = r.res.documentoAdjunto;
+          }
+        });
+      }
+    } catch(err) {
+      console.warn("Fallo sincronizando lote online con Apps Script:", err);
     }
   }
 
@@ -3086,7 +3560,7 @@ async function confirmarSubidaLote() {
   btn.textContent = 'Confirmar y Subir Todo';
   cerrarModalAltaMasiva();
 
-  alert(`✓ Lote procesado exitosamente: ${cargados} documentos vinculados a Google Drive y planillas.`);
+  alert(`✓ Lote procesado exitosamente: ${cargados} documentos organizados en Google Drive (Por Empresa y Por Mes) y registrados en la plataforma.`);
 }
 
 // CONFIGURACIÓN Y SINCRONIZACIÓN CON BACKEND

@@ -242,11 +242,12 @@ function procesarGuardarVisita(sheet, colMap, payload) {
   var observaciones = payload.observaciones || "";
   var archivoSubidoUrl = payload.documentoAdjuntoUrl || "";
 
-  // 1. Si viene un archivo en Base64, guardarlo en Google Drive organizado por Mes
+  // 1. Si viene un archivo en Base64, guardarlo en Google Drive (Doble guardado: Por Empresa y Por Mes)
   if (payload.fileBase64 && payload.fileName) {
-    var cuit = (colMap["Cuit"] ? sheet.getRange(rowId, colMap["Cuit"]).getValue() : "00000000000").toString().trim();
-    var estab = (colMap["Nro Estab IAPART"] ? sheet.getRange(rowId, colMap["Nro Estab IAPART"]).getValue() : "1").toString().trim();
-    var tarea = (colMap["Tarea"] ? sheet.getRange(rowId, colMap["Tarea"]).getValue() : "Visita").toString().trim();
+    var cuit = (payload.cuit || (colMap["Cuit"] ? sheet.getRange(rowId, colMap["Cuit"]).getValue() : "00000000000")).toString().trim();
+    var estab = (payload.nroEstab || (colMap["Nro Estab IAPART"] ? sheet.getRange(rowId, colMap["Nro Estab IAPART"]).getValue() : "1")).toString().trim();
+    var tarea = (payload.tarea || (colMap["Tarea"] ? sheet.getRange(rowId, colMap["Tarea"]).getValue() : "Visita")).toString().trim();
+    var emp = (payload.empleador || (colMap["Empleador"] ? sheet.getRange(rowId, colMap["Empleador"]).getValue() : "")).toString().trim();
     
     archivoSubidoUrl = guardarArchivoEnDrive(
       payload.fileBase64,
@@ -255,7 +256,8 @@ function procesarGuardarVisita(sheet, colMap, payload) {
       cuit,
       estab,
       tarea,
-      fechaRealizada
+      fechaRealizada,
+      emp
     );
   }
 
@@ -351,12 +353,48 @@ function procesarGestionFallida(sheet, colMap, payload) {
 function procesarCargaLote(sheet, colMap, payload) {
   var items = payload.items || [];
   var results = [];
+  var lastRow = sheet.getLastRow();
 
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
     try {
-      var res = procesarGuardarVisita(sheet, colMap, item);
-      results.push({ itemIndex: i, success: true, res: res });
+      var rowId = parseInt(item.rowId, 10);
+      
+      // Si no viene rowId específico, buscar fila por Cuit + NroEstab + Tarea
+      if (!rowId || rowId < 2) {
+        var cuitBuscado = (item.cuit || "").toString().replace(/\D/g, "");
+        var estabBuscado = (item.nroEstab || "1").toString().trim();
+        var tareaBuscada = (item.tarea || "Visita tecnica").toString().trim();
+
+        if (cuitBuscado && colMap["Cuit"] && colMap["Nro Estab IAPART"]) {
+          var dataCuit = sheet.getRange(2, colMap["Cuit"], Math.max(1, lastRow - 1), 1).getValues();
+          var dataEstab = sheet.getRange(2, colMap["Nro Estab IAPART"], Math.max(1, lastRow - 1), 1).getValues();
+          var dataTarea = colMap["Tarea"] ? sheet.getRange(2, colMap["Tarea"], Math.max(1, lastRow - 1), 1).getValues() : null;
+
+          for (var r = 0; r < dataCuit.length; r++) {
+            var cVal = (dataCuit[r][0] || "").toString().replace(/\D/g, "");
+            var eVal = (dataEstab[r][0] || "").toString().trim();
+            var tVal = dataTarea ? (dataTarea[r][0] || "").toString().trim() : "";
+
+            if (cVal === cuitBuscado && eVal === estabBuscado && (!tVal || tVal.toLowerCase() === tareaBuscada.toLowerCase())) {
+              rowId = r + 2;
+              break;
+            }
+          }
+        }
+      }
+
+      if (rowId && rowId >= 2) {
+        item.rowId = rowId;
+        var res = procesarGuardarVisita(sheet, colMap, item);
+        results.push({ itemIndex: i, success: true, rowId: rowId, res: res });
+      } else {
+        // Si no existe fila previa, crear la nueva tarea y registrar la visita
+        var newTRes = procesarCrearTarea(sheet, colMap, item);
+        item.rowId = newTRes.newRowId;
+        var resSave = procesarGuardarVisita(sheet, colMap, item);
+        results.push({ itemIndex: i, success: true, rowId: newTRes.newRowId, res: resSave });
+      }
     } catch (e) {
       results.push({ itemIndex: i, success: false, error: e.toString() });
     }
@@ -401,10 +439,12 @@ function procesarCrearTarea(sheet, colMap, payload) {
 }
 
 /**
- * Guarda el archivo en Google Drive dentro de una carpeta del mes correspondiente (YYYY-MM),
+ * Guarda el archivo en Google Drive en DOBLE ESTRUCTURA:
+ * 1. Por Empresa: IAPSER_Visitas_Por_Empresa / {CUIT - RazonSocial} / Estab_{NroEstab} /
+ * 2. Por Mes: IAPSER_Visitas_Por_Mes / IAPSER_Visitas_YYYY-MM /
  * con la nomenclatura estandarizada: CUIT_Estab_Tarea_YYYYMMDD.ext
  */
-function guardarArchivoEnDrive(base64Data, originalFileName, mimeType, cuit, nroEstab, tarea, fechaRealizadaStr) {
+function guardarArchivoEnDrive(base64Data, originalFileName, mimeType, cuit, nroEstab, tarea, fechaRealizadaStr, empleador) {
   var cleanBase64 = base64Data;
   if (cleanBase64.indexOf("base64,") !== -1) {
     cleanBase64 = cleanBase64.split("base64,")[1];
@@ -421,50 +461,64 @@ function guardarArchivoEnDrive(base64Data, originalFileName, mimeType, cuit, nro
   var fechaYMD = yyyy + mm + dd;
   var anioMes = yyyy + "-" + mm;
 
-  // Normalizar nombre de tarea para nombre de archivo seguro
-  var tareaNorm = tarea.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 20);
-  var cuitNorm = cuit.replace(/\D/g, "");
-  var estabNorm = nroEstab.toString().replace(/\D/g, "") || "1";
+  // Normalizar nombres
+  var tareaNorm = (tarea || "Visita").replace(/[^a-zA-Z0-9]/g, "_").slice(0, 20);
+  var cuitNorm = (cuit || "00000000000").toString().replace(/\D/g, "");
+  var estabNorm = (nroEstab || "1").toString().replace(/\D/g, "") || "1";
+  var empNorm = (empleador || "").toString().replace(/[/\\:*?"<>|]/g, " ").slice(0, 30).trim();
 
   var standardFileName = cuitNorm + "_" + estabNorm + "_" + tareaNorm + "_" + fechaYMD + "." + ext;
 
-  var subCarpeta = obtenerOCrearCarpetaMes(anioMes);
   var decodedBytes = Utilities.base64Decode(cleanBase64);
   var blob = Utilities.newBlob(decodedBytes, mimeType, standardFileName);
-  var file = subCarpeta.createFile(blob);
 
-  // Asegurar acceso de lectura con enlace
+  var raiz = obtenerCarpetaRaizDrive();
+
+  // 1. Estructura Por Empresa: IAPSER_Visitas_Por_Empresa / {CUIT - RazonSocial} / Estab_{N}
+  var carpPorEmpresa = obtenerOCrearSubcarpeta(raiz, "IAPSER_Visitas_Por_Empresa");
+  var nombreEmpCarpeta = cuitNorm + (empNorm ? " - " + empNorm : "");
+  var carpEmpresa = obtenerOCrearSubcarpeta(carpPorEmpresa, nombreEmpCarpeta);
+  var carpEstab = obtenerOCrearSubcarpeta(carpEmpresa, "Estab_" + estabNorm);
+  var file = carpEstab.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  // 2. Estructura Por Mes: IAPSER_Visitas_Por_Mes / IAPSER_Visitas_YYYY-MM
+  var carpPorMes = obtenerOCrearSubcarpeta(raiz, "IAPSER_Visitas_Por_Mes");
+  var carpMes = obtenerOCrearSubcarpeta(carpPorMes, CONFIG.PREFIJO_SUB_CARPETAS_MES + anioMes);
+  try {
+    carpMes.addFile(file);
+  } catch(e) {
+    Logger.log("Nota en addFile a carpeta mensual: " + e.toString());
+  }
 
   return file.getUrl();
 }
 
 /**
- * Localiza o crea la subcarpeta mensual en Google Drive
+ * Obtiene o crea la carpeta raíz principal en Google Drive
  */
-function obtenerOCrearCarpetaMes(anioMes) {
-  var parentFolder;
+function obtenerCarpetaRaizDrive() {
   if (CONFIG.CARPETA_DRIVE_PRINCIPAL_ID) {
-    parentFolder = DriveApp.getFolderById(CONFIG.CARPETA_DRIVE_PRINCIPAL_ID);
-  } else {
-    var folders = DriveApp.getFoldersByName("IAPSER_Gestion_Visitas");
-    if (folders.hasNext()) {
-      parentFolder = folders.next();
-    } else {
-      parentFolder = DriveApp.createFolder("IAPSER_Gestion_Visitas");
-      parentFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    }
+    return DriveApp.getFolderById(CONFIG.CARPETA_DRIVE_PRINCIPAL_ID);
   }
+  var folders = DriveApp.getFoldersByName("IAPSER_Gestion_Visitas");
+  if (folders.hasNext()) {
+    return folders.next();
+  }
+  var f = DriveApp.createFolder("IAPSER_Gestion_Visitas");
+  f.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return f;
+}
 
-  var targetFolderName = CONFIG.PREFIJO_SUB_CARPETAS_MES + anioMes;
-  var subFolders = parentFolder.getFoldersByName(targetFolderName);
-  if (subFolders.hasNext()) {
-    return subFolders.next();
-  } else {
-    var newSub = parentFolder.createFolder(targetFolderName);
-    newSub.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    return newSub;
-  }
+/**
+ * Obtiene o crea una subcarpeta dentro de un folder padre
+ */
+function obtenerOCrearSubcarpeta(parent, nombre) {
+  var it = parent.getFoldersByName(nombre);
+  if (it.hasNext()) return it.next();
+  var sub = parent.createFolder(nombre);
+  sub.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return sub;
 }
 
 /**
