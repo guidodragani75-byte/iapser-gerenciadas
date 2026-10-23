@@ -762,7 +762,10 @@
                 <option value="Visita Agro">Visita Agro</option>
                 <option value="Verosimilitud">Verosimilitud</option>
                 <option value="Visita inicial">Visita inicial</option>
+                <option value="Seguimiento Verosimilitud">Seguimiento Verosimilitud</option>
                 <option value="Pese">Pese</option>
+                <option value="RGRL/ Verosimilitud">RGRL/ Verosimilitud</option>
+                <option value="Siniestro">Siniestro</option>
               </select>
             </label>
             <label style="font-size:12px; color:#5B6670; min-width:160px;">
@@ -1344,6 +1347,8 @@
               <option value="Visita inicial">Visita inicial</option>
               <option value="Seguimiento Verosimilitud">Seguimiento Verosimilitud</option>
               <option value="Pese">Pese</option>
+              <option value="RGRL/ Verosimilitud">RGRL/ Verosimilitud</option>
+              <option value="Siniestro">Siniestro</option>
             </select>
           </div>
         </div>
@@ -2475,7 +2480,7 @@ function seleccionarTarea(tarea) {
     (tarea.estadoTarea || '').includes('Próxima') ? 'badge-warn' : 'badge-neutral'
   );
 
-  const esAT_EP = (tarea.tarea || '').includes('AT') || (tarea.tarea || '').includes('EP');
+  const esAT_EP = (tarea.tarea || '').includes('AT') || (tarea.tarea || '').includes('EP') || (tarea.tarea || '').toLowerCase().includes('siniestro');
   document.getElementById('boxNroSiniestro').style.display = esAT_EP ? 'block' : 'none';
   document.getElementById('txtNroSiniestro').required = esAT_EP;
   document.getElementById('txtNroSiniestro').value = tarea.nroSiniestro || '';
@@ -2647,10 +2652,10 @@ async function guardarVisitaActual(e) {
     TAREA_SELECCIONADA.fechaHasta = `${pH[2]}/${pH[1]}/${pH[0]}`;
   }
 
-  const esAT_EP = (TAREA_SELECCIONADA.tarea || '').includes('AT') || (TAREA_SELECCIONADA.tarea || '').includes('EP');
+  const esAT_EP = (TAREA_SELECCIONADA.tarea || '').includes('AT') || (TAREA_SELECCIONADA.tarea || '').includes('EP') || (TAREA_SELECCIONADA.tarea || '').toLowerCase().includes('siniestro');
   const nroSiniestro = document.getElementById('txtNroSiniestro').value.trim();
   if (esAT_EP && !nroSiniestro) {
-    alert("Las tareas de Investigación o Seguimiento AT/EP requieren obligatoriamente el N° de Siniestro.");
+    alert("Las tareas de Investigación / Seguimiento AT/EP y Siniestros requieren obligatoriamente el N° de Siniestro.");
     document.getElementById('txtNroSiniestro').focus();
     return;
   }
@@ -2803,9 +2808,9 @@ function cerrarModalNuevaTarea() {
 }
 
 function verificarTipoTareaNueva(tipo) {
-  const esAT_EP = tipo.includes('AT') || tipo.includes('EP');
-  document.getElementById('newTareaBoxSiniestro').style.display = esAT_EP ? 'block' : 'none';
-  document.getElementById('newTareaNroSiniestro').required = esAT_EP;
+  const esAT_EP_Sin = tipo.includes('AT') || tipo.includes('EP') || tipo.toLowerCase().includes('siniestro');
+  document.getElementById('newTareaBoxSiniestro').style.display = esAT_EP_Sin ? 'block' : 'none';
+  document.getElementById('newTareaNroSiniestro').required = esAT_EP_Sin;
 }
 
 async function guardarNuevaTarea(e) {

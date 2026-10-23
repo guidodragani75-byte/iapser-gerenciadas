@@ -40,6 +40,23 @@ var CONFIG = {
   ]
 };
 
+// LISTA DE TAREAS AUTORIZADAS EN EL MÓDULO (VALIDACIÓN COLUMNA X)
+var LISTA_TAREAS_VALIDAS = [
+  "Visita tecnica",
+  "Investigacion AT",
+  "Investigacion EP",
+  "Seguimiento AT",
+  "Seguimiento EP",
+  "Visita obra",
+  "Visita Agro",
+  "Verosimilitud",
+  "Visita inicial",
+  "Seguimiento Verosimilitud",
+  "Pese",
+  "RGRL/ Verosimilitud",
+  "Siniestro"
+];
+
 /**
  * Agrega automáticamente las columnas nuevas a la planilla sin afectar datos previos
  * y precarga las fechas para las 736 visitas técnicas y la marca "Residual 2026"
@@ -97,6 +114,19 @@ function inicializarColumnas() {
         }
       }
     }
+  }
+  
+  // 3. Aplicar Validación de Datos estricta a la Columna X (Tarea) para que solo permita tareas autorizadas
+  if (colMap["Tarea"]) {
+    var maxFilas = Math.max(1000, lastRow);
+    var rangoTarea = sheet.getRange(2, colMap["Tarea"], maxFilas - 1, 1);
+    var reglaValidacion = SpreadsheetApp.newDataValidation()
+      .requireValueInList(LISTA_TAREAS_VALIDAS, true)
+      .setAllowInvalid(false)
+      .setHelpText("Solo se permiten tareas autorizadas en el módulo: " + LISTA_TAREAS_VALIDAS.join(", "))
+      .build();
+    rangoTarea.setDataValidation(reglaValidacion);
+    Logger.log("Validación de datos agregada a la columna Tarea.");
   }
   
   Logger.log("Columnas agregadas: " + (agregadas.length > 0 ? agregadas.join(", ") : "Ninguna, ya estaban creadas."));
@@ -342,11 +372,16 @@ function procesarCrearTarea(sheet, colMap, payload) {
   var lastCol = sheet.getLastColumn();
   var newRow = new Array(lastCol).fill("");
 
+  var tareaSeleccionada = payload.tarea || "Visita tecnica";
+  if (LISTA_TAREAS_VALIDAS.indexOf(tareaSeleccionada) === -1) {
+    throw new Error("Tarea no válida: '" + tareaSeleccionada + "'. Solo se permiten las tareas autorizadas del módulo: " + LISTA_TAREAS_VALIDAS.join(", "));
+  }
+
   if (colMap["Cuit"]) newRow[colMap["Cuit"] - 1] = payload.cuit || "";
   if (colMap["Empleador"]) newRow[colMap["Empleador"] - 1] = payload.empleador || "";
   if (colMap["Establecimiento"]) newRow[colMap["Establecimiento"] - 1] = payload.establecimiento || "";
   if (colMap["Localidad"]) newRow[colMap["Localidad"] - 1] = payload.localidad || "";
-  if (colMap["Tarea"]) newRow[colMap["Tarea"] - 1] = payload.tarea || "Visita tecnica";
+  if (colMap["Tarea"]) newRow[colMap["Tarea"] - 1] = tareaSeleccionada;
   if (colMap["Nro Estab IAPART"]) newRow[colMap["Nro Estab IAPART"] - 1] = payload.nroEstab || "1";
   if (colMap["Origen Plan"]) newRow[colMap["Origen Plan"] - 1] = payload.origenPlan || "Alta Sep 2026";
   if (colMap["Fecha Desde"]) newRow[colMap["Fecha Desde"] - 1] = payload.fechaDesde || "";
