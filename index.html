@@ -589,16 +589,6 @@
         <span style="font-size: 10px; font-weight: bold; background: #0F4C5C; color:#fff; padding: 2px 6px; border-radius:2px;">SEP=M0</span>
       </button>
 
-      <button type="button" class="nav" id="btnNavProximas" onclick="setMainView('sedes'); setNavTab('proximas');">
-        <span>Próximas y Vencidas</span>
-        <span class="nav-badge alert" id="badgeNavProximas">0</span>
-      </button>
-
-      <button type="button" class="nav" id="btnNavFallidas" onclick="setMainView('sedes'); setNavTab('fallidas');">
-        <span>Fallidas a evaluar</span>
-        <span class="nav-badge" id="badgeNavFallidas">0</span>
-      </button>
-
       <button type="button" class="nav" id="btnNavMasiva" onclick="abrirModalAltaMasiva()">
         <span>Alta masiva (OCR)</span>
         <span style="font-size: 10px; font-weight: bold; background: #2E3A46; color:#D9DEE2; padding: 2px 5px; border-radius:2px;">LOTE</span>
@@ -613,9 +603,6 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
         <span>+ Alta en Sheets ↗</span>
       </a>
-      <button type="button" class="nav" onclick="abrirModalNuevaTarea()">
-        <span>+ Nueva Tarea (App)</span>
-      </button>
       <button type="button" class="nav" onclick="abrirModalConfig()">
         <span>Configurar Sheets & Drive</span>
       </button>
@@ -628,22 +615,9 @@
     <header class="top-header">
       <div style="flex:1; min-width:280px;">
         <h1 class="header-title" id="pageTitle" style="display:flex; align-items:center; gap:10px; margin:0;">
-          Plan y Avance Anual HyS
+          Gerenciamiento - Actividades ART
           <span class="badge" style="background:#FEF6EC; color:#B35806; border:1px solid #FADCB6; font-size:12px; font-weight:600;">Ciclo Sep 2026 – Ago 2027</span>
         </h1>
-        <div style="font-size:12px; color:#5B6670; margin-top:2px;">
-          Monitoreo Contractual Prestador (100 visitas/mes mínimas) y Stock Residual 2026 (925 visitas)
-        </div>
-      </div>
-
-      <!-- CONMUTADOR RÁPIDO DE VISTAS EN CABECERA -->
-      <div style="display:inline-flex; background:#E5E8E4; padding:3px; border-radius:3px; gap:4px; margin-right:8px;">
-        <button type="button" class="chip on" id="btnHeaderSedes" onclick="setMainView('sedes')" style="min-height:32px; font-size:12px; padding:2px 12px; font-weight:600;" title="Ver tabla de tareas">
-          📋 Tareas (Tabla)
-        </button>
-        <button type="button" class="chip" id="btnHeaderKpis" onclick="setMainView('kpis')" style="min-height:32px; font-size:12px; padding:2px 12px; font-weight:600;" title="Ver métricas y KPIs">
-          📊 Plan & KPIs
-        </button>
       </div>
 
       <div class="header-info">
@@ -660,11 +634,6 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
         + Alta en Sheets ↗
       </a>
-
-      <button type="button" class="btn btn-secondary" onclick="abrirModalNuevaTarea()" style="min-height:38px; font-weight:600; display:inline-flex; align-items:center; gap:6px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
-        Nueva Tarea
-      </button>
 
       <button type="button" class="btn btn-primary" onclick="abrirModalAltaMasiva()" style="min-height:38px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -976,10 +945,10 @@
         <!-- FILA 1: DATOS FUERTES EN ETIQUETAS (STAT CARDS EJECUTIVAS) -->
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:24px;">
           
-          <!-- Stat 1: Control Prestador - Meta Anual 1.200 -->
+          <!-- Stat 1: Plan Anual de Visitas (1.200 contratadas) -->
           <div class="stat-card">
             <div class="stat-header">
-              <span class="stat-title">Stock Visitas Contratadas</span>
+              <span class="stat-title">Plan Anual de Visitas</span>
               <span class="badge" style="background:#E3EDEF; color:#0F4C5C; border:1px solid #C4DDE2; font-size:11px; font-weight:600;">Sep 26 – Ago 27</span>
             </div>
             <div class="stat-number">
@@ -988,10 +957,10 @@
             </div>
             <div class="stat-callout ok" id="calloutCumplimientoTotal">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              Consumido: <span id="kpiDashPctTotal">0.0%</span>
+              Avance del Plan: <span id="kpiDashPctTotal">0.0%</span>
             </div>
             <div class="stat-meta">
-              Residual contratado: <strong id="kpiDashResidualProv">1.200 visitas</strong> (100 efectivas/mes)
+              Meta contractual: <strong>100 efectivas/mes</strong> · Restantes: <strong id="kpiDashResidualProv">1.200 visitas</strong>
             </div>
           </div>
 
@@ -1036,11 +1005,11 @@
             </div>
           </div>
 
-          <!-- Stat 3: Stock Plan Residual 2026 (Tabla Base) -->
+          <!-- Stat 3: Stock Residual 2026 (Tabla Base) -->
           <div class="stat-card">
             <div class="stat-header">
-              <span class="stat-title">Stock Plan Residual 2026</span>
-              <span class="badge" style="background:#ECEEEA; color:#5B6670; border:1px solid #D5D8D3; font-size:11px; font-weight:600;">925 Base</span>
+              <span class="stat-title">Stock Residual 2026</span>
+              <span class="badge" style="background:#ECEEEA; color:#5B6670; border:1px solid #D5D8D3; font-size:11px; font-weight:600;">925 Inicial</span>
             </div>
             <div class="stat-number">
               <span id="kpiDashRealizadasResid">0</span>
@@ -1532,26 +1501,24 @@ function setMainView(view) {
   const btnNavTodas = document.getElementById('btnNavTodas');
   const btnNavKpis = document.getElementById('btnNavKpis');
   const pageTitle = document.getElementById('pageTitle');
-  const btnHeaderSedes = document.getElementById('btnHeaderSedes');
-  const btnHeaderKpis = document.getElementById('btnHeaderKpis');
 
   if (view === 'sedes') {
-    viewSedesEl.style.display = 'flex';
-    viewKpisEl.style.display = 'none';
-    btnNavTodas.classList.add('on');
-    btnNavKpis.classList.remove('on');
-    if (btnHeaderSedes) btnHeaderSedes.classList.add('on');
-    if (btnHeaderKpis) btnHeaderKpis.classList.remove('on');
-    pageTitle.innerHTML = 'Plan y Avance Anual HyS <span class="badge" style="background:#FEF6EC; color:#B35806; border:1px solid #FADCB6; font-size:12px; font-weight:600;">Ciclo Sep 2026 – Ago 2027</span>';
+    if (viewSedesEl) viewSedesEl.style.display = 'flex';
+    if (viewKpisEl) viewKpisEl.style.display = 'none';
+    if (btnNavTodas) btnNavTodas.classList.add('on');
+    if (btnNavKpis) btnNavKpis.classList.remove('on');
+    if (pageTitle) {
+      pageTitle.innerHTML = 'Gerenciamiento - Actividades ART <span class="badge" style="background:#FEF6EC; color:#B35806; border:1px solid #FADCB6; font-size:12px; font-weight:600;">Ciclo Sep 2026 – Ago 2027 · Sedes y Visitas</span>';
+    }
     filtrarYRenderizar();
   } else if (view === 'kpis') {
-    viewSedesEl.style.display = 'none';
-    viewKpisEl.style.display = 'flex';
-    btnNavTodas.classList.remove('on');
-    btnNavKpis.classList.add('on');
-    if (btnHeaderSedes) btnHeaderSedes.classList.remove('on');
-    if (btnHeaderKpis) btnHeaderKpis.classList.add('on');
-    pageTitle.innerHTML = 'Plan y Métricas · Tablero Ejecutivo <span class="badge" style="background:#E3EDEF; color:#0F4C5C; border:1px solid #C4DDE2; font-size:12px; font-weight:600;">Sep 2026 = Mes 0</span>';
+    if (viewSedesEl) viewSedesEl.style.display = 'none';
+    if (viewKpisEl) viewKpisEl.style.display = 'flex';
+    if (btnNavTodas) btnNavTodas.classList.remove('on');
+    if (btnNavKpis) btnNavKpis.classList.add('on');
+    if (pageTitle) {
+      pageTitle.innerHTML = 'Gerenciamiento - Actividades ART <span class="badge" style="background:#E3EDEF; color:#0F4C5C; border:1px solid #C4DDE2; font-size:12px; font-weight:600;">Ciclo Sep 2026 – Ago 2027 · Plan & KPIs</span>';
+    }
     renderizarTableroKPIs();
   }
 }
@@ -1831,16 +1798,16 @@ function renderizarTableroKPIs() {
   if (document.getElementById('kpiDashTasaEfSmall')) document.getElementById('kpiDashTasaEfSmall').textContent = tasaEfectividad + '%';
   if (document.getElementById('lblTotalEfectivasBox')) document.getElementById('lblTotalEfectivasBox').textContent = totalEfectivasCiclo;
 
-  document.getElementById('kpiDashVencidasStock').textContent = totalVencidasStock;
-  document.getElementById('kpiDashPctVencidas').textContent = ((totalVencidasStock / TASKS.length) * 100).toFixed(1) + '%';
-  document.getElementById('kpiDashProximasSemana').textContent = totalProximas;
+  if (document.getElementById('kpiDashVencidasStock')) document.getElementById('kpiDashVencidasStock').textContent = totalVencidasStock;
+  if (document.getElementById('kpiDashPctVencidas')) document.getElementById('kpiDashPctVencidas').textContent = ((totalVencidasStock / TASKS.length) * 100).toFixed(1) + '%';
+  if (document.getElementById('kpiDashProximasSemana')) document.getElementById('kpiDashProximasSemana').textContent = totalProximas;
 
-  document.getElementById('lblTotalEfectivasBox').textContent = totalEfectivasYTD;
-  document.getElementById('badgeStockVencidas').textContent = `${totalVencidasStock} acumuladas`;
-  document.getElementById('lblTotEfPie').textContent = `${totalEfectivasYTD} (${tasaEfectividad}%)`;
-  document.getElementById('lblTotFaPie').textContent = `${totalFallidasYTD} (${(100 - parseFloat(tasaEfectividad)).toFixed(1)}%)`;
-  document.getElementById('lblTotFaGest').textContent = fallidasGestionadas;
-  document.getElementById('lblTotFaPend').textContent = fallidasPendientes;
+  if (document.getElementById('lblTotalEfectivasBox')) document.getElementById('lblTotalEfectivasBox').textContent = totalEfectivasYTD;
+  if (document.getElementById('badgeStockVencidas')) document.getElementById('badgeStockVencidas').textContent = `${totalVencidasStock} acumuladas`;
+  if (document.getElementById('lblTotEfPie')) document.getElementById('lblTotEfPie').textContent = `${totalEfectivasYTD} (${tasaEfectividad}%)`;
+  if (document.getElementById('lblTotFaPie')) document.getElementById('lblTotFaPie').textContent = `${totalFallidasYTD} (${(100 - parseFloat(tasaEfectividad)).toFixed(1)}%)`;
+  if (document.getElementById('lblTotFaGest')) document.getElementById('lblTotFaGest').textContent = fallidasGestionadas;
+  if (document.getElementById('lblTotFaPend')) document.getElementById('lblTotFaPend').textContent = fallidasPendientes;
 
   let mejorMesNombre = 'Sin visitas registradas aún';
   let mejorMesVal = -1;
@@ -2375,19 +2342,25 @@ function setNavTab(tab) {
   NAV_TAB_ACTIVA = tab;
   PAGINA_ACTUAL = 1;
 
-  document.getElementById('btnNavTodas').classList.toggle('on', tab === 'todas');
-  document.getElementById('btnNavProximas').classList.toggle('on', tab === 'proximas');
-  document.getElementById('btnNavFallidas').classList.toggle('on', tab === 'fallidas');
+  const btnTodas = document.getElementById('btnNavTodas');
+  const btnProx = document.getElementById('btnNavProximas');
+  const btnFall = document.getElementById('btnNavFallidas');
+  if (btnTodas) btnTodas.classList.toggle('on', tab === 'todas');
+  if (btnProx) btnProx.classList.toggle('on', tab === 'proximas');
+  if (btnFall) btnFall.classList.toggle('on', tab === 'fallidas');
 
-  if (tab === 'todas') {
-    document.getElementById('pageTitle').textContent = 'Sedes · Visitas y Tareas';
-    FILTRO_ESTADO = 'todos';
-  } else if (tab === 'proximas') {
-    document.getElementById('pageTitle').textContent = 'Control de Vencimientos · Próximas y Vencidas';
-    FILTRO_ESTADO = 'todos';
-  } else if (tab === 'fallidas') {
-    document.getElementById('pageTitle').textContent = 'Bandeja de Gestión · Visitas Fallidas';
-    FILTRO_ESTADO = 'fallidas';
+  const pageTitle = document.getElementById('pageTitle');
+  if (pageTitle) {
+    if (tab === 'todas') {
+      pageTitle.innerHTML = 'Gerenciamiento - Actividades ART <span class="badge" style="background:#FEF6EC; color:#B35806; border:1px solid #FADCB6; font-size:12px; font-weight:600;">Ciclo Sep 2026 – Ago 2027 · Sedes y Visitas</span>';
+      FILTRO_ESTADO = 'todos';
+    } else if (tab === 'proximas') {
+      pageTitle.innerHTML = 'Gerenciamiento - Actividades ART <span class="badge" style="background:#FEF6EC; color:#B35806; border:1px solid #FADCB6; font-size:12px; font-weight:600;">Control de Vencimientos</span>';
+      FILTRO_ESTADO = 'todos';
+    } else if (tab === 'fallidas') {
+      pageTitle.innerHTML = 'Gerenciamiento - Actividades ART <span class="badge" style="background:#FEF6EC; color:#B35806; border:1px solid #FADCB6; font-size:12px; font-weight:600;">Bandeja Visitas Fallidas</span>';
+      FILTRO_ESTADO = 'fallidas';
+    }
   }
 
   actualizarBotonesChips();
