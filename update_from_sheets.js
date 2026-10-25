@@ -1,9 +1,11 @@
 /**
  * Script de sincronización directa desde Google Sheets
  * Descarga las filas en vivo de la planilla compartida y regenera datos_precargados.js
+ * Incluye extracción automática de hipervínculos reales a Google Drive
  */
 const fs = require('fs');
 const https = require('https');
+const { execSync } = require('child_process');
 
 const SHEET_ID = '1xXEmPqATmcMR0JpO2IuTmf1YZ6fMRxyeAc9avbfDRqI';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
@@ -59,12 +61,58 @@ function normalizarFecha(str) {
   return `${d}/${mes}/${y}`;
 }
 
+function obtenerEnlacesDriveDesdeXLSX(sheetId) {
+  try {
+    const xlsxUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx`;
+    execSync(`powershell -Command "Invoke-WebRequest -Uri '${xlsxUrl}' -OutFile '_tmp_sheet.zip'; Expand-Archive -Path '_tmp_sheet.zip' -DestinationPath '_tmp_extracted' -Force"`, { stdio: 'ignore' });
+    
+    const relsPath = '_tmp_extracted/xl/worksheets/_rels/sheet1.xml.rels';
+    const sheetPath = '_tmp_extracted/xl/worksheets/sheet1.xml';
+    const rowLinks = {};
+
+    if (fs.existsSync(relsPath) && fs.existsSync(sheetPath)) {
+      const relsXml = fs.readFileSync(relsPath, 'utf8');
+      const relMap = {};
+      const relRegex = /<Relationship\s+[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"/g;
+      let rm;
+      while ((rm = relRegex.exec(relsXml)) !== null) {
+        relMap[rm[1]] = rm[2];
+      }
+
+      const sheetXml = fs.readFileSync(sheetPath, 'utf8');
+      const hlRegex = /<hyperlink\b([^>]+)\/?>/g;
+      let hm;
+      while ((hm = hlRegex.exec(sheetXml)) !== null) {
+        const attrs = hm[1];
+        const idMatch = attrs.match(/r:id="([^"]+)"/);
+        const refMatch = attrs.match(/ref="([^"]+)"/);
+        if (idMatch && refMatch) {
+          const rId = idMatch[1];
+          const cellRef = refMatch[1];
+          const rowNum = parseInt(cellRef.replace(/\D/g, ''), 10);
+          rowLinks[rowNum] = relMap[rId] || '';
+        }
+      }
+    }
+
+    execSync(`powershell -Command "Remove-Item -Force '_tmp_sheet.zip' -ErrorAction SilentlyContinue; Remove-Item -Recurse -Force '_tmp_extracted' -ErrorAction SilentlyContinue"`, { stdio: 'ignore' });
+    return rowLinks;
+  } catch(e) {
+    console.warn("Extracción de hipervínculos omitida:", e.message);
+    return {};
+  }
+}
+
 async function run() {
   console.log('Conectando a Google Sheets...');
   const csv = await fetchUrl(CSV_URL);
   const rows = parseCSV(csv);
   const headers = rows[0];
   console.log(`Descargadas ${rows.length - 1} filas.`);
+
+  console.log('Extrayendo enlaces de Google Drive...');
+  const driveLinks = obtenerEnlacesDriveDesdeXLSX(SHEET_ID);
+  console.log(`Detectados ${Object.keys(driveLinks).length} enlaces reales a Drive.`);
 
   const colIdx = {};
   headers.forEach((h, i) => {
@@ -74,11 +122,11 @@ async function run() {
   const tasks = [];
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
+    const rowId = r + 1;
     const cuit = row[colIdx['Cuit']] || '';
     const empleador = row[colIdx['Empleador']] || '';
     if (!cuit && !empleador) continue;
 
-    // Columna F: Fecha Realizada. Si viene vacía y tiene algo en Fecha Visita (Col E), usar esa.
     let rawFechaReal = row[colIdx['Fecha Realizada']] || '';
     if (!rawFechaReal && row[colIdx['Fecha Visita']]) {
       rawFechaReal = row[colIdx['Fecha Visita']];
@@ -101,7 +149,12 @@ async function run() {
       resultadoVisita = 'Efectiva';
     }
 
-    const documentoAdjunto = row[colIdx['Documento Adjunto']] || '';
+    // Priorizar el enlace real de Google Drive extraído del hipervínculo
+    let documentoAdjunto = driveLinks[rowId] || row[colIdx['Documento Adjunto']] || '';
+    if (documentoAdjunto === 'Ver Archivo' && driveLinks[rowId]) {
+      documentoAdjunto = driveLinks[rowId];
+    }
+
     let estadoTarea = row[colIdx['Estado Tarea']] || '';
     if (!estadoTarea) {
       if (fechaReal && documentoAdjunto) {
@@ -115,14 +168,13 @@ async function run() {
       }
     }
 
-    // Nombre de establecimiento: si está en blanco, asignar "Obra en construcción" o nombre de empleador
     let estabNombre = row[colIdx['Establecimiento']] || '';
     if (!estabNombre) {
       estabNombre = tarea.toLowerCase().includes('obra') ? 'Obra en construcción' : (empleador || 'Sede Principal');
     }
 
     tasks.push({
-      rowId: r + 1,
+      rowId: rowId,
       cuit: cuit,
       empleador: empleador,
       contrato: row[colIdx['Contrato IAPART']] || '',
@@ -145,8 +197,8 @@ async function run() {
     });
   }
 
-  fs.writeFileSync('datos_precargados.js', '// Datos sincronizados en vivo desde Google Sheets\nwindow.DATOS_INICIALES_IAPSER = ' + JSON.stringify(tasks, null, 2) + ';\n');
-  console.log(`¡Éxito! Se actualizaron ${tasks.length} tareas en datos_precargados.js`);
+  fs.writeFileSync('datos_precargados.js', '// Datos sincronizados en vivo desde Google Sheets con enlaces reales de Google Drive\nwindow.DATOS_INICIALES_IAPSER = ' + JSON.stringify(tasks, null, 2) + ';\n');
+  console.log(`¡Éxito! Se actualizaron ${tasks.length} tareas en datos_precargados.js con sus enlaces a Drive.`);
 }
 
 run().catch(err => {
