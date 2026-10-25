@@ -995,7 +995,7 @@
               Avance del Plan: <span id="kpiDashPctTotal">0.0%</span>
             </div>
             <div class="stat-meta">
-              Meta contractual: <strong>100 efectivas/mes</strong> · Restantes: <strong id="kpiDashResidualProv">1.200 visitas</strong>
+              Meta contractual: <strong>100 visitas/mes</strong> · Efectivas: <strong id="kpiDashStatEf" style="color:#0F4C5C;">0</strong> · Fallidas: <strong id="kpiDashStatFa" style="color:#A8470A;">0</strong> · Restantes: <strong id="kpiDashResidualProv">1.200</strong>
             </div>
           </div>
 
@@ -1084,8 +1084,8 @@
         <div class="chart-panel">
           <div class="chart-header">
             <div>
-              <div class="chart-title" id="lblTituloChart1">Visitas Efectivas Realizadas vs Presupuestadas (Meta: 100/mes)</div>
-              <div class="chart-subtitle" id="lblSubtituloChart1">Línea de tiempo del año de proyecto iniciando en Septiembre 2026 (Mes 0)</div>
+              <div class="chart-title" id="lblTituloChart1">Conteo de Visitas Realizadas vs Presupuestadas (Meta: 100/mes)</div>
+              <div class="chart-subtitle" id="lblSubtituloChart1">Barras apiladas de visitas efectivas y fallidas frente al presupuesto mensual (Sep 2026 = M0)</div>
             </div>
             <div style="font-size:12px; color:#5B6670; font-family:'IBM Plex Mono', monospace;">
               Ejecutadas Proyecto: <strong id="lblTotalEfectivasBox" style="color:#0F4C5C;">0</strong> / 1.200 Presupuesto Anual
@@ -1423,8 +1423,8 @@ let chartFallidasDonutInstance = null;
 let modoChartPresupuesto = 'mensual';
 let modoChartFallidas = 'stack';
 
-// Claves LocalStorage (V10: Visitas estrictamente por Columna F, métricas corregidas)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V10';
+// Claves LocalStorage (V11: Barras apiladas de visitas efectivas y fallidas en KPIs)
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V11';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -1947,6 +1947,9 @@ function renderizarTableroKPIs() {
   if (document.getElementById('kpiDashTasaEfSmall')) document.getElementById('kpiDashTasaEfSmall').textContent = tasaEfectividad + '%';
   if (document.getElementById('lblTotalEfectivasBox')) document.getElementById('lblTotalEfectivasBox').textContent = totalRealizadasCiclo;
 
+  if (document.getElementById('kpiDashStatEf')) document.getElementById('kpiDashStatEf').textContent = totalEfectivasCiclo;
+  if (document.getElementById('kpiDashStatFa')) document.getElementById('kpiDashStatFa').textContent = totalFallidasCiclo;
+
   if (document.getElementById('kpiDashVencidasStock')) document.getElementById('kpiDashVencidasStock').textContent = totalVencidasStock;
   if (document.getElementById('kpiDashPctVencidas')) document.getElementById('kpiDashPctVencidas').textContent = ((totalVencidasStock / TASKS.length) * 100).toFixed(1) + '%';
   if (document.getElementById('kpiDashProximasSemana')) document.getElementById('kpiDashProximasSemana').textContent = totalProximas;
@@ -1957,20 +1960,19 @@ function renderizarTableroKPIs() {
   if (document.getElementById('lblTotFaGest')) document.getElementById('lblTotFaGest').textContent = fallidasGestionadas;
   if (document.getElementById('lblTotFaPend')) document.getElementById('lblTotFaPend').textContent = fallidasPendientes;
 
-  let mejorMesNombre = 'Sin visitas registradas aún';
-  let mejorMesVal = -1;
-  for (let i = 0; i <= 1; i++) {
-    if (efectivasPorMes[i] > 0 && efectivasPorMes[i] > mejorMesVal) {
-      mejorMesVal = efectivasPorMes[i];
-      mejorMesNombre = `${PROYECTO_TIMELINE[i].label} (${mejorMesVal} efectivas)`;
-    }
-  }
-  document.getElementById('lblMejorMes').textContent = mejorMesNombre;
-  document.getElementById('lblPromedioMensual').textContent = `${totalRealizadasCiclo} visitas registradas a la fecha`;
+  const m0Ef = efectivasPorMes[0] || 0;
+  const m0Fa = fallidasPorMes[0] || 0;
+  const m0Tot = m0Ef + m0Fa;
+  const m1Ef = efectivasPorMes[1] || 0;
+  const m1Fa = fallidasPorMes[1] || 0;
+  const m1Tot = m1Ef + m1Fa;
+
+  document.getElementById('lblMejorMes').textContent = `${m0Tot} visitas (${m0Ef} efec. + ${m0Fa} fall.)`;
+  document.getElementById('lblPromedioMensual').textContent = `${m1Tot} visitas (${m1Ef} efec. + ${m1Fa} fall.)`;
   document.getElementById('lblDesvioMensual').textContent = `${totalRealizadasCiclo - metaYTD} visitas vs meta acumulada de 200`;
 
-  // Renderizar Gráficos con Chart.js
-  renderChartPresupuesto(efectivasPorMes, metaMensual);
+  // Renderizar Gráficos con Chart.js (Conteo con barras apiladas de efectivas y fallidas)
+  renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual);
   renderChartVencidas(vencidasPorMes);
   renderChartFallidas(efectivasPorMes, fallidasPorMes);
 
@@ -1978,8 +1980,8 @@ function renderizarTableroKPIs() {
   renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidasPorMes, metaMensual);
 }
 
-// GRÁFICO 1: REALIZADAS VS PRESUPUESTADAS (1 AÑO DE PROYECTO INICIANDO EN M0 = SEP 26)
-function renderChartPresupuesto(efectivasPorMes, metaMensual) {
+// GRÁFICO 1: CONTEO DE VISITAS REALIZADAS (EFECTIVAS + FALLIDAS EN BARRAS APILADAS) VS PRESUPUESTADAS
+function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual) {
   const ctx = document.getElementById('chartPresupuesto').getContext('2d');
   if (chartPresupuestoInstance) chartPresupuestoInstance.destroy();
 
@@ -1988,8 +1990,10 @@ function renderChartPresupuesto(efectivasPorMes, metaMensual) {
 
   // Curvas acumuladas
   const efectivasAcum = [];
+  const fallidasAcum = [];
   const presupuestoAcum = [];
   let sumEf = 0;
+  let sumFa = 0;
   let sumPres = 0;
 
   for (let i = 0; i < PROYECTO_TIMELINE.length; i++) {
@@ -1997,10 +2001,13 @@ function renderChartPresupuesto(efectivasPorMes, metaMensual) {
     presupuestoAcum.push(sumPres);
 
     if (i <= 1) { // M0 y M1 transcurridos
-      sumEf += efectivasPorMes[i];
+      sumEf += (efectivasPorMes[i] || 0);
+      sumFa += (fallidasPorMes[i] || 0);
       efectivasAcum.push(sumEf);
+      fallidasAcum.push(sumFa);
     } else {
       efectivasAcum.push(null);
+      fallidasAcum.push(null);
     }
   }
 
@@ -2009,47 +2016,60 @@ function renderChartPresupuesto(efectivasPorMes, metaMensual) {
   if (modoChartPresupuesto === 'mensual') {
     datasets = [
       {
-        label: 'Visitas Efectivas Realizadas',
+        label: 'Visitas Efectivas',
         data: efectivasPorMes.map((val, idx) => idx <= 1 ? val : null),
         backgroundColor: '#0F4C5C',
+        stack: 'visitas',
+        borderRadius: 0,
+        barPercentage: 0.65
+      },
+      {
+        label: 'Visitas Fallidas',
+        data: fallidasPorMes.map((val, idx) => idx <= 1 ? val : null),
+        backgroundColor: '#A8470A',
+        stack: 'visitas',
         borderRadius: 2,
         barPercentage: 0.65
       },
       {
-        label: 'Presupuesto Mensual (100 efectivas/mes)',
+        label: 'Presupuesto Mensual (100 visitas/mes)',
         data: presupuestoMensualData,
         type: 'line',
-        borderColor: '#A8470A',
+        borderColor: '#2E3A46',
         borderWidth: 2.5,
         borderDash: [5, 5],
         pointRadius: 4,
-        pointBackgroundColor: '#A8470A',
+        pointBackgroundColor: '#2E3A46',
         fill: false
       }
     ];
   } else {
     datasets = [
       {
-        label: 'Efectivas Acumuladas Proyecto',
+        label: 'Efectivas Acumuladas',
         data: efectivasAcum,
-        type: 'line',
-        borderColor: '#0F4C5C',
-        backgroundColor: 'rgba(15, 76, 92, 0.12)',
-        fill: true,
-        borderWidth: 3,
-        pointRadius: 5,
-        pointBackgroundColor: '#0F4C5C',
-        tension: 0.2
+        backgroundColor: '#0F4C5C',
+        stack: 'visitasAcum',
+        borderRadius: 0,
+        barPercentage: 0.65
+      },
+      {
+        label: 'Fallidas Acumuladas',
+        data: fallidasAcum,
+        backgroundColor: '#A8470A',
+        stack: 'visitasAcum',
+        borderRadius: 2,
+        barPercentage: 0.65
       },
       {
         label: 'Presupuesto Acumulado (100/mes × 12)',
         data: presupuestoAcum,
         type: 'line',
-        borderColor: '#A8470A',
-        borderWidth: 2,
+        borderColor: '#2E3A46',
+        borderWidth: 2.5,
         borderDash: [6, 4],
-        pointRadius: 3,
-        pointBackgroundColor: '#A8470A',
+        pointRadius: 4,
+        pointBackgroundColor: '#2E3A46',
         fill: false
       }
     ];
@@ -2061,6 +2081,19 @@ function renderChartPresupuesto(efectivasPorMes, metaMensual) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      scales: {
+        x: {
+          stacked: true,
+          grid: { display: false },
+          ticks: { font: { family: 'IBM Plex Sans', size: 11, weight: '500' } }
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          grid: { color: '#E3E5E1' },
+          ticks: { font: { family: 'IBM Plex Mono', size: 11 } }
+        }
+      },
       plugins: {
         legend: {
           position: 'top',
@@ -2072,19 +2105,14 @@ function renderChartPresupuesto(efectivasPorMes, metaMensual) {
           callbacks: {
             label: function(context) {
               return ` ${context.dataset.label}: ${context.parsed.y} visitas`;
+            },
+            footer: function(items) {
+              const total = items
+                .filter(i => i.dataset.type !== 'line')
+                .reduce((acc, curr) => acc + curr.parsed.y, 0);
+              return total > 0 ? `Total salidas a terreno: ${total} visitas` : '';
             }
           }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grid: { color: '#E3E5E1' },
-          ticks: { font: { family: 'IBM Plex Mono', size: 11 } }
-        },
-        x: {
-          grid: { display: false },
-          ticks: { font: { family: 'IBM Plex Sans', size: 11, weight: '500' } }
         }
       }
     }
@@ -2097,11 +2125,11 @@ function toggleModoPresupuesto(modo) {
   document.getElementById('btnToggleChartAcumulado').classList.toggle('on', modo === 'acumulado');
 
   if (modo === 'mensual') {
-    document.getElementById('lblTituloChart1').textContent = 'Visitas Efectivas Realizadas vs Presupuestadas (Meta: 100/mes)';
-    document.getElementById('lblSubtituloChart1').textContent = 'Comparativa mensual de cumplimiento frente al presupuesto fijo de 100 visitas efectivas por mes (Sep 2026 = M0)';
+    document.getElementById('lblTituloChart1').textContent = 'Conteo de Visitas Realizadas vs Presupuestadas (Meta: 100/mes)';
+    document.getElementById('lblSubtituloChart1').textContent = 'Barras apiladas de visitas efectivas y fallidas frente al presupuesto mensual de 100 visitas (Sep 2026 = M0)';
   } else {
     document.getElementById('lblTituloChart1').textContent = 'Curva de Cumplimiento Acumulado del Proyecto (Inicio: Sep 2026)';
-    document.getElementById('lblSubtituloChart1').textContent = 'Evolución acumulativa (S-Curve) de visitas logradas frente al objetivo lineal presupuestado de 1.200';
+    document.getElementById('lblSubtituloChart1').textContent = 'Evolución acumulativa en barras apiladas (efectivas + fallidas) frente al objetivo de 1.200';
   }
 
   renderizarTableroKPIs();
