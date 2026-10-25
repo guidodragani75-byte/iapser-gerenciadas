@@ -1593,14 +1593,24 @@ function inicializarDatos() {
       if (esVT) {
         if (!t.fechaDesde) { t.fechaDesde = '01/01/2026'; huboCambios = true; }
         if (!t.fechaHasta) { t.fechaHasta = '31/12/2026'; huboCambios = true; }
-        if (!t.estadoTarea || t.estadoTarea === 'Pendiente plazo') {
-          t.estadoTarea = t.fechaRealizada ? (t.documentoAdjunto ? 'Terminada' : 'Realizada sin documento') : 'En término';
-          huboCambios = true;
-        }
+      }
+      // Mantener únicamente los 3 estados oficiales: Realizada, En término, Vencida
+      if (t.fechaRealizada) {
+        if (t.estadoTarea !== 'Realizada') { t.estadoTarea = 'Realizada'; huboCambios = true; }
       } else {
-        if (!t.fechaHasta && (!t.fechaRealizada) && t.estadoTarea !== 'Pendiente plazo') {
-          t.estadoTarea = 'Pendiente plazo';
-          huboCambios = true;
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        if (t.fechaHasta) {
+          const p = t.fechaHasta.split('/');
+          if (p.length === 3) {
+            const dH = new Date(parseInt(p[2], 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10));
+            const est = (dH < hoy) ? 'Vencida' : 'En término';
+            if (t.estadoTarea !== est) { t.estadoTarea = est; huboCambios = true; }
+          } else {
+            if (t.estadoTarea !== 'En término') { t.estadoTarea = 'En término'; huboCambios = true; }
+          }
+        } else {
+          if (t.estadoTarea !== 'En término') { t.estadoTarea = 'En término'; huboCambios = true; }
         }
       }
     });
