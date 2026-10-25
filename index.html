@@ -674,10 +674,48 @@
                 <option value="Siniestro">Siniestro</option>
               </select>
             </label>
-            <label style="font-size:12px; color:#5B6670; min-width:160px;">
+            <label style="font-size:12px; color:#5B6670; min-width:140px;">
               Localidad
               <select id="selLocalidadFiltro" onchange="filtrarYRenderizar()">
                 <option value="todas">Todas las localidades</option>
+              </select>
+            </label>
+            <label style="font-size:12px; color:#0F4C5C; font-weight:600; min-width:180px;">
+              📅 Mes Realizada (Ejecución)
+              <select id="selMesRealizadaFiltro" onchange="filtrarYRenderizar()" style="border-color:#0F4C5C;">
+                <option value="todas">Cualquier fecha realizada</option>
+                <option value="2026-09">Realizadas en Septiembre 2026</option>
+                <option value="2026-10">Realizadas en Octubre 2026</option>
+                <option value="2026-11">Realizadas en Noviembre 2026</option>
+                <option value="2026-12">Realizadas en Diciembre 2026</option>
+                <option value="2027-01">Realizadas en Enero 2027</option>
+                <option value="2027-02">Realizadas en Febrero 2027</option>
+                <option value="2027-03">Realizadas en Marzo 2027</option>
+                <option value="2027-04">Realizadas en Abril 2027</option>
+                <option value="2027-05">Realizadas en Mayo 2027</option>
+                <option value="2027-06">Realizadas en Junio 2027</option>
+                <option value="2027-07">Realizadas en Julio 2027</option>
+                <option value="2027-08">Realizadas en Agosto 2027</option>
+                <option value="pendientes">Pendientes (Sin realizar)</option>
+              </select>
+            </label>
+            <label style="font-size:12px; color:#0F4C5C; font-weight:600; min-width:180px;">
+              📋 Mes Alta / Vigencia
+              <select id="selMesAltaFiltro" onchange="filtrarYRenderizar()" style="border-color:#0F4C5C;">
+                <option value="todas">Todas las altas y períodos</option>
+                <option value="2026-09">Altas Septiembre 2026 (01/09 - 30/09)</option>
+                <option value="2026-10">Altas Octubre 2026 (01/10 - 31/10)</option>
+                <option value="2026-11">Altas Noviembre 2026</option>
+                <option value="2026-12">Altas Diciembre 2026</option>
+                <option value="2027-01">Altas Enero 2027</option>
+                <option value="2027-02">Altas Febrero 2027</option>
+                <option value="2027-03">Altas Marzo 2027</option>
+                <option value="2027-04">Altas Abril 2027</option>
+                <option value="2027-05">Altas Mayo 2027</option>
+                <option value="2027-06">Altas Junio 2027</option>
+                <option value="2027-07">Altas Julio 2027</option>
+                <option value="2027-08">Altas Agosto 2027</option>
+                <option value="residual">Plan Base Anual (Residual 2026)</option>
               </select>
             </label>
             <button type="button" class="btn btn-secondary" id="btnToggleFichaBar" onclick="togglePanelFicha()" style="min-height:36px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-left:auto; white-space:nowrap;" title="Mostrar u ocultar la ficha lateral">
@@ -789,9 +827,15 @@
             <div style="font-size:13px; color:#5B6670;" id="detEmpleadorYCuit">Empresa · CUIT</div>
             <div style="font-size:12px; color:#5B6670; margin-top:2px;" id="detLocalidadYContrato">Localidad · Contrato</div>
 
+            <div style="margin-top:8px;">
+              <button type="button" class="chip" onclick="abrirModalAltaMasiva()" title="Abrir carga masiva de actas y documentos para esta empresa" style="font-size:11px; cursor:pointer; background:#EAF2F4; color:#0F4C5C; border-color:#0F4C5C; font-weight:600; padding:3px 10px; display:inline-flex; align-items:center; gap:5px;">
+                📁 Subida Masiva de Documentos (Empresa)
+              </button>
+            </div>
+
             <div style="display:flex; justify-content:space-between; align-items:center; margin:14px 0; padding:10px 0; border-top:1px solid #D5D8D3; border-bottom:1px solid #D5D8D3;">
               <span>Tarea: <strong id="detTarea">Visita tecnica</strong></span>
-              <span id="detBadgeEstado" class="badge badge-neutral">En término</span>
+              <span id="detBadgeEstado2" class="badge badge-neutral">En término</span>
             </div>
 
             <!-- AVISO TAREA ESPECIAL SIN PLAZO -->
@@ -1352,6 +1396,7 @@
     </div>
 
     <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="restablecerDatosLocales()" style="color:#A8470A; margin-right:auto;" title="Borra el almacenamiento local del navegador y recarga desde la base precargada">Recargar Base Local</button>
       <button type="button" class="btn btn-secondary" onclick="probarConexionBackend()">Probar Conexión</button>
       <button type="button" class="btn btn-primary" onclick="guardarConfig()">Guardar y Sincronizar</button>
     </div>
@@ -1387,8 +1432,8 @@ let chartFallidasDonutInstance = null;
 let modoChartPresupuesto = 'mensual';
 let modoChartFallidas = 'stack';
 
-// Claves LocalStorage (V4: Baseline limpio con nuevas columnas vacías)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V5';
+// Claves LocalStorage (V7: Baseline sincronizado con 977 registros y fechas normalizadas)
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V7';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -1426,19 +1471,115 @@ function cargarConfig() {
   }
 }
 
+function normalizarFecha(str) {
+  if (!str) return '';
+  str = String(str).trim();
+  const m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (!m) return str;
+  let d = m[1].padStart(2, '0');
+  let mes = m[2].padStart(2, '0');
+  let y = m[3];
+  if (y.length === 2) y = '20' + y;
+  return `${d}/${mes}/${y}`;
+}
+
+function normalizarTarea(t, idx) {
+  const rowId = parseInt(t.rowId || (idx !== undefined ? idx + 2 : 2), 10);
+  const cuit = (t.cuit || t["Cuit"] || "").toString().trim();
+  const empleador = (t.empleador || t["Empleador"] || "").toString().trim();
+  const contrato = (t.contrato || t["Contrato IAPART"] || t["Contrato"] || "").toString().trim();
+  const nroEstab = (t.nroEstab || t["Nro Estab IAPART"] || t["Nro Estab"] || "1").toString().trim();
+  const localidad = (t.localidad || t["Localidad"] || "").toString().trim();
+  const preventor = (t.preventor || t["Preventor Asignado"] || t["Preventor"] || "").toString().trim();
+  const capitas = (t.capitas || t["Capitas"] || "").toString().trim();
+  const tarea = (t.tarea || t["Tarea"] || "Visita tecnica").toString().trim();
+  let origenPlan = (t.origenPlan || t["Origen Plan"] || "Residual 2026").toString().trim();
+
+  let rawDesde = (t.fechaDesde || t["Fecha Desde"] || "").toString().trim();
+  if (!rawDesde && tarea.toLowerCase().includes('visita tecnica')) rawDesde = '01/01/2026';
+  let fechaDesde = normalizarFecha(rawDesde);
+
+  let rawHasta = (t.fechaHasta || t["Fecha Hasta"] || "").toString().trim();
+  if (!rawHasta && tarea.toLowerCase().includes('visita tecnica')) rawHasta = '31/12/2026';
+  let fechaHasta = normalizarFecha(rawHasta);
+
+  let rawReal = (t.fechaRealizada || t["Fecha Realizada"] || "").toString().trim();
+  if (!rawReal && (t["Fecha Visita"] || t.fechaVisita)) {
+    rawReal = (t["Fecha Visita"] || t.fechaVisita).toString().trim();
+  }
+  const fechaRealizada = normalizarFecha(rawReal);
+
+  let resultadoVisita = (t.resultadoVisita || t["Resultado Visita"] || "").toString().trim();
+  if (!resultadoVisita && fechaRealizada) {
+    resultadoVisita = 'Efectiva';
+  }
+
+  const nroSiniestro = (t.nroSiniestro || t["Nro Siniestro"] || "").toString().trim();
+  const observaciones = (t.observaciones || t["Observaciones"] || "").toString().trim();
+  const documentoAdjunto = (t.documentoAdjunto || t["Documento Adjunto"] || "").toString().trim();
+  let estadoTarea = (t.estadoTarea || t["Estado Tarea"] || "").toString().trim();
+  const gestionFallida = (t.gestionFallida || t["Gestion Fallida"] || "").toString().trim();
+
+  // Nombre de establecimiento: si está en blanco, asignar "Obra en construcción" o nombre de empleador
+  let establecimiento = (t.establecimiento || t["Establecimiento"] || "").toString().trim();
+  if (!establecimiento) {
+    establecimiento = tarea.toLowerCase().includes('obra') ? 'Obra en construcción' : (empleador || 'Sede Principal');
+  }
+
+  // Calcular estado si no viene asignado
+  if (!estadoTarea) {
+    if (fechaRealizada && documentoAdjunto) {
+      estadoTarea = (resultadoVisita.toLowerCase() === 'fallida') ? 'Terminada (Fallida)' : 'Terminada';
+    } else if (fechaRealizada) {
+      estadoTarea = (resultadoVisita.toLowerCase() === 'fallida') ? 'Fallida sin documento' : 'Realizada sin documento';
+    } else if (!fechaHasta) {
+      estadoTarea = 'Pendiente plazo';
+    } else {
+      estadoTarea = 'En término';
+    }
+  }
+
+  return {
+    rowId,
+    cuit,
+    empleador,
+    contrato,
+    establecimiento,
+    nroEstab,
+    localidad,
+    preventor,
+    capitas,
+    tarea,
+    origenPlan,
+    fechaDesde,
+    fechaHasta,
+    fechaRealizada,
+    resultadoVisita,
+    nroSiniestro,
+    observaciones,
+    documentoAdjunto,
+    estadoTarea,
+    gestionFallida
+  };
+}
+
 function inicializarDatos() {
   const cached = localStorage.getItem(LS_TASKS_KEY);
   if (cached) {
     try {
-      TASKS = JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        TASKS = parsed.map((item, idx) => normalizarTarea(item, idx));
+      }
     } catch(e) {
       console.warn("Error leyendo cache local:", e);
     }
   }
 
-  if (!TASKS || TASKS.length === 0) {
+  // Si no hay caché o si el archivo precargado tiene más registros (nuevas altas desde Google Sheets), actualizar
+  if (!TASKS || TASKS.length === 0 || (window.DATOS_INICIALES_IAPSER && window.DATOS_INICIALES_IAPSER.length > TASKS.length)) {
     if (window.DATOS_INICIALES_IAPSER && window.DATOS_INICIALES_IAPSER.length > 0) {
-      TASKS = JSON.parse(JSON.stringify(window.DATOS_INICIALES_IAPSER));
+      TASKS = window.DATOS_INICIALES_IAPSER.map((item, idx) => normalizarTarea(item, idx));
       guardarEnCacheLocal();
     }
   }
@@ -2194,11 +2335,72 @@ function renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidas
   tbody.appendChild(trTotal);
 }
 
+// Filtro 1: Matchea por Fecha Realizada (Mes de Ejecución de la visita)
+function matcheaMesRealizada(t, fMesY) {
+  if (!fMesY || fMesY === 'todas') return true;
+  if (fMesY === 'pendientes') {
+    return !t.fechaRealizada || t.fechaRealizada.trim() === '';
+  }
+  const norm = normalizarFecha(t.fechaRealizada);
+  if (!norm) return false;
+  const [fAnio, fMes] = fMesY.split('-');
+  const p = norm.split('/');
+  return p.length === 3 && p[1] === fMes && p[2] === fAnio;
+}
+
+// Filtro 2: Matchea por Mes de Alta / Planificación (Desde/Hasta u Origen Plan)
+function matcheaMesAlta(t, fMesY) {
+  if (!fMesY || fMesY === 'todas') return true;
+  if (fMesY === 'residual') {
+    return (t.origenPlan || '').toLowerCase().includes('residual');
+  }
+  const [fAnio, fMes] = fMesY.split('-');
+
+  // 1. Matchear por Origen Plan (ej: "Alta Sep 2026", "Alta Oct 2026")
+  const orig = (t.origenPlan || '').toLowerCase();
+  const aliasMes = {
+    '01': ['ene', 'enero'],
+    '02': ['feb', 'febrero'],
+    '03': ['mar', 'marzo'],
+    '04': ['abr', 'abril'],
+    '05': ['may', 'mayo'],
+    '06': ['jun', 'junio'],
+    '07': ['jul', 'julio'],
+    '08': ['ago', 'agosto'],
+    '09': ['sep', 'set', 'septiembre', 'setiembre'],
+    '10': ['oct', 'octubre'],
+    '11': ['nov', 'noviembre'],
+    '12': ['dic', 'diciembre']
+  };
+  const aliases = aliasMes[fMes] || [];
+  if (aliases.some(a => orig.includes(a)) && orig.includes(fAnio)) {
+    return true;
+  }
+
+  // 2. Matchear por Fecha Desde
+  const dNorm = normalizarFecha(t.fechaDesde);
+  if (dNorm) {
+    const p = dNorm.split('/');
+    if (p.length === 3 && p[1] === fMes && p[2] === fAnio) return true;
+  }
+
+  // 3. Matchear por Fecha Hasta
+  const hNorm = normalizarFecha(t.fechaHasta);
+  if (hNorm) {
+    const p = hNorm.split('/');
+    if (p.length === 3 && p[1] === fMes && p[2] === fAnio) return true;
+  }
+
+  return false;
+}
+
 // FILTRADO Y RENDERIZADO DE TABLA (VISTA SEDES)
 function filtrarYRenderizar() {
   const txt = document.getElementById('txtBuscar').value.toLowerCase().trim();
   const filtroTarea = document.getElementById('selTareaFiltro').value;
   const filtroLoc = document.getElementById('selLocalidadFiltro').value;
+  const filtroMesReal = document.getElementById('selMesRealizadaFiltro') ? document.getElementById('selMesRealizadaFiltro').value : 'todas';
+  const filtroMesAlta = document.getElementById('selMesAltaFiltro') ? document.getElementById('selMesAltaFiltro').value : 'todas';
 
   const filtrados = TASKS.filter(t => {
     // Filtro por Tab de navegación
@@ -2209,7 +2411,7 @@ function filtrarYRenderizar() {
       if ((t.resultadoVisita || '').toLowerCase() !== 'fallida') return false;
     }
 
-    // Filtro Cohorte / Origen del Plan
+    // Filtro Cohorte / Origen del Plan (Chips)
     if (FILTRO_COHORTE !== 'todos') {
       const orig = (t.origenPlan || 'Residual 2026').toLowerCase();
       if (FILTRO_COHORTE === 'residual' && !orig.includes('residual')) return false;
@@ -2233,6 +2435,12 @@ function filtrarYRenderizar() {
 
     // Filtro Localidad
     if (filtroLoc !== 'todas' && (t.localidad || '').trim() !== filtroLoc) return false;
+
+    // Filtro 1: Mes Realizada (Ejecución)
+    if (filtroMesReal !== 'todas' && !matcheaMesRealizada(t, filtroMesReal)) return false;
+
+    // Filtro 2: Mes Alta / Planificación (Desde / Hasta)
+    if (filtroMesAlta !== 'todas' && !matcheaMesAlta(t, filtroMesAlta)) return false;
 
     // Filtro Texto Libre
     if (txt) {
@@ -2455,12 +2663,19 @@ function seleccionarTarea(tarea) {
   document.getElementById('detFechaRealizadaLabel').textContent = tarea.fechaRealizada || 'Pendiente';
 
   const badge = document.getElementById('detBadgeEstado');
-  badge.textContent = tarea.estadoTarea || 'En término';
-  badge.className = 'badge ' + (
-    (tarea.estadoTarea || '').includes('Terminada') ? 'badge-ok' :
-    (tarea.estadoTarea || '').includes('Vencida') ? 'badge-alert' :
-    (tarea.estadoTarea || '').includes('Próxima') ? 'badge-warn' : 'badge-neutral'
-  );
+  if (badge) {
+    badge.textContent = tarea.estadoTarea || 'En término';
+    badge.className = 'badge ' + (
+      (tarea.estadoTarea || '').includes('Terminada') ? 'badge-ok' :
+      (tarea.estadoTarea || '').includes('Vencida') ? 'badge-alert' :
+      (tarea.estadoTarea || '').includes('Próxima') ? 'badge-warn' : 'badge-neutral'
+    );
+  }
+  const badge2 = document.getElementById('detBadgeEstado2');
+  if (badge2 && badge) {
+    badge2.textContent = badge.textContent;
+    badge2.className = badge.className;
+  }
 
   const esAT_EP = (tarea.tarea || '').includes('AT') || (tarea.tarea || '').includes('EP') || (tarea.tarea || '').toLowerCase().includes('siniestro');
   document.getElementById('boxNroSiniestro').style.display = esAT_EP ? 'block' : 'none';
@@ -2658,7 +2873,8 @@ async function guardarSoloPlazos() {
           rowId: TAREA_SELECCIONADA.rowId,
           fechaDesde: fechaDesdeStr,
           fechaHasta: fechaHastaStr,
-          fechaRealizada: TAREA_SELECCIONADA.fechaRealizada || ''
+          fechaRealizada: TAREA_SELECCIONADA.fechaRealizada || '',
+          resultadoVisita: TAREA_SELECCIONADA.resultadoVisita || ''
         })
       });
     } catch(err) {
@@ -3683,8 +3899,9 @@ async function sincronizarConBackend() {
     const res = await fetch(url + '?action=getData', { mode: 'cors' });
     const json = await res.json();
     if (json.status === 'success' && json.data) {
-      TASKS = json.data;
+      TASKS = json.data.map((item, idx) => normalizarTarea(item, idx));
       guardarEnCacheLocal();
+      llenarFiltroLocalidades();
       actualizarKpis();
       filtrarYRenderizar();
       if (VISTA_ACTIVA === 'kpis') renderizarTableroKPIs();
@@ -3697,6 +3914,18 @@ async function sincronizarConBackend() {
     txt.textContent = 'Modo local activo (sin conexión directa)';
     console.warn("Error en sync:", err);
   }
+}
+
+function restablecerDatosLocales() {
+  if (!confirm("¿Deseás reiniciar los datos locales del navegador y recargar desde la base precargada?")) return;
+  localStorage.removeItem(LS_TASKS_KEY);
+  TASKS = [];
+  inicializarDatos();
+  llenarFiltroLocalidades();
+  actualizarKpis();
+  filtrarYRenderizar();
+  cerrarModalConfig();
+  alert("✓ Datos base recargados exitosamente.");
 }
 
 function escapeHtml(str) {

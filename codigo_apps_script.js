@@ -237,7 +237,16 @@ function procesarGuardarVisita(sheet, colMap, payload) {
   }
 
   var fechaRealizada = (payload.fechaRealizada !== undefined && payload.fechaRealizada !== null) ? payload.fechaRealizada : (colMap["Fecha Realizada"] ? sheet.getRange(rowId, colMap["Fecha Realizada"]).getValue() : "");
-  var resultadoVisita = payload.resultadoVisita || (colMap["Resultado Visita"] ? sheet.getRange(rowId, colMap["Resultado Visita"]).getValue() : "Efectiva");
+  var resultadoVisita = "";
+  if (payload.resultadoVisita !== undefined && payload.resultadoVisita !== null) {
+    resultadoVisita = payload.resultadoVisita;
+  } else if (colMap["Resultado Visita"]) {
+    resultadoVisita = sheet.getRange(rowId, colMap["Resultado Visita"]).getValue() || "";
+  }
+  // Si la visita tiene fecha realizada pero no tiene resultado, asignarle Efectiva por defecto
+  if (fechaRealizada && !resultadoVisita) {
+    resultadoVisita = "Efectiva";
+  }
   var nroSiniestro = payload.nroSiniestro || (colMap["Nro Siniestro"] ? sheet.getRange(rowId, colMap["Nro Siniestro"]).getValue() : "");
   var observaciones = payload.observaciones || (colMap["Observaciones"] ? sheet.getRange(rowId, colMap["Observaciones"]).getValue() : "");
   var archivoSubidoUrl = payload.documentoAdjuntoUrl || "";
@@ -601,6 +610,28 @@ function obtenerTodosLosDatos() {
       }
       obj[headerKey] = val !== undefined && val !== null ? val.toString().trim() : "";
     }
+
+    // Mapeo normalizado a minúsculas / camelCase para compatibilidad total con la plataforma web
+    obj.cuit = (obj["Cuit"] || obj.cuit || "").toString();
+    obj.empleador = (obj["Empleador"] || obj.empleador || "").toString();
+    obj.contrato = (obj["Contrato IAPART"] || obj["Contrato"] || obj.contrato || "").toString();
+    obj.establecimiento = (obj["Establecimiento"] || obj.establecimiento || "").toString();
+    obj.nroEstab = (obj["Nro Estab IAPART"] || obj["Nro Estab"] || obj.nroEstab || "1").toString();
+    obj.localidad = (obj["Localidad"] || obj.localidad || "").toString();
+    obj.preventor = (obj["Preventor Asignado"] || obj["Preventor"] || obj.preventor || "").toString();
+    obj.capitas = (obj["Capitas"] || obj.capitas || "").toString();
+    obj.tarea = (obj["Tarea"] || obj.tarea || "Visita tecnica").toString();
+    obj.origenPlan = (obj["Origen Plan"] || obj.origenPlan || "Residual 2026").toString();
+    obj.fechaDesde = (obj["Fecha Desde"] || obj.fechaDesde || "").toString();
+    obj.fechaHasta = (obj["Fecha Hasta"] || obj.fechaHasta || "").toString();
+    obj.fechaRealizada = (obj["Fecha Realizada"] || obj.fechaRealizada || "").toString();
+    obj.resultadoVisita = (obj["Resultado Visita"] || obj.resultadoVisita || "").toString();
+    obj.nroSiniestro = (obj["Nro Siniestro"] || obj.nroSiniestro || "").toString();
+    obj.observaciones = (obj["Observaciones"] || obj.observaciones || "").toString();
+    obj.documentoAdjunto = (obj["Documento Adjunto"] || obj.documentoAdjunto || "").toString();
+    obj.estadoTarea = (obj["Estado Tarea"] || obj.estadoTarea || "").toString();
+    obj.gestionFallida = (obj["Gestion Fallida"] || obj.gestionFallida || "").toString();
+
     result.push(obj);
   }
   return result;
