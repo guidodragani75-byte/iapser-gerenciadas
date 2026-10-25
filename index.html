@@ -1423,8 +1423,8 @@ let chartFallidasDonutInstance = null;
 let modoChartPresupuesto = 'mensual';
 let modoChartFallidas = 'stack';
 
-// Claves LocalStorage (V9: Estados unificados: Realizada, En término, Vencida)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V9';
+// Claves LocalStorage (V10: Visitas estrictamente por Columna F, métricas corregidas)
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V10';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -1494,10 +1494,8 @@ function normalizarTarea(t, idx) {
   if (!rawHasta && tarea.toLowerCase().includes('visita tecnica')) rawHasta = '31/12/2026';
   let fechaHasta = normalizarFecha(rawHasta);
 
+  // Columna F: Solo Columna F es Fecha Realizada (la visita efectuada)
   let rawReal = (t.fechaRealizada || t["Fecha Realizada"] || "").toString().trim();
-  if (!rawReal && (t["Fecha Visita"] || t.fechaVisita)) {
-    rawReal = (t["Fecha Visita"] || t.fechaVisita).toString().trim();
-  }
   const fechaRealizada = normalizarFecha(rawReal);
 
   let resultadoVisita = (t.resultadoVisita || t["Resultado Visita"] || "").toString().trim();
@@ -1508,7 +1506,6 @@ function normalizarTarea(t, idx) {
   const nroSiniestro = (t.nroSiniestro || t["Nro Siniestro"] || "").toString().trim();
   const observaciones = (t.observaciones || t["Observaciones"] || "").toString().trim();
   const documentoAdjunto = (t.documentoAdjunto || t["Documento Adjunto"] || "").toString().trim();
-  let estadoTarea = (t.estadoTarea || t["Estado Tarea"] || "").toString().trim();
   const gestionFallida = (t.gestionFallida || t["Gestion Fallida"] || "").toString().trim();
 
   // Nombre de establecimiento: si está en blanco, asignar "Obra en construcción" o nombre de empleador
@@ -1518,9 +1515,9 @@ function normalizarTarea(t, idx) {
   }
 
   // ESTADO TAREA:
-  // 1. Si tiene fecha de visita realizada (efectiva o fallida) -> Realizada
+  // 1. Si tiene fecha de visita realizada en Columna F (efectiva o fallida) -> Realizada
   // 2. Si no se realizó -> En término o Vencida según fecha límite
-  let estadoTarea = '';
+  let estadoTarea = (t.estadoTarea || t["Estado Tarea"] || "").toString().trim();
   if (fechaRealizada) {
     estadoTarea = 'Realizada';
   } else {
@@ -1743,25 +1740,25 @@ function actualizarKpis() {
     }
   });
 
-  // Cortes Trimestrales (300 por trimestre)
-  const q1 = (efectivasPorMes[0] || 0) + (efectivasPorMes[1] || 0) + (efectivasPorMes[2] || 0);
-  const q2 = (efectivasPorMes[3] || 0) + (efectivasPorMes[4] || 0) + (efectivasPorMes[5] || 0);
-  const q3 = (efectivasPorMes[6] || 0) + (efectivasPorMes[7] || 0) + (efectivasPorMes[8] || 0);
-  const q4 = (efectivasPorMes[9] || 0) + (efectivasPorMes[10] || 0) + (efectivasPorMes[11] || 0);
+  // Cortes Trimestrales (300 por trimestre, visitas realizadas en Columna F)
+  const q1 = (efectivasPorMes[0] || 0) + (efectivasPorMes[1] || 0) + (efectivasPorMes[2] || 0) + (fallidasPorMes[0] || 0) + (fallidasPorMes[1] || 0) + (fallidasPorMes[2] || 0);
+  const q2 = (efectivasPorMes[3] || 0) + (efectivasPorMes[4] || 0) + (efectivasPorMes[5] || 0) + (fallidasPorMes[3] || 0) + (fallidasPorMes[4] || 0) + (fallidasPorMes[5] || 0);
+  const q3 = (efectivasPorMes[6] || 0) + (efectivasPorMes[7] || 0) + (efectivasPorMes[8] || 0) + (fallidasPorMes[6] || 0) + (fallidasPorMes[7] || 0) + (fallidasPorMes[8] || 0);
+  const q4 = (efectivasPorMes[9] || 0) + (efectivasPorMes[10] || 0) + (efectivasPorMes[11] || 0) + (fallidasPorMes[9] || 0) + (fallidasPorMes[10] || 0) + (fallidasPorMes[11] || 0);
 
   // Meta del Proveedor (1.200 al año, 100/mes)
   const metaTotalProv = 1200;
-  const pctProv = ((efectivasTotal / metaTotalProv) * 100).toFixed(1);
+  const pctProv = ((realizadasTotal / metaTotalProv) * 100).toFixed(1);
   const metaAcumM1 = 200; // Mes 0 (Sep) + Mes 1 (Oct) = 200 visitas acumuladas
-  const desvioAcum = efectivasTotal - metaAcumM1;
+  const desvioAcum = realizadasTotal - metaAcumM1;
 
   // Actualizar Card 1: Control Prestador
   const elRealProv = document.getElementById('kpiRealizadasProv');
-  if (elRealProv) elRealProv.textContent = efectivasTotal;
+  if (elRealProv) elRealProv.textContent = realizadasTotal;
   const elPctProv = document.getElementById('kpiPctProv');
   if (elPctProv) elPctProv.textContent = pctProv + '%';
   const elBarProv = document.getElementById('kpiBarProv');
-  if (elBarProv) elBarProv.style.width = Math.min(100, (efectivasTotal / metaTotalProv) * 100) + '%';
+  if (elBarProv) elBarProv.style.width = Math.min(100, (realizadasTotal / metaTotalProv) * 100) + '%';
 
   const elSubCad = document.getElementById('kpiSubCadenciaProv');
   if (elSubCad) {
@@ -1834,14 +1831,24 @@ function renderizarTableroKPIs() {
   let realizadasResidual = 0;
   let totalAltas = 0;
   let realizadasAltas = 0;
+  let totalVencidasStock = 0;
+  let totalProximas = 0;
+  let fallidasGestionadas = 0;
+  let fallidasPendientes = 0;
 
   TASKS.forEach(t => {
     const origen = (t.origenPlan || 'Residual 2026').toLowerCase();
     const esResidual = origen.includes('residual');
     if (esResidual) totalResidual++; else totalAltas++;
 
-    if (t.fechaRealizada && t.fechaRealizada.trim()) {
+    const tieneRealizada = !!(t.fechaRealizada && t.fechaRealizada.trim());
+    if (tieneRealizada) {
       if (esResidual) realizadasResidual++; else realizadasAltas++;
+
+      const esFallida = (t.resultadoVisita || '').toLowerCase() === 'fallida';
+      if (esFallida) {
+        if (t.gestionFallida) fallidasGestionadas++; else fallidasPendientes++;
+      }
 
       const parts = t.fechaRealizada.split('/');
       if (parts.length === 3) {
@@ -1850,28 +1857,29 @@ function renderizarTableroKPIs() {
         const claveYM = `${y}-${m}`;
         const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
         if (idxTimeline !== -1) {
-          if ((t.resultadoVisita || '').toLowerCase() === 'fallida') {
+          if (esFallida) {
             fallidasPorMes[idxTimeline]++;
           } else {
             efectivasPorMes[idxTimeline]++;
           }
         }
       }
-    }
-
-    if ((t.estadoTarea || '').toLowerCase().includes('vencida')) {
-      const fh = t.fechaHasta;
-      if (fh) {
-        const parts = fh.split('/');
-        if (parts.length === 3) {
-          const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
-          const m = parts[1].padStart(2, '0');
-          const claveYM = `${y}-${m}`;
-          const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
-          if (idxTimeline !== -1) {
-            vencidasPorMes[idxTimeline]++;
-          } else {
-            vencidasPorMes[0]++;
+    } else {
+      if ((t.estadoTarea || '').toLowerCase().includes('vencida')) {
+        totalVencidasStock++;
+        const fh = t.fechaHasta;
+        if (fh) {
+          const parts = fh.split('/');
+          if (parts.length === 3) {
+            const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+            const m = parts[1].padStart(2, '0');
+            const claveYM = `${y}-${m}`;
+            const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
+            if (idxTimeline !== -1) {
+              vencidasPorMes[idxTimeline]++;
+            } else {
+              vencidasPorMes[0]++;
+            }
           }
         }
       }
@@ -1883,26 +1891,29 @@ function renderizarTableroKPIs() {
   const mesActualIdx = 1; // Octubre 2026 es el mes en curso (Mes 1)
   const metaYTD = (mesActualIdx + 1) * metaMensual; // 200
 
-  // Total efectivas del ciclo
+  // Total visitas realizadas en Columna F (efectivas y fallidas)
   let totalEfectivasCiclo = 0;
   let totalFallidasCiclo = 0;
   efectivasPorMes.forEach(v => totalEfectivasCiclo += v);
   fallidasPorMes.forEach(v => totalFallidasCiclo += v);
-  const totalCampo = totalEfectivasCiclo + totalFallidasCiclo;
-  const tasaEfectividad = totalCampo > 0 ? ((totalEfectivasCiclo / totalCampo) * 100).toFixed(1) : '100.0';
+  const totalRealizadasCiclo = totalEfectivasCiclo + totalFallidasCiclo;
+  const tasaEfectividad = totalRealizadasCiclo > 0 ? ((totalEfectivasCiclo / totalRealizadasCiclo) * 100).toFixed(1) : '100.0';
 
-  // Trimestres
-  const q1 = (efectivasPorMes[0] || 0) + (efectivasPorMes[1] || 0) + (efectivasPorMes[2] || 0);
-  const q2 = (efectivasPorMes[3] || 0) + (efectivasPorMes[4] || 0) + (efectivasPorMes[5] || 0);
-  const q3 = (efectivasPorMes[6] || 0) + (efectivasPorMes[7] || 0) + (efectivasPorMes[8] || 0);
-  const q4 = (efectivasPorMes[9] || 0) + (efectivasPorMes[10] || 0) + (efectivasPorMes[11] || 0);
+  const totalEfectivasYTD = totalEfectivasCiclo;
+  const totalFallidasYTD = totalFallidasCiclo;
+
+  // Trimestres (suman todas las visitas realizadas en el período)
+  const q1 = (efectivasPorMes[0] || 0) + (efectivasPorMes[1] || 0) + (efectivasPorMes[2] || 0) + (fallidasPorMes[0] || 0) + (fallidasPorMes[1] || 0) + (fallidasPorMes[2] || 0);
+  const q2 = (efectivasPorMes[3] || 0) + (efectivasPorMes[4] || 0) + (efectivasPorMes[5] || 0) + (fallidasPorMes[3] || 0) + (fallidasPorMes[4] || 0) + (fallidasPorMes[5] || 0);
+  const q3 = (efectivasPorMes[6] || 0) + (efectivasPorMes[7] || 0) + (efectivasPorMes[8] || 0) + (fallidasPorMes[6] || 0) + (fallidasPorMes[7] || 0) + (fallidasPorMes[8] || 0);
+  const q4 = (efectivasPorMes[9] || 0) + (efectivasPorMes[10] || 0) + (efectivasPorMes[11] || 0) + (fallidasPorMes[9] || 0) + (fallidasPorMes[10] || 0) + (fallidasPorMes[11] || 0);
 
   // Actualizar Stat Cards Ejecutivas
-  if (document.getElementById('kpiDashEfectivasTotal')) document.getElementById('kpiDashEfectivasTotal').textContent = totalEfectivasCiclo;
+  if (document.getElementById('kpiDashEfectivasTotal')) document.getElementById('kpiDashEfectivasTotal').textContent = totalRealizadasCiclo;
   if (document.getElementById('kpiDashMetaTotal')) document.getElementById('kpiDashMetaTotal').textContent = metaTotalAnual;
-  const pctTotal = ((totalEfectivasCiclo / metaTotalAnual) * 100).toFixed(1);
+  const pctTotal = ((totalRealizadasCiclo / metaTotalAnual) * 100).toFixed(1);
   if (document.getElementById('kpiDashPctTotal')) document.getElementById('kpiDashPctTotal').textContent = pctTotal + '%';
-  if (document.getElementById('kpiDashResidualProv')) document.getElementById('kpiDashResidualProv').textContent = `${Math.max(0, metaTotalAnual - totalEfectivasCiclo)} visitas`;
+  if (document.getElementById('kpiDashResidualProv')) document.getElementById('kpiDashResidualProv').textContent = `${Math.max(0, metaTotalAnual - totalRealizadasCiclo)} visitas`;
 
   // Cortes Trimestrales
   if (document.getElementById('dashQ1Val')) document.getElementById('dashQ1Val').textContent = `${q1}/300`;
@@ -1920,8 +1931,8 @@ function renderizarTableroKPIs() {
   if (document.getElementById('kpiDashPctResid')) document.getElementById('kpiDashPctResid').textContent = pctResid + '%';
 
   // Ritmo & Cadencia
-  if (document.getElementById('kpiDashRitmoEfectivas')) document.getElementById('kpiDashRitmoEfectivas').textContent = totalEfectivasCiclo;
-  const desvioRitmo = totalEfectivasCiclo - metaYTD;
+  if (document.getElementById('kpiDashRitmoEfectivas')) document.getElementById('kpiDashRitmoEfectivas').textContent = totalRealizadasCiclo;
+  const desvioRitmo = totalRealizadasCiclo - metaYTD;
   const badgeDesvio = document.getElementById('kpiDashDesvioBadge');
   const calloutRitmo = document.getElementById('calloutRitmoAlerta');
   if (badgeDesvio && calloutRitmo) {
@@ -1934,13 +1945,12 @@ function renderizarTableroKPIs() {
     }
   }
   if (document.getElementById('kpiDashTasaEfSmall')) document.getElementById('kpiDashTasaEfSmall').textContent = tasaEfectividad + '%';
-  if (document.getElementById('lblTotalEfectivasBox')) document.getElementById('lblTotalEfectivasBox').textContent = totalEfectivasCiclo;
+  if (document.getElementById('lblTotalEfectivasBox')) document.getElementById('lblTotalEfectivasBox').textContent = totalRealizadasCiclo;
 
   if (document.getElementById('kpiDashVencidasStock')) document.getElementById('kpiDashVencidasStock').textContent = totalVencidasStock;
   if (document.getElementById('kpiDashPctVencidas')) document.getElementById('kpiDashPctVencidas').textContent = ((totalVencidasStock / TASKS.length) * 100).toFixed(1) + '%';
   if (document.getElementById('kpiDashProximasSemana')) document.getElementById('kpiDashProximasSemana').textContent = totalProximas;
 
-  if (document.getElementById('lblTotalEfectivasBox')) document.getElementById('lblTotalEfectivasBox').textContent = totalEfectivasYTD;
   if (document.getElementById('badgeStockVencidas')) document.getElementById('badgeStockVencidas').textContent = `${totalVencidasStock} acumuladas`;
   if (document.getElementById('lblTotEfPie')) document.getElementById('lblTotEfPie').textContent = `${totalEfectivasYTD} (${tasaEfectividad}%)`;
   if (document.getElementById('lblTotFaPie')) document.getElementById('lblTotFaPie').textContent = `${totalFallidasYTD} (${(100 - parseFloat(tasaEfectividad)).toFixed(1)}%)`;
@@ -1956,8 +1966,8 @@ function renderizarTableroKPIs() {
     }
   }
   document.getElementById('lblMejorMes').textContent = mejorMesNombre;
-  document.getElementById('lblPromedioMensual').textContent = `${totalEfectivasYTD} visitas registradas a la fecha`;
-  document.getElementById('lblDesvioMensual').textContent = `${totalEfectivasYTD - metaYTD} visitas vs meta acumulada de 200`;
+  document.getElementById('lblPromedioMensual').textContent = `${totalRealizadasCiclo} visitas registradas a la fecha`;
+  document.getElementById('lblDesvioMensual').textContent = `${totalRealizadasCiclo - metaYTD} visitas vs meta acumulada de 200`;
 
   // Renderizar Gráficos con Chart.js
   renderChartPresupuesto(efectivasPorMes, metaMensual);
