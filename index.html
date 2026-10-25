@@ -2490,7 +2490,7 @@ function filtrarYRenderizar() {
 
     const tieneDoc = !!(t.documentoAdjunto && t.documentoAdjunto.trim());
     const docDot = tieneDoc 
-      ? `<span class="ok" title="Documento cargado">●</span>` 
+      ? `<a href="${escapeHtml(t.documentoAdjunto)}" target="_blank" onclick="event.stopPropagation()" class="ok" title="Clic para abrir documento en Google Drive" style="text-decoration:none; font-size:13px; font-weight:bold; color:#0F4C5C;">📄 ↗</a>` 
       : (t.fechaRealizada ? `<span class="no" title="Falta subir documento">○</span>` : `<span class="na" title="Sin visita realizada">–</span>`);
 
     let badgeClass = 'badge-neutral';
