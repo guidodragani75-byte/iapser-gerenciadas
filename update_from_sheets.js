@@ -127,11 +127,8 @@ async function run() {
     const empleador = row[colIdx['Empleador']] || '';
     if (!cuit && !empleador) continue;
 
-    let rawFechaReal = row[colIdx['Fecha Realizada']] || '';
-    if (!rawFechaReal && row[colIdx['Fecha Visita']]) {
-      rawFechaReal = row[colIdx['Fecha Visita']];
-    }
-    const fechaReal = normalizarFecha(rawFechaReal);
+    // Columna F: Solo Columna F es Fecha Realizada (la visita efectivamente realizada)
+    const fechaReal = normalizarFecha(row[colIdx['Fecha Realizada']] || '');
 
     const tarea = row[colIdx['Tarea']] || 'Visita tecnica';
     const origenPlan = row[colIdx['Origen Plan']] || 'Residual 2026';
@@ -141,7 +138,9 @@ async function run() {
     const fechaDesde = normalizarFecha(rawDesde);
 
     let rawHasta = row[colIdx['Fecha Hasta']] || '';
-    if (!rawHasta && tarea.toLowerCase().includes('visita tecnica')) rawHasta = '31/12/2026';
+    if (!rawHasta) {
+      rawHasta = row[colIdx['Fecha Visita']] || (tarea.toLowerCase().includes('visita tecnica') ? '31/12/2026' : '');
+    }
     const fechaHasta = normalizarFecha(rawHasta);
 
     let resultadoVisita = row[colIdx['Resultado Visita']] || '';
@@ -155,14 +154,23 @@ async function run() {
       documentoAdjunto = driveLinks[rowId];
     }
 
-    let estadoTarea = row[colIdx['Estado Tarea']] || '';
-    if (!estadoTarea) {
-      if (fechaReal && documentoAdjunto) {
-        estadoTarea = (resultadoVisita.toLowerCase() === 'fallida') ? 'Terminada (Fallida)' : 'Terminada';
-      } else if (fechaReal) {
-        estadoTarea = (resultadoVisita.toLowerCase() === 'fallida') ? 'Fallida sin documento' : 'Realizada sin documento';
-      } else if (!fechaHasta) {
-        estadoTarea = 'Pendiente plazo';
+    // ESTADO TAREA:
+    // 1. Si se realizó la visita (efectiva o fallida) -> Realizada
+    // 2. Si no se realizó -> En término o Vencida según fecha límite
+    let estadoTarea = '';
+    if (fechaReal) {
+      estadoTarea = 'Realizada';
+    } else {
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      if (fechaHasta) {
+        const p = fechaHasta.split('/');
+        if (p.length === 3) {
+          const dHasta = new Date(parseInt(p[2], 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10));
+          estadoTarea = (dHasta < hoy) ? 'Vencida' : 'En término';
+        } else {
+          estadoTarea = 'En término';
+        }
       } else {
         estadoTarea = 'En término';
       }

@@ -535,18 +535,15 @@ function obtenerOCrearSubcarpeta(parent, nombre) {
  */
 function calcularEstadoTarea(fechaHastaStr, fechaRealizadaStr, docAdjuntoUrl, resultadoVisita) {
   var tieneFechaRealizada = !!(fechaRealizadaStr && fechaRealizadaStr.toString().trim());
-  var tieneDoc = !!(docAdjuntoUrl && docAdjuntoUrl.toString().trim());
 
-  if (tieneFechaRealizada && tieneDoc) {
-    return resultadoVisita === "Fallida" ? "Terminada (Fallida)" : "Terminada";
+  // 1. Si se realizó la visita (efectiva o fallida) -> Realizada
+  if (tieneFechaRealizada) {
+    return "Realizada";
   }
 
-  if (tieneFechaRealizada && !tieneDoc) {
-    return "Realizada sin documento";
-  }
-
+  // 2. Si no se realizó -> En término o Vencida según fecha límite
   if (!fechaHastaStr || !fechaHastaStr.toString().trim()) {
-    return "Pendiente plazo";
+    return "En término";
   }
 
   var dHasta = parsearFecha(fechaHastaStr);
@@ -561,8 +558,6 @@ function calcularEstadoTarea(fechaHastaStr, fechaRealizadaStr, docAdjuntoUrl, re
 
   if (diffDias < 0) {
     return "Vencida";
-  } else if (diffDias <= CONFIG.DIAS_ALERTA_PROXIMA_A_VENCER) {
-    return "Próxima a vencer";
   } else {
     return "En término";
   }

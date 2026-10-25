@@ -744,23 +744,14 @@
             <button type="button" class="chip on" id="chipTodos" onclick="setFiltroEstado('todos')">
               Todos <span class="chip-count" id="countChipTodos">0</span>
             </button>
-            <button type="button" class="chip" id="chipProximas" onclick="setFiltroEstado('proximas')">
-              Próximas a vencer (≤7d) <span class="chip-count" id="countChipProximas">0</span>
-            </button>
-            <button type="button" class="chip" id="chipVencidas" onclick="setFiltroEstado('vencidas')">
-              Vencidas <span class="chip-count" id="countChipVencidas">0</span>
+            <button type="button" class="chip" id="chipRealizadas" onclick="setFiltroEstado('realizadas')">
+              Realizadas <span class="chip-count" id="countChipRealizadas">0</span>
             </button>
             <button type="button" class="chip" id="chipTermino" onclick="setFiltroEstado('termino')">
               En término <span class="chip-count" id="countChipTermino">0</span>
             </button>
-            <button type="button" class="chip" id="chipPendienteDoc" onclick="setFiltroEstado('pendienteDoc')">
-              Realizada sin doc <span class="chip-count" id="countChipPendienteDoc">0</span>
-            </button>
-            <button type="button" class="chip" id="chipTerminadas" onclick="setFiltroEstado('terminadas')">
-              Terminadas <span class="chip-count" id="countChipTerminadas">0</span>
-            </button>
-            <button type="button" class="chip" id="chipFallidas" onclick="setFiltroEstado('fallidas')">
-              Fallidas <span class="chip-count" id="countChipFallidas">0</span>
+            <button type="button" class="chip" id="chipVencidas" onclick="setFiltroEstado('vencidas')">
+              Vencidas <span class="chip-count" id="countChipVencidas">0</span>
             </button>
           </div>
 
@@ -1432,8 +1423,8 @@ let chartFallidasDonutInstance = null;
 let modoChartPresupuesto = 'mensual';
 let modoChartFallidas = 'stack';
 
-// Claves LocalStorage (V8: Baseline sincronizado con 977 registros y 52 enlaces reales a Drive)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V8';
+// Claves LocalStorage (V9: Estados unificados: Realizada, En término, Vencida)
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V9';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -1526,14 +1517,23 @@ function normalizarTarea(t, idx) {
     establecimiento = tarea.toLowerCase().includes('obra') ? 'Obra en construcción' : (empleador || 'Sede Principal');
   }
 
-  // Calcular estado si no viene asignado
-  if (!estadoTarea) {
-    if (fechaRealizada && documentoAdjunto) {
-      estadoTarea = (resultadoVisita.toLowerCase() === 'fallida') ? 'Terminada (Fallida)' : 'Terminada';
-    } else if (fechaRealizada) {
-      estadoTarea = (resultadoVisita.toLowerCase() === 'fallida') ? 'Fallida sin documento' : 'Realizada sin documento';
-    } else if (!fechaHasta) {
-      estadoTarea = 'Pendiente plazo';
+  // ESTADO TAREA:
+  // 1. Si tiene fecha de visita realizada (efectiva o fallida) -> Realizada
+  // 2. Si no se realizó -> En término o Vencida según fecha límite
+  let estadoTarea = '';
+  if (fechaRealizada) {
+    estadoTarea = 'Realizada';
+  } else {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    if (fechaHasta) {
+      const p = fechaHasta.split('/');
+      if (p.length === 3) {
+        const dHasta = new Date(parseInt(p[2], 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10));
+        estadoTarea = (dHasta < hoy) ? 'Vencida' : 'En término';
+      } else {
+        estadoTarea = 'En término';
+      }
     } else {
       estadoTarea = 'En término';
     }
@@ -1812,12 +1812,9 @@ function actualizarKpis() {
 
   // Contadores de Chips de Estado
   if (document.getElementById('countChipTodos')) document.getElementById('countChipTodos').textContent = total;
-  if (document.getElementById('countChipProximas')) document.getElementById('countChipProximas').textContent = proximas;
-  if (document.getElementById('countChipVencidas')) document.getElementById('countChipVencidas').textContent = vencidas;
+  if (document.getElementById('countChipRealizadas')) document.getElementById('countChipRealizadas').textContent = realizadasTotal;
   if (document.getElementById('countChipTermino')) document.getElementById('countChipTermino').textContent = enTermino;
-  if (document.getElementById('countChipPendienteDoc')) document.getElementById('countChipPendienteDoc').textContent = pendienteDoc;
-  if (document.getElementById('countChipTerminadas')) document.getElementById('countChipTerminadas').textContent = terminadas;
-  if (document.getElementById('countChipFallidas')) document.getElementById('countChipFallidas').textContent = fallidasTotal;
+  if (document.getElementById('countChipVencidas')) document.getElementById('countChipVencidas').textContent = vencidas;
 
   // Badges en Sidebar Rail
   if (document.getElementById('badgeNavTodas')) document.getElementById('badgeNavTodas').textContent = total;
@@ -2421,13 +2418,9 @@ function filtrarYRenderizar() {
     // Filtro Chip Estado
     if (FILTRO_ESTADO !== 'todos') {
       const est = (t.estadoTarea || '').toLowerCase();
-      const res = (t.resultadoVisita || '').toLowerCase();
-      if (FILTRO_ESTADO === 'proximas' && !est.includes('próxima') && !est.includes('proxima')) return false;
+      if (FILTRO_ESTADO === 'realizadas' && !est.includes('realizada')) return false;
       if (FILTRO_ESTADO === 'vencidas' && !est.includes('vencida')) return false;
       if (FILTRO_ESTADO === 'termino' && !est.includes('término') && !est.includes('termino')) return false;
-      if (FILTRO_ESTADO === 'pendienteDoc' && !est.includes('sin documento')) return false;
-      if (FILTRO_ESTADO === 'terminadas' && !est.includes('terminada')) return false;
-      if (FILTRO_ESTADO === 'fallidas' && res !== 'fallida') return false;
     }
 
     // Filtro Tarea
@@ -2585,12 +2578,9 @@ function setFiltroEstado(estado) {
 function actualizarBotonesChips() {
   const map = {
     'todos': 'chipTodos',
-    'proximas': 'chipProximas',
-    'vencidas': 'chipVencidas',
+    'realizadas': 'chipRealizadas',
     'termino': 'chipTermino',
-    'pendienteDoc': 'chipPendienteDoc',
-    'terminadas': 'chipTerminadas',
-    'fallidas': 'chipFallidas'
+    'vencidas': 'chipVencidas'
   };
 
   Object.keys(map).forEach(k => {
