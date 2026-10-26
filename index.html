@@ -1480,6 +1480,8 @@ function cargarConfig() {
 function normalizarFecha(str) {
   if (!str) return '';
   str = String(str).trim();
+  // Quitar hora si viene en formato timestamp (ej: 05/08/2026 00:00)
+  str = str.split(' ')[0].trim();
   const m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
   if (!m) return str;
   let d = m[1].padStart(2, '0');
@@ -1487,6 +1489,64 @@ function normalizarFecha(str) {
   let y = m[3];
   if (y.length === 2) y = '20' + y;
   return `${d}/${mes}/${y}`;
+}
+
+// Helper para parsear cualquier fecha límite (hasta) a Date nativo
+function parsearFechaHasta(fechaStr) {
+  if (!fechaStr) return null;
+  const s = String(fechaStr).trim().split(' ')[0];
+  if (s.includes('/')) {
+    const p = s.split('/');
+    if (p.length === 3) {
+      let y = p[2].trim();
+      if (y.length === 2) y = '20' + y;
+      const m = parseInt(p[1], 10) - 1;
+      const d = parseInt(p[0], 10);
+      const dt = new Date(parseInt(y, 10), m, d);
+      dt.setHours(0, 0, 0, 0);
+      return dt;
+    }
+  } else if (s.includes('-')) {
+    const p = s.split('-');
+    if (p.length === 3) {
+      const dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+      dt.setHours(0, 0, 0, 0);
+      return dt;
+    }
+  }
+  return null;
+}
+
+// 1. ¿Se realizó la visita?
+function tieneVisitaRealizada(t) {
+  if (!t) return false;
+  return !!(t.fechaRealizada && t.fechaRealizada.toString().trim());
+}
+
+// 2. ¿Es vencida? -> CONCEPTO: NO se realizó la visita Y el hasta es pasado
+function esVisitaVencida(t) {
+  if (!t) return false;
+  // Si ya se realizó la visita (efectiva o fallida), NUNCA es vencida
+  if (tieneVisitaRealizada(t)) return false;
+
+  // Si no tiene fecha límite (hasta), no puede considerarse vencida
+  if (!t.fechaHasta || !t.fechaHasta.toString().trim()) return false;
+
+  const dHasta = parsearFechaHasta(t.fechaHasta);
+  if (!dHasta) return false;
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  // El hasta es pasado (estrictamente menor a hoy)
+  return dHasta < hoy;
+}
+
+// 3. ¿Está en término? -> NO se realizó la visita Y (no tiene hasta O el hasta es hoy o futuro)
+function esVisitaEnTermino(t) {
+  if (!t) return false;
+  if (tieneVisitaRealizada(t)) return false;
+  return !esVisitaVencida(t);
 }
 
 // =========================================================================
@@ -1512,9 +1572,7 @@ function calcularEstadosAutomaticos(t) {
     if (!t.fechaHasta) t.fechaHasta = '31/12/2026';
   }
 
-  const tieneRealizada = !!(t.fechaRealizada && t.fechaRealizada.toString().trim());
-
-  if (tieneRealizada) {
+  if (tieneVisitaRealizada(t)) {
     // Si se realizó la visita (efectiva o fallida) -> Estado SIEMPRE "Realizada"
     t.estadoTarea = 'Realizada';
 
@@ -1533,23 +1591,8 @@ function calcularEstadosAutomaticos(t) {
     }
   } else {
     // Si NO se realizó visita:
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-
-    if (t.fechaHasta && t.fechaHasta.toString().trim()) {
-      const p = t.fechaHasta.toString().split('/');
-      if (p.length === 3) {
-        const y = p[2].length === 2 ? '20' + p[2] : p[2];
-        const dHasta = new Date(parseInt(y, 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10));
-        dHasta.setHours(0, 0, 0, 0);
-        t.estadoTarea = (dHasta < hoy) ? 'Vencida' : 'En término';
-      } else {
-        t.estadoTarea = 'En término';
-      }
-    } else {
-      t.estadoTarea = 'En término';
-    }
-
+    // Vencida ÚNICAMENTE si no se realizó la visita y el hasta es pasado
+    t.estadoTarea = esVisitaVencida(t) ? 'Vencida' : 'En término';
     t.resultadoVisita = '';
     t.gestionFallida = '';
   }
@@ -1741,9 +1784,7 @@ function actualizarKpis() {
     const esResidual = origen.includes('residual');
     if (esResidual) totalResidual++; else totalAltas++;
 
-    const estado = (t.estadoTarea || '').toLowerCase();
-    const resultado = (t.resultadoVisita || '').toLowerCase();
-    const tieneRealizada = !!(t.fechaRealizada && t.fechaRealizada.trim());
+    const tieneRealizada = tieneVisitaRealizada(t);
 
     if (tieneRealizada) {
       realizadasTotal++;
@@ -1766,20 +1807,13 @@ function actualizarKpis() {
           else efectivasPorMes[idxTimeline]++;
         }
       }
-    }
-
-    if (estado.includes('próxima') || estado.includes('proxima')) {
-      proximas++;
-    } else if (estado.includes('vencida')) {
-      vencidas++;
-    } else if (estado.includes('pendiente plazo')) {
-      pendientePlazo++;
-    } else if (estado.includes('término') || estado.includes('termino')) {
-      enTermino++;
-    } else if (estado.includes('sin documento')) {
-      pendienteDoc++;
-    } else if (estado.includes('terminada')) {
-      terminadas++;
+    } else {
+      // Vencida ÚNICAMENTE si no se realizó la visita y el hasta es pasado
+      if (esVisitaVencida(t)) {
+        vencidas++;
+      } else {
+        enTermino++;
+      }
     }
   });
 
@@ -1836,14 +1870,10 @@ function actualizarKpis() {
   // Actualizar Card 4: Semáforo y Alertas
   const elVenc = document.getElementById('kpiVencidas');
   if (elVenc) elVenc.textContent = vencidas;
-  const elProx = document.getElementById('kpiProximas');
-  if (elProx) elProx.textContent = proximas;
   const elFall = document.getElementById('kpiFallidas');
   if (elFall) elFall.textContent = fallidasTotal;
-  const elPendDocTop = document.getElementById('kpiPendienteDocTop');
-  if (elPendDocTop) elPendDocTop.textContent = pendienteDoc;
   const elBarVenc = document.getElementById('kpiBarVencidas');
-  if (elBarVenc) elBarVenc.style.width = total > 0 ? Math.min(100, Math.round(((vencidas + proximas) / total) * 100) * 4) + '%' : '0%';
+  if (elBarVenc) elBarVenc.style.width = total > 0 ? Math.min(100, Math.round((vencidas / total) * 100) * 4) + '%' : '0%';
 
   // Contadores de Selector de Cohorte
   if (document.getElementById('countCohorteTodos')) document.getElementById('countCohorteTodos').textContent = total;
@@ -1858,7 +1888,7 @@ function actualizarKpis() {
 
   // Badges en Sidebar Rail
   if (document.getElementById('badgeNavTodas')) document.getElementById('badgeNavTodas').textContent = total;
-  if (document.getElementById('badgeNavProximas')) document.getElementById('badgeNavProximas').textContent = proximas + vencidas;
+  if (document.getElementById('badgeNavProximas')) document.getElementById('badgeNavProximas').textContent = vencidas;
   if (document.getElementById('badgeNavFallidas')) document.getElementById('badgeNavFallidas').textContent = fallidasTotal;
 }
 
@@ -1884,7 +1914,7 @@ function renderizarTableroKPIs() {
     const esResidual = origen.includes('residual');
     if (esResidual) totalResidual++; else totalAltas++;
 
-    const tieneRealizada = !!(t.fechaRealizada && t.fechaRealizada.trim());
+    const tieneRealizada = tieneVisitaRealizada(t);
     if (tieneRealizada) {
       if (esResidual) realizadasResidual++; else realizadasAltas++;
 
@@ -1907,22 +1937,21 @@ function renderizarTableroKPIs() {
           }
         }
       }
-    } else {
-      if ((t.estadoTarea || '').toLowerCase().includes('vencida')) {
-        totalVencidasStock++;
-        const fh = t.fechaHasta;
-        if (fh) {
-          const parts = fh.split('/');
-          if (parts.length === 3) {
-            const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
-            const m = parts[1].padStart(2, '0');
-            const claveYM = `${y}-${m}`;
-            const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
-            if (idxTimeline !== -1) {
-              vencidasPorMes[idxTimeline]++;
-            } else {
-              vencidasPorMes[0]++;
-            }
+    } else if (esVisitaVencida(t)) {
+      // Vencida ÚNICAMENTE si no se realizó la visita y el hasta es pasado
+      totalVencidasStock++;
+      const fh = t.fechaHasta;
+      if (fh) {
+        const parts = fh.split('/');
+        if (parts.length === 3) {
+          const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+          const m = parts[1].padStart(2, '0');
+          const claveYM = `${y}-${m}`;
+          const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
+          if (idxTimeline !== -1) {
+            vencidasPorMes[idxTimeline]++;
+          } else {
+            vencidasPorMes[0]++;
           }
         }
       }
@@ -2498,10 +2527,9 @@ function filtrarYRenderizar() {
 
     // Filtro Chip Estado
     if (FILTRO_ESTADO !== 'todos') {
-      const est = (t.estadoTarea || '').toLowerCase();
-      if (FILTRO_ESTADO === 'realizadas' && !est.includes('realizada')) return false;
-      if (FILTRO_ESTADO === 'vencidas' && !est.includes('vencida')) return false;
-      if (FILTRO_ESTADO === 'termino' && !est.includes('término') && !est.includes('termino')) return false;
+      if (FILTRO_ESTADO === 'realizadas' && !tieneVisitaRealizada(t)) return false;
+      if (FILTRO_ESTADO === 'vencidas' && !esVisitaVencida(t)) return false;
+      if (FILTRO_ESTADO === 'termino' && !esVisitaEnTermino(t)) return false;
     }
 
     // Filtro Tarea
@@ -2568,11 +2596,15 @@ function filtrarYRenderizar() {
       : (t.fechaRealizada ? `<span class="no" title="Falta subir documento">○</span>` : `<span class="na" title="Sin visita realizada">–</span>`);
 
     let badgeClass = 'badge-neutral';
-    const est = (t.estadoTarea || '').toLowerCase();
-    if (est.includes('terminada')) badgeClass = 'badge-ok';
-    else if (est.includes('vencida')) badgeClass = 'badge-alert';
-    else if (est.includes('próxima') || est.includes('proxima')) badgeClass = 'badge-warn';
-    else if (est.includes('fallida')) badgeClass = 'badge-alert';
+    if (tieneVisitaRealizada(t)) {
+      badgeClass = 'badge-ok';
+    } else if (esVisitaVencida(t)) {
+      badgeClass = 'badge-alert';
+    } else {
+      badgeClass = 'badge-neutral';
+    }
+
+    const estadoTexto = tieneVisitaRealizada(t) ? 'Realizada' : (esVisitaVencida(t) ? 'Vencida' : 'En término');
 
     const fechaDesdeDisplay = t.fechaDesde || '<span class="na">--</span>';
     const fechaHastaDisplay = t.fechaHasta 
@@ -2602,7 +2634,7 @@ function filtrarYRenderizar() {
       <td class="m">${escapeHtml(t.cuit || '--')}</td>
       <td><span>${escapeHtml(t.tarea || 'Visita')}</span></td>
       <td class="m">${docDot}</td>
-      <td><span class="badge ${badgeClass}">${escapeHtml(t.estadoTarea || 'Pendiente')}</span></td>
+      <td><span class="badge ${badgeClass}">${escapeHtml(estadoTexto)}</span></td>
       <td class="m">${fechaDesdeDisplay}</td>
       <td class="m">${fechaHastaDisplay}</td>
       <td class="m" style="background:#F4F8F9;">${fechaRealDisplay}</td>
@@ -2735,12 +2767,11 @@ function seleccionarTarea(tarea) {
 
   const badge = document.getElementById('detBadgeEstado');
   if (badge) {
-    badge.textContent = tarea.estadoTarea || 'En término';
-    badge.className = 'badge ' + (
-      (tarea.estadoTarea || '').includes('Terminada') ? 'badge-ok' :
-      (tarea.estadoTarea || '').includes('Vencida') ? 'badge-alert' :
-      (tarea.estadoTarea || '').includes('Próxima') ? 'badge-warn' : 'badge-neutral'
-    );
+    const isReal = tieneVisitaRealizada(tarea);
+    const isVenc = esVisitaVencida(tarea);
+    const estDisplay = isReal ? 'Realizada' : (isVenc ? 'Vencida' : 'En término');
+    badge.textContent = estDisplay;
+    badge.className = 'badge ' + (isReal ? 'badge-ok' : (isVenc ? 'badge-alert' : 'badge-neutral'));
   }
   const badge2 = document.getElementById('detBadgeEstado2');
   if (badge2 && badge) {
@@ -2832,39 +2863,22 @@ function actualizarPrevisualizacionEstadoAside() {
   let estadoCalc = 'En término';
   let badgeClass = 'badge-neutral';
 
+  // 1. Si se ingresó fecha realizada -> Siempre Realizada
   if (fRealizadaVal) {
     estadoCalc = 'Realizada';
     badgeClass = 'badge-ok';
-  } else if (fHastaVal) {
-    const p = fHastaVal.split('-');
-    if (p.length === 3) {
-      const dH = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-      dH.setHours(0, 0, 0, 0);
-      if (dH < hoy) {
-        estadoCalc = 'Vencida';
-        badgeClass = 'badge-alert';
-      } else {
-        estadoCalc = 'En término';
-        badgeClass = 'badge-neutral';
-      }
-    }
-  } else if (TAREA_SELECCIONADA.fechaHasta) {
-    const p = TAREA_SELECCIONADA.fechaHasta.split('/');
-    if (p.length === 3) {
-      const y = p[2].length === 2 ? '20' + p[2] : p[2];
-      const dH = new Date(parseInt(y, 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10));
-      const hoy = new Date();
-      hoy.setHours(0, 0, 0, 0);
-      dH.setHours(0, 0, 0, 0);
-      if (dH < hoy) {
-        estadoCalc = 'Vencida';
-        badgeClass = 'badge-alert';
-      } else {
-        estadoCalc = 'En término';
-        badgeClass = 'badge-neutral';
-      }
+  } else {
+    // 2. Si no se realizó visita -> Vencida ÚNICAMENTE si el hasta es pasado
+    const dummy = {
+      fechaRealizada: '',
+      fechaHasta: fHastaVal || TAREA_SELECCIONADA.fechaHasta
+    };
+    if (esVisitaVencida(dummy)) {
+      estadoCalc = 'Vencida';
+      badgeClass = 'badge-alert';
+    } else {
+      estadoCalc = 'En término';
+      badgeClass = 'badge-neutral';
     }
   }
 
