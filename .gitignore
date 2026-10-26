@@ -4,6 +4,8 @@ Desktop.ini
 .DS_Store
 *.tmp
 *.log
+__pycache__/
+*.pyc
 
 # Temp files
 scratch_*

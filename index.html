@@ -1438,8 +1438,8 @@ let chartFallidasDonutInstance = null;
 let modoChartPresupuesto = 'mensual';
 let filtroMesFallidas = 'acumulado';
 
-// Claves LocalStorage (V11: Barras apiladas de visitas efectivas y fallidas en KPIs)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V11';
+// Claves LocalStorage (V13: Deduplicación e imputación de visitas de arranque en Septiembre 2026)
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V13';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -1600,12 +1600,71 @@ function calcularEstadosAutomaticos(t) {
   return t;
 }
 
+function normalizarCuit(cuit) {
+  return (cuit || '').toString().replace(/\D/g, '');
+}
+
+function normalizarTextoClave(txt) {
+  return (txt || '').toString().trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * Obtiene la clave única de visita para deduplicación:
+ * CUIT + Nro Estab Intercambio + Tarea + Fecha Realizada.
+ * Si varios registros coinciden en estos 4 campos, representan la misma salida/visita
+ * y deben contarse como 1 en todos los indicadores y tableros de visitas.
+ */
+function obtenerClaveVisita(t) {
+  if (!tieneVisitaRealizada(t)) return null;
+  const c = normalizarCuit(t.cuit);
+  const e = (t.nroEstabIntercambio || t.nroEstab || '1').toString().trim();
+  const tar = normalizarTextoClave(t.tarea);
+  const fr = normalizarFecha(t.fechaRealizada);
+  if (!c || !fr) return null;
+  return `${c}_${e}_${tar}_${fr}`;
+}
+
+/**
+ * Obtiene la clave YYYY-MM para la línea de tiempo del proyecto.
+ * Las visitas realizadas antes del inicio oficial del ciclo (Sep 2026)
+ * se imputan en Septiembre 2026 (Mes 0) como parte del lote inicial.
+ */
+function obtenerClaveMesRealizada(fechaStr) {
+  const norm = normalizarFecha(fechaStr);
+  if (!norm) return null;
+  const p = norm.split('/');
+  if (p.length !== 3) return null;
+  let y = p[2];
+  if (y.length === 2) y = '20' + y;
+  const m = p[1].padStart(2, '0');
+  let claveYM = `${y}-${m}`;
+  if (claveYM < '2026-09') {
+    claveYM = '2026-09';
+  }
+  return claveYM;
+}
+
+let MAPA_CONTEO_VISITAS = {};
+
+function recalcularMapaConteoVisitas() {
+  MAPA_CONTEO_VISITAS = {};
+  if (!Array.isArray(TASKS)) return;
+  TASKS.forEach(t => {
+    const k = obtenerClaveVisita(t);
+    if (k) {
+      MAPA_CONTEO_VISITAS[k] = (MAPA_CONTEO_VISITAS[k] || 0) + 1;
+    }
+  });
+}
+
 function normalizarTarea(t, idx) {
   const rowId = parseInt(t.rowId || (idx !== undefined ? idx + 2 : 2), 10);
   const cuit = (t.cuit || t["Cuit"] || "").toString().trim();
   const empleador = (t.empleador || t["Empleador"] || "").toString().trim();
   const contrato = (t.contrato || t["Contrato IAPART"] || t["Contrato"] || "").toString().trim();
   const nroEstab = (t.nroEstab || t["Nro Estab IAPART"] || t["Nro Estab"] || "1").toString().trim();
+  const nroEstabIntercambio = (t.nroEstabIntercambio || t["Nro Estab Intercambio"] || nroEstab || "1").toString().trim();
   const localidad = (t.localidad || t["Localidad"] || "").toString().trim();
   const preventor = (t.preventor || t["Preventor Asignado"] || t["Preventor"] || "").toString().trim();
   const capitas = (t.capitas || t["Capitas"] || "").toString().trim();
@@ -1641,6 +1700,7 @@ function normalizarTarea(t, idx) {
     contrato,
     establecimiento,
     nroEstab,
+    nroEstabIntercambio,
     localidad,
     preventor,
     capitas,
@@ -1760,6 +1820,7 @@ function setFiltroCohorte(cohorte) {
 }
 
 function actualizarKpis() {
+  recalcularMapaConteoVisitas();
   const total = TASKS.length;
   let totalResidual = 0;
   let totalAltas = 0;
@@ -1779,6 +1840,9 @@ function actualizarKpis() {
   const efectivasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
   const fallidasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
 
+  // Registro de visitas contadas para deduplicar por CUIT + Nro Estab Intercambio + Tarea + Fecha Realizada
+  const visitasContadas = new Set();
+
   TASKS.forEach(t => {
     const origen = (t.origenPlan || 'Residual 2026').toLowerCase();
     const esResidual = origen.includes('residual');
@@ -1787,20 +1851,28 @@ function actualizarKpis() {
     const tieneRealizada = tieneVisitaRealizada(t);
 
     if (tieneRealizada) {
+      const claveVisita = obtenerClaveVisita(t);
+      if (claveVisita && visitasContadas.has(claveVisita)) {
+        // Coincide CUIT + Nro Estab Intercambio + Tarea + Fecha Realizada:
+        // Se computa como 1 en el conteo de visitas
+        return;
+      }
+      if (claveVisita) {
+        visitasContadas.add(claveVisita);
+      }
+
       realizadasTotal++;
       if (esResidual) realizadasResidual++; else realizadasAltas++;
+      const resultado = (t.resultadoVisita || '').toLowerCase();
       if (resultado === 'fallida') {
         fallidasTotal++;
       } else {
         efectivasTotal++;
       }
 
-      // Mapear al timeline
-      const parts = t.fechaRealizada.split('/');
-      if (parts.length === 3) {
-        const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
-        const m = parts[1].padStart(2, '0');
-        const claveYM = `${y}-${m}`;
+      // Mapear al timeline (imputando en Sep 2026 las fechas anteriores)
+      const claveYM = obtenerClaveMesRealizada(t.fechaRealizada);
+      if (claveYM) {
         const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
         if (idxTimeline !== -1) {
           if (resultado === 'fallida') fallidasPorMes[idxTimeline]++;
@@ -1909,6 +1981,9 @@ function renderizarTableroKPIs() {
   let fallidasGestionadas = 0;
   let fallidasPendientes = 0;
 
+  // Registro de visitas contadas para deduplicar por CUIT + Nro Estab Intercambio + Tarea + Fecha Realizada
+  const visitasContadas = new Set();
+
   TASKS.forEach(t => {
     const origen = (t.origenPlan || 'Residual 2026').toLowerCase();
     const esResidual = origen.includes('residual');
@@ -1916,6 +1991,16 @@ function renderizarTableroKPIs() {
 
     const tieneRealizada = tieneVisitaRealizada(t);
     if (tieneRealizada) {
+      const claveVisita = obtenerClaveVisita(t);
+      if (claveVisita && visitasContadas.has(claveVisita)) {
+        // Coincide CUIT + Nro Estab Intercambio + Tarea + Fecha Realizada:
+        // Se computa como 1 en el conteo de visitas
+        return;
+      }
+      if (claveVisita) {
+        visitasContadas.add(claveVisita);
+      }
+
       if (esResidual) realizadasResidual++; else realizadasAltas++;
 
       const esFallida = (t.resultadoVisita || '').toLowerCase() === 'fallida';
@@ -1923,11 +2008,8 @@ function renderizarTableroKPIs() {
         if (t.gestionFallida) fallidasGestionadas++; else fallidasPendientes++;
       }
 
-      const parts = t.fechaRealizada.split('/');
-      if (parts.length === 3) {
-        const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
-        const m = parts[1].padStart(2, '0');
-        const claveYM = `${y}-${m}`;
+      const claveYM = obtenerClaveMesRealizada(t.fechaRealizada);
+      if (claveYM) {
         const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
         if (idxTimeline !== -1) {
           if (esFallida) {
@@ -2287,15 +2369,17 @@ function renderChartFallidas() {
   let faGest = 0;
   let faPend = 0;
 
-  TASKS.forEach(t => {
-    if (t.fechaRealizada && t.fechaRealizada.trim()) {
-      const parts = t.fechaRealizada.split('/');
-      if (parts.length === 3) {
-        const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
-        const m = parts[1].padStart(2, '0');
-        const claveYM = `${y}-${m}`;
-        const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
+  const visitasContadas = new Set();
 
+  TASKS.forEach(t => {
+    if (tieneVisitaRealizada(t)) {
+      const claveVisita = obtenerClaveVisita(t);
+      if (claveVisita && visitasContadas.has(claveVisita)) return;
+      if (claveVisita) visitasContadas.add(claveVisita);
+
+      const claveYM = obtenerClaveMesRealizada(t.fechaRealizada);
+      if (claveYM) {
+        const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
         const matches = (filtroMesFallidas === 'acumulado') || (idxTimeline === parseInt(filtroMesFallidas, 10));
         if (matches) {
           const esFallida = (t.resultadoVisita || '').toLowerCase() === 'fallida';
@@ -2448,11 +2532,8 @@ function matcheaMesRealizada(t, fMesY) {
   if (fMesY === 'pendientes') {
     return !t.fechaRealizada || t.fechaRealizada.trim() === '';
   }
-  const norm = normalizarFecha(t.fechaRealizada);
-  if (!norm) return false;
-  const [fAnio, fMes] = fMesY.split('-');
-  const p = norm.split('/');
-  return p.length === 3 && p[1] === fMes && p[2] === fAnio;
+  const claveYM = obtenerClaveMesRealizada(t.fechaRealizada);
+  return claveYM === fMesY;
 }
 
 // Filtro 2: Matchea por Mes de Alta / Planificación (Desde/Hasta u Origen Plan)
@@ -2610,7 +2691,12 @@ function filtrarYRenderizar() {
     const fechaHastaDisplay = t.fechaHasta 
       ? escapeHtml(t.fechaHasta) 
       : `<span class="badge badge-warn" style="font-size:10px; cursor:pointer; font-weight:600;" title="Clic en la fila para asignar plazo Desde/Hasta">+ Asignar plazo</span>`;
-    const fechaRealDisplay = t.fechaRealizada ? `<strong style="color:#0F4C5C;">${escapeHtml(t.fechaRealizada)}</strong>` : '<span class="na">--</span>';
+    const claveV = obtenerClaveVisita(t);
+    const esCompartida = claveV && (MAPA_CONTEO_VISITAS[claveV] > 1);
+    const badgeCompartida = esCompartida 
+      ? ` <span class="badge" style="background:#EBF3F5; color:#0F4C5C; border:1px solid #B0CDD4; font-size:9.5px; padding:1px 4px; border-radius:3px; margin-left:3px; vertical-align:middle;" title="Visita compartida / unificada: coincide CUIT, Nro Estab Intercambio, Tarea y Fecha con otro registro. Se computa como 1 visita en los totales de KPIs.">1 visita</span>` 
+      : '';
+    const fechaRealDisplay = t.fechaRealizada ? `<strong style="color:#0F4C5C;">${escapeHtml(t.fechaRealizada)}</strong>${badgeCompartida}` : '<span class="na">--</span>';
 
     const resBadge = t.resultadoVisita 
       ? `<span class="badge ${t.resultadoVisita.toLowerCase() === 'efectiva' ? 'badge-ok' : 'badge-alert'}" style="font-size:11px;">${escapeHtml(t.resultadoVisita)}</span>`
@@ -2758,12 +2844,19 @@ function seleccionarTarea(tarea) {
 
   document.getElementById('detEstablecimiento').textContent = tarea.establecimiento || 'Establecimiento';
   document.getElementById('detEmpleadorYCuit').textContent = `${tarea.empleador || 'Empresa'} · CUIT [${tarea.cuit || '--'}]`;
-  document.getElementById('detLocalidadYContrato').textContent = `Loc: ${tarea.localidad || 'S/D'} · Contrato IAPSER: ${tarea.contrato || '--'} · N° Estab: ${tarea.nroEstab || '1'}`;
+  const strEstabInter = tarea.nroEstabIntercambio ? ` · Intercambio: ${tarea.nroEstabIntercambio}` : '';
+  document.getElementById('detLocalidadYContrato').textContent = `Loc: ${tarea.localidad || 'S/D'} · Contrato IAPSER: ${tarea.contrato || '--'} · N° Estab: ${tarea.nroEstab || '1'}${strEstabInter}`;
   document.getElementById('detTarea').textContent = tarea.tarea || 'Visita';
   
   document.getElementById('detFechaDesde').textContent = tarea.fechaDesde || '--';
   document.getElementById('detFechaHasta').textContent = tarea.fechaHasta || '--';
-  document.getElementById('detFechaRealizadaLabel').textContent = tarea.fechaRealizada || 'Pendiente';
+  
+  const claveSel = obtenerClaveVisita(tarea);
+  const esVisitaCompartidaSel = claveSel && (MAPA_CONTEO_VISITAS[claveSel] > 1);
+  const avisoCompartidaHtml = esVisitaCompartidaSel 
+    ? ` <span class="badge" style="background:#EBF3F5; color:#0F4C5C; border:1px solid #B0CDD4; font-size:10px; margin-left:4px;" title="Coincide CUIT, Nro Estab Intercambio, Tarea y Fecha Realizada con otro registro. Se computa como 1 visita única en KPIs.">(1 visita unificada)</span>` 
+    : '';
+  document.getElementById('detFechaRealizadaLabel').innerHTML = tarea.fechaRealizada ? `${escapeHtml(tarea.fechaRealizada)}${avisoCompartidaHtml}` : 'Pendiente';
 
   const badge = document.getElementById('detBadgeEstado');
   if (badge) {

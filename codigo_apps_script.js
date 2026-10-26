@@ -430,6 +430,7 @@ function procesarCrearTarea(sheet, colMap, payload) {
   if (colMap["Localidad"]) newRow[colMap["Localidad"] - 1] = payload.localidad || "";
   if (colMap["Tarea"]) newRow[colMap["Tarea"] - 1] = tareaSeleccionada;
   if (colMap["Nro Estab IAPART"]) newRow[colMap["Nro Estab IAPART"] - 1] = payload.nroEstab || "1";
+  if (colMap["Nro Estab Intercambio"]) newRow[colMap["Nro Estab Intercambio"] - 1] = payload.nroEstabIntercambio || payload.nroEstab || "1";
   if (colMap["Origen Plan"]) newRow[colMap["Origen Plan"] - 1] = payload.origenPlan || "Alta Sep 2026";
   if (colMap["Fecha Desde"]) newRow[colMap["Fecha Desde"] - 1] = payload.fechaDesde || "";
   if (colMap["Fecha Hasta"]) newRow[colMap["Fecha Hasta"] - 1] = payload.fechaHasta || "";
@@ -612,6 +613,7 @@ function obtenerTodosLosDatos() {
     obj.contrato = (obj["Contrato IAPART"] || obj["Contrato"] || obj.contrato || "").toString();
     obj.establecimiento = (obj["Establecimiento"] || obj.establecimiento || "").toString();
     obj.nroEstab = (obj["Nro Estab IAPART"] || obj["Nro Estab"] || obj.nroEstab || "1").toString();
+    obj.nroEstabIntercambio = (obj["Nro Estab Intercambio"] || obj.nroEstabIntercambio || obj.nroEstab || "1").toString();
     obj.localidad = (obj["Localidad"] || obj.localidad || "").toString();
     obj.preventor = (obj["Preventor Asignado"] || obj["Preventor"] || obj.preventor || "").toString();
     obj.capitas = (obj["Capitas"] || obj.capitas || "").toString();

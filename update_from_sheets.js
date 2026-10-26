@@ -188,6 +188,7 @@ async function run() {
       contrato: row[colIdx['Contrato IAPART']] || '',
       establecimiento: estabNombre,
       nroEstab: row[colIdx['Nro Estab IAPART']] || '1',
+      nroEstabIntercambio: row[colIdx['Nro Estab Intercambio']] || row[colIdx['Nro Estab IAPART']] || '1',
       localidad: row[colIdx['Localidad']] || '',
       preventor: row[colIdx['Preventor Asignado']] || '',
       capitas: row[colIdx['Capitas']] || '',
