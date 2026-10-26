@@ -876,11 +876,11 @@
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
                   <div>
                     <label style="font-size:11px; color:#5B6670; display:block; margin-bottom:3px;">Nueva Fecha Desde:</label>
-                    <input type="date" id="txtInputFechaDesde">
+                    <input type="date" id="txtInputFechaDesde" onchange="actualizarPrevisualizacionEstadoAside()">
                   </div>
                   <div>
                     <label style="font-size:11px; color:#5B6670; display:block; margin-bottom:3px;">Nueva Fecha Hasta (Vence):</label>
-                    <input type="date" id="txtInputFechaHasta">
+                    <input type="date" id="txtInputFechaHasta" onchange="actualizarPrevisualizacionEstadoAside()" oninput="actualizarPrevisualizacionEstadoAside()">
                   </div>
                 </div>
                 <button type="button" class="btn btn-secondary" onclick="guardarSoloPlazos()" id="btnGuardarSoloPlazos" style="width:100%; min-height:34px; font-size:12px; border-color:#0F4C5C; color:#0F4C5C; font-weight:600;">
@@ -904,8 +904,11 @@
               </div>
 
               <div style="margin-bottom:10px;">
-                <label style="font-size:12px; color:#5B6670; display:block; margin-bottom:4px;">Nueva Fecha Realizada:</label>
-                <input type="date" id="txtFechaRealizada">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <label style="font-size:12px; color:#5B6670;">Nueva Fecha Realizada:</label>
+                  <button type="button" onclick="limpiarFechaRealizadaForm()" style="font-size:11px; background:none; border:none; color:#A8470A; cursor:pointer; text-decoration:underline; padding:0;">Limpiar fecha</button>
+                </div>
+                <input type="date" id="txtFechaRealizada" onchange="actualizarPrevisualizacionEstadoAside()" oninput="actualizarPrevisualizacionEstadoAside()">
               </div>
 
               <div id="boxNroSiniestro" style="margin-bottom:10px; display:none;">
@@ -1103,17 +1106,17 @@
           </div>
         </div>
 
-        <!-- FILA 3: DOS COLUMNAS DE GRÁFICOS (VENCIDAS ACUMULADAS + PARTICIPACIÓN FALLIDAS) -->
+        <!-- FILA 3: DOS COLUMNAS DE GRÁFICOS (VENCIDAS + PARTICIPACIÓN FALLIDAS VS EFECTIVAS EN ANILLO) -->
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap:24px; margin-bottom:24px;">
 
-          <!-- Gráfico 2: Evolución de Vencidas Barras Acumuladas Desde Mes 0 -->
+          <!-- Gráfico 2: Evolución de Visitas Vencidas (Solo barras de cantidades) -->
           <div class="chart-panel" style="margin-bottom:0;">
             <div class="chart-header">
               <div>
-                <div class="chart-title">Evolución de Visitas Vencidas (Barras Acumuladas)</div>
-                <div class="chart-subtitle">Acumulación de deuda operativa mes a mes desde el inicio en Septiembre (Mes 0)</div>
+                <div class="chart-title">Evolución de Visitas Vencidas</div>
+                <div class="chart-subtitle">Cantidad de visitas vencidas por período mensual (Sep 2026 = Mes 0)</div>
               </div>
-              <span class="badge badge-alert" id="badgeStockVencidas">20 acumuladas</span>
+              <span class="badge badge-alert" id="badgeStockVencidas">0 vencidas</span>
             </div>
 
             <div class="chart-canvas-box">
@@ -1121,36 +1124,49 @@
             </div>
 
             <div style="display:flex; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid #D5D8D3; font-size:12px; color:#5B6670;">
-              <div>Vencidas en M0 (Sep 26): <strong>8 visitas</strong></div>
-              <div>Nuevas vencidas en M1 (Oct 26): <strong>12 visitas</strong></div>
-              <div>Stock total en mora: <strong style="color:#A8470A;">20 vencidas</strong></div>
+              <div>Vencidas en M0 (Sep 26): <strong id="lblVencM0">0 visitas</strong></div>
+              <div>Vencidas en M1 (Oct 26): <strong id="lblVencM1">0 visitas</strong></div>
+              <div>Total vencidas en mora: <strong style="color:#A8470A;" id="lblVencTotal">0 vencidas</strong></div>
             </div>
           </div>
 
-          <!-- Gráfico 3: Participación y Evolución Fallidas vs Efectivas -->
+          <!-- Gráfico 3: Participación y Evolución Fallidas vs Efectivas (Anillo acumulado con filtro por mes) -->
           <div class="chart-panel" style="margin-bottom:0;">
             <div class="chart-header">
               <div>
                 <div class="chart-title">Participación y Evolución: Fallidas vs Efectivas</div>
-                <div class="chart-subtitle">Volumen total de salidas a terreno desde el inicio del proyecto</div>
+                <div class="chart-subtitle" id="lblSubtituloFallidas">Distribución acumulada de visitas efectivas y fallidas en todo el ciclo</div>
               </div>
-              <div style="display:flex; gap:6px;">
-                <button type="button" class="chip on" id="btnToggleFallidasStack" onclick="toggleModoFallidas('stack')" style="min-height:30px; font-size:11px; padding:2px 8px;">Evolución</button>
-                <button type="button" class="chip" id="btnToggleFallidasDonut" onclick="toggleModoFallidas('donut')" style="min-height:30px; font-size:11px; padding:2px 8px;">Distribución</button>
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <button type="button" class="chip on" id="chipFiltroFallidasAcum" onclick="setFiltroMesFallidas('acumulado')" style="min-height:30px; font-size:11px; padding:2px 8px;">Acumulado</button>
+                <button type="button" class="chip" id="chipFiltroFallidasM0" onclick="setFiltroMesFallidas('0')" style="min-height:30px; font-size:11px; padding:2px 8px;">Sep 26</button>
+                <button type="button" class="chip" id="chipFiltroFallidasM1" onclick="setFiltroMesFallidas('1')" style="min-height:30px; font-size:11px; padding:2px 8px;">Oct 26</button>
+                <select id="selFiltroMesFallidas" onchange="setFiltroMesFallidas(this.value)" style="min-height:30px; font-size:11px; padding:2px 6px; border:1px solid #D5D8D3; border-radius:3px; background:#fff; color:#17202A; cursor:pointer;" title="Filtrar por mes específico">
+                  <option value="acumulado">📊 Acumulado Total</option>
+                  <option value="0">M0: Sep 2026</option>
+                  <option value="1">M1: Oct 2026</option>
+                  <option value="2">M2: Nov 2026</option>
+                  <option value="3">M3: Dic 2026</option>
+                  <option value="4">M4: Ene 2027</option>
+                  <option value="5">M5: Feb 2027</option>
+                  <option value="6">M6: Mar 2027</option>
+                  <option value="7">M7: Abr 2027</option>
+                  <option value="8">M8: May 2027</option>
+                  <option value="9">M9: Jun 2027</option>
+                  <option value="10">M10: Jul 2027</option>
+                  <option value="11">M11: Ago 2027</option>
+                </select>
               </div>
             </div>
 
-            <div class="chart-canvas-box" id="boxChartFallidasStack">
-              <canvas id="chartFallidasStack"></canvas>
-            </div>
-            <div class="chart-canvas-box" id="boxChartFallidasDonut" style="display:none;">
+            <div class="chart-canvas-box" id="boxChartFallidasDonut">
               <canvas id="chartFallidasDonut"></canvas>
             </div>
 
             <div style="display:flex; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid #D5D8D3; font-size:12px; color:#5B6670;">
-              <div>Efectivas: <strong style="color:#0F4C5C;" id="lblTotEfPie">149 (89.8%)</strong></div>
-              <div>Fallidas: <strong style="color:#A8470A;" id="lblTotFaPie">17 (10.2%)</strong></div>
-              <div>Gestionadas: <strong id="lblTotFaGest">11</strong> | Pendientes: <strong style="color:#A8470A;" id="lblTotFaPend">6</strong></div>
+              <div>Efectivas: <strong style="color:#0F4C5C;" id="lblTotEfPie">0 (0.0%)</strong></div>
+              <div>Fallidas: <strong style="color:#A8470A;" id="lblTotFaPie">0 (0.0%)</strong></div>
+              <div>Gestionadas: <strong id="lblTotFaGest">0</strong> | Pendientes: <strong style="color:#A8470A;" id="lblTotFaPend">0</strong></div>
             </div>
           </div>
 
@@ -1418,10 +1434,9 @@ let LOTE_MASIVO = [];
 // Instancias de Chart.js
 let chartPresupuestoInstance = null;
 let chartVencidasInstance = null;
-let chartFallidasStackInstance = null;
 let chartFallidasDonutInstance = null;
 let modoChartPresupuesto = 'mensual';
-let modoChartFallidas = 'stack';
+let filtroMesFallidas = 'acumulado';
 
 // Claves LocalStorage (V11: Barras apiladas de visitas efectivas y fallidas en KPIs)
 const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V11';
@@ -1474,6 +1489,74 @@ function normalizarFecha(str) {
   return `${d}/${mes}/${y}`;
 }
 
+// =========================================================================
+// REGLA CENTRAL DE NEGOCIO: CÁLCULO DE ESTADOS AUTOMÁTICOS
+// =========================================================================
+function calcularEstadosAutomaticos(t) {
+  if (!t) return t;
+
+  // 1. Tarea técnica por defecto
+  if (!t.tarea || !t.tarea.toString().trim()) {
+    t.tarea = 'Visita tecnica';
+  }
+
+  // 2. Origen Plan por defecto
+  if (!t.origenPlan || !t.origenPlan.toString().trim()) {
+    t.origenPlan = 'Residual 2026';
+  }
+
+  // 3. Fechas para Visitas Técnicas si faltan
+  const esVT = (t.tarea || '').toLowerCase().includes('visita tecnica');
+  if (esVT) {
+    if (!t.fechaDesde) t.fechaDesde = '01/01/2026';
+    if (!t.fechaHasta) t.fechaHasta = '31/12/2026';
+  }
+
+  const tieneRealizada = !!(t.fechaRealizada && t.fechaRealizada.toString().trim());
+
+  if (tieneRealizada) {
+    // Si se realizó la visita (efectiva o fallida) -> Estado SIEMPRE "Realizada"
+    t.estadoTarea = 'Realizada';
+
+    // Resultado de visita: Si está vacío, por defecto Efectiva
+    if (!t.resultadoVisita || !t.resultadoVisita.toString().trim()) {
+      t.resultadoVisita = 'Efectiva';
+    }
+
+    // Gestión de fallida: Si es Fallida, pasa automáticamente a "Pendiente evaluacion" si no tiene gestión previa
+    if (t.resultadoVisita.toString().toLowerCase() === 'fallida') {
+      if (!t.gestionFallida || !t.gestionFallida.toString().trim()) {
+        t.gestionFallida = 'Pendiente evaluacion';
+      }
+    } else {
+      t.gestionFallida = '';
+    }
+  } else {
+    // Si NO se realizó visita:
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    if (t.fechaHasta && t.fechaHasta.toString().trim()) {
+      const p = t.fechaHasta.toString().split('/');
+      if (p.length === 3) {
+        const y = p[2].length === 2 ? '20' + p[2] : p[2];
+        const dHasta = new Date(parseInt(y, 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10));
+        dHasta.setHours(0, 0, 0, 0);
+        t.estadoTarea = (dHasta < hoy) ? 'Vencida' : 'En término';
+      } else {
+        t.estadoTarea = 'En término';
+      }
+    } else {
+      t.estadoTarea = 'En término';
+    }
+
+    t.resultadoVisita = '';
+    t.gestionFallida = '';
+  }
+
+  return t;
+}
+
 function normalizarTarea(t, idx) {
   const rowId = parseInt(t.rowId || (idx !== undefined ? idx + 2 : 2), 10);
   const cuit = (t.cuit || t["Cuit"] || "").toString().trim();
@@ -1487,11 +1570,9 @@ function normalizarTarea(t, idx) {
   let origenPlan = (t.origenPlan || t["Origen Plan"] || "Residual 2026").toString().trim();
 
   let rawDesde = (t.fechaDesde || t["Fecha Desde"] || "").toString().trim();
-  if (!rawDesde && tarea.toLowerCase().includes('visita tecnica')) rawDesde = '01/01/2026';
   let fechaDesde = normalizarFecha(rawDesde);
 
   let rawHasta = (t.fechaHasta || t["Fecha Hasta"] || "").toString().trim();
-  if (!rawHasta && tarea.toLowerCase().includes('visita tecnica')) rawHasta = '31/12/2026';
   let fechaHasta = normalizarFecha(rawHasta);
 
   // Columna F: Solo Columna F es Fecha Realizada (la visita efectuada)
@@ -1499,10 +1580,6 @@ function normalizarTarea(t, idx) {
   const fechaRealizada = normalizarFecha(rawReal);
 
   let resultadoVisita = (t.resultadoVisita || t["Resultado Visita"] || "").toString().trim();
-  if (!resultadoVisita && fechaRealizada) {
-    resultadoVisita = 'Efectiva';
-  }
-
   const nroSiniestro = (t.nroSiniestro || t["Nro Siniestro"] || "").toString().trim();
   const observaciones = (t.observaciones || t["Observaciones"] || "").toString().trim();
   const documentoAdjunto = (t.documentoAdjunto || t["Documento Adjunto"] || "").toString().trim();
@@ -1514,29 +1591,7 @@ function normalizarTarea(t, idx) {
     establecimiento = tarea.toLowerCase().includes('obra') ? 'Obra en construcción' : (empleador || 'Sede Principal');
   }
 
-  // ESTADO TAREA:
-  // 1. Si tiene fecha de visita realizada en Columna F (efectiva o fallida) -> Realizada
-  // 2. Si no se realizó -> En término o Vencida según fecha límite
-  let estadoTarea = (t.estadoTarea || t["Estado Tarea"] || "").toString().trim();
-  if (fechaRealizada) {
-    estadoTarea = 'Realizada';
-  } else {
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    if (fechaHasta) {
-      const p = fechaHasta.split('/');
-      if (p.length === 3) {
-        const dHasta = new Date(parseInt(p[2], 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10));
-        estadoTarea = (dHasta < hoy) ? 'Vencida' : 'En término';
-      } else {
-        estadoTarea = 'En término';
-      }
-    } else {
-      estadoTarea = 'En término';
-    }
-  }
-
-  return {
+  const obj = {
     rowId,
     cuit,
     empleador,
@@ -1555,9 +1610,11 @@ function normalizarTarea(t, idx) {
     nroSiniestro,
     observaciones,
     documentoAdjunto,
-    estadoTarea,
+    estadoTarea: '',
     gestionFallida
   };
+
+  return calcularEstadosAutomaticos(obj);
 }
 
 function inicializarDatos() {
@@ -1581,38 +1638,14 @@ function inicializarDatos() {
     }
   }
 
-  // Asegurar migración de cohortes y fechas en cualquier versión de datos cargada
+  // Asegurar cálculo de estados automáticos en cualquier versión de datos cargada
   if (TASKS && TASKS.length > 0) {
     let huboCambios = false;
     TASKS.forEach(t => {
-      if (!t.origenPlan) {
-        t.origenPlan = 'Residual 2026';
-        huboCambios = true;
-      }
-      const esVT = (t.tarea || '').toLowerCase().includes('visita tecnica');
-      if (esVT) {
-        if (!t.fechaDesde) { t.fechaDesde = '01/01/2026'; huboCambios = true; }
-        if (!t.fechaHasta) { t.fechaHasta = '31/12/2026'; huboCambios = true; }
-      }
-      // Mantener únicamente los 3 estados oficiales: Realizada, En término, Vencida
-      if (t.fechaRealizada) {
-        if (t.estadoTarea !== 'Realizada') { t.estadoTarea = 'Realizada'; huboCambios = true; }
-      } else {
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-        if (t.fechaHasta) {
-          const p = t.fechaHasta.split('/');
-          if (p.length === 3) {
-            const dH = new Date(parseInt(p[2], 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10));
-            const est = (dH < hoy) ? 'Vencida' : 'En término';
-            if (t.estadoTarea !== est) { t.estadoTarea = est; huboCambios = true; }
-          } else {
-            if (t.estadoTarea !== 'En término') { t.estadoTarea = 'En término'; huboCambios = true; }
-          }
-        } else {
-          if (t.estadoTarea !== 'En término') { t.estadoTarea = 'En término'; huboCambios = true; }
-        }
-      }
+      const antEst = t.estadoTarea;
+      const antGest = t.gestionFallida;
+      calcularEstadosAutomaticos(t);
+      if (t.estadoTarea !== antEst || t.gestionFallida !== antGest) huboCambios = true;
     });
     if (huboCambios) guardarEnCacheLocal();
   }
@@ -1964,11 +1997,10 @@ function renderizarTableroKPIs() {
   if (document.getElementById('kpiDashPctVencidas')) document.getElementById('kpiDashPctVencidas').textContent = ((totalVencidasStock / TASKS.length) * 100).toFixed(1) + '%';
   if (document.getElementById('kpiDashProximasSemana')) document.getElementById('kpiDashProximasSemana').textContent = totalProximas;
 
-  if (document.getElementById('badgeStockVencidas')) document.getElementById('badgeStockVencidas').textContent = `${totalVencidasStock} acumuladas`;
-  if (document.getElementById('lblTotEfPie')) document.getElementById('lblTotEfPie').textContent = `${totalEfectivasYTD} (${tasaEfectividad}%)`;
-  if (document.getElementById('lblTotFaPie')) document.getElementById('lblTotFaPie').textContent = `${totalFallidasYTD} (${(100 - parseFloat(tasaEfectividad)).toFixed(1)}%)`;
-  if (document.getElementById('lblTotFaGest')) document.getElementById('lblTotFaGest').textContent = fallidasGestionadas;
-  if (document.getElementById('lblTotFaPend')) document.getElementById('lblTotFaPend').textContent = fallidasPendientes;
+  if (document.getElementById('badgeStockVencidas')) document.getElementById('badgeStockVencidas').textContent = `${totalVencidasStock} vencidas`;
+  if (document.getElementById('lblVencM0')) document.getElementById('lblVencM0').textContent = `${vencidasPorMes[0] || 0} visitas`;
+  if (document.getElementById('lblVencM1')) document.getElementById('lblVencM1').textContent = `${vencidasPorMes[1] || 0} visitas`;
+  if (document.getElementById('lblVencTotal')) document.getElementById('lblVencTotal').textContent = `${totalVencidasStock} vencidas`;
 
   const m0Ef = efectivasPorMes[0] || 0;
   const m0Fa = fallidasPorMes[0] || 0;
@@ -1981,10 +2013,10 @@ function renderizarTableroKPIs() {
   document.getElementById('lblPromedioMensual').textContent = `${m1Tot} visitas (${m1Ef} efec. + ${m1Fa} fall.)`;
   document.getElementById('lblDesvioMensual').textContent = `${totalRealizadasCiclo - metaYTD} visitas vs meta acumulada de 200`;
 
-  // Renderizar Gráficos con Chart.js (Conteo con barras apiladas de efectivas y fallidas)
+  // Renderizar Gráficos con Chart.js
   renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual);
   renderChartVencidas(vencidasPorMes);
-  renderChartFallidas(efectivasPorMes, fallidasPorMes);
+  renderChartFallidas();
 
   // Renderizar Tabla Resumen Mensual
   renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidasPorMes, metaMensual);
@@ -2145,23 +2177,13 @@ function toggleModoPresupuesto(modo) {
   renderizarTableroKPIs();
 }
 
-// GRÁFICO 2: EVOLUCIÓN DE VENCIDAS (BARRAS ACUMULADAS DESDE M0 = SEP 2026)
+// GRÁFICO 2: EVOLUCIÓN DE VISITAS VENCIDAS (SOLO BARRAS DE CANTIDADES)
 function renderChartVencidas(vencidasPorMes) {
   const ctx = document.getElementById('chartVencidas').getContext('2d');
   if (chartVencidasInstance) chartVencidasInstance.destroy();
 
   const labels = PROYECTO_TIMELINE.map(pt => pt.label);
-  const vencidasAcumuladas = [];
-  let sumVenc = 0;
-
-  for (let i = 0; i < PROYECTO_TIMELINE.length; i++) {
-    if (i <= 1) { // M0 y M1
-      sumVenc += vencidasPorMes[i];
-      vencidasAcumuladas.push(sumVenc);
-    } else {
-      vencidasAcumuladas.push(null);
-    }
-  }
+  const dataCantidades = vencidasPorMes.map((v, i) => i <= 1 ? v : null);
 
   chartVencidasInstance = new Chart(ctx, {
     type: 'bar',
@@ -2169,21 +2191,11 @@ function renderChartVencidas(vencidasPorMes) {
       labels: labels,
       datasets: [
         {
-          label: 'Stock Acumulado de Vencidas',
-          data: vencidasAcumuladas,
+          label: 'Visitas Vencidas',
+          data: dataCantidades,
           backgroundColor: '#A8470A',
-          borderRadius: 2,
-          barPercentage: 0.65
-        },
-        {
-          label: 'Nuevas Vencidas del Período',
-          data: vencidasPorMes.map((v, i) => i <= 1 ? v : null),
-          type: 'line',
-          borderColor: '#17202A',
-          borderWidth: 2,
-          pointRadius: 4,
-          pointBackgroundColor: '#17202A',
-          fill: false
+          borderRadius: 3,
+          barPercentage: 0.55
         }
       ]
     },
@@ -2197,14 +2209,17 @@ function renderChartVencidas(vencidasPorMes) {
         },
         tooltip: {
           titleFont: { family: 'IBM Plex Sans' },
-          bodyFont: { family: 'IBM Plex Mono' }
+          bodyFont: { family: 'IBM Plex Mono' },
+          callbacks: {
+            label: (ctx) => ` Visitas vencidas: ${ctx.parsed.y}`
+          }
         }
       },
       scales: {
         y: {
           beginAtZero: true,
           grid: { color: '#E3E5E1' },
-          ticks: { font: { family: 'IBM Plex Mono', size: 11 } }
+          ticks: { font: { family: 'IBM Plex Mono', size: 11 }, precision: 0 }
         },
         x: {
           grid: { display: false },
@@ -2215,62 +2230,77 @@ function renderChartVencidas(vencidasPorMes) {
   });
 }
 
-// GRÁFICO 3: PARTICIPACIÓN Y EVOLUCIÓN FALLIDAS VS EFECTIVAS
-function renderChartFallidas(efectivasPorMes, fallidasPorMes) {
-  const ctxStack = document.getElementById('chartFallidasStack').getContext('2d');
-  if (chartFallidasStackInstance) chartFallidasStackInstance.destroy();
+// GRÁFICO 3: PARTICIPACIÓN Y EVOLUCIÓN FALLIDAS VS EFECTIVAS (ANILLO ACUMULADO CON FILTRO POR MES)
+function setFiltroMesFallidas(mesKey) {
+  filtroMesFallidas = mesKey.toString();
 
-  // Solo meses transcurridos (M0 Sep y M1 Oct)
-  const labelsTranscurridos = [PROYECTO_TIMELINE[0].label, PROYECTO_TIMELINE[1].label];
+  const btnAcum = document.getElementById('chipFiltroFallidasAcum');
+  const btnM0 = document.getElementById('chipFiltroFallidasM0');
+  const btnM1 = document.getElementById('chipFiltroFallidasM1');
+  const selMes = document.getElementById('selFiltroMesFallidas');
 
-  chartFallidasStackInstance = new Chart(ctxStack, {
-    type: 'bar',
-    data: {
-      labels: labelsTranscurridos,
-      datasets: [
-        {
-          label: 'Visitas Efectivas',
-          data: [efectivasPorMes[0], efectivasPorMes[1]],
-          backgroundColor: '#0F4C5C',
-          borderRadius: 1,
-          barPercentage: 0.55
-        },
-        {
-          label: 'Visitas Fallidas',
-          data: [fallidasPorMes[0], fallidasPorMes[1]],
-          backgroundColor: '#A8470A',
-          borderRadius: 1,
-          barPercentage: 0.55
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'IBM Plex Sans', size: 12 } } },
-        y: { stacked: true, grid: { color: '#E3E5E1' }, ticks: { font: { family: 'IBM Plex Mono' } } }
-      },
-      plugins: {
-        legend: { position: 'top', labels: { font: { family: 'IBM Plex Sans', size: 12 }, usePointStyle: true } },
-        tooltip: {
-          callbacks: {
-            footer: (items) => {
-              const total = items.reduce((a, b) => a + b.parsed.y, 0);
-              return `Total salidas: ${total}`;
-            }
+  if (btnAcum) btnAcum.classList.toggle('on', filtroMesFallidas === 'acumulado');
+  if (btnM0) btnM0.classList.toggle('on', filtroMesFallidas === '0');
+  if (btnM1) btnM1.classList.toggle('on', filtroMesFallidas === '1');
+  if (selMes && selMes.value !== filtroMesFallidas) selMes.value = filtroMesFallidas;
+
+  renderChartFallidas();
+}
+
+function renderChartFallidas() {
+  const canvas = document.getElementById('chartFallidasDonut');
+  if (!canvas) return;
+  const ctxDonut = canvas.getContext('2d');
+  if (chartFallidasDonutInstance) chartFallidasDonutInstance.destroy();
+
+  let totEf = 0;
+  let totFa = 0;
+  let faGest = 0;
+  let faPend = 0;
+
+  TASKS.forEach(t => {
+    if (t.fechaRealizada && t.fechaRealizada.trim()) {
+      const parts = t.fechaRealizada.split('/');
+      if (parts.length === 3) {
+        const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+        const m = parts[1].padStart(2, '0');
+        const claveYM = `${y}-${m}`;
+        const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
+
+        const matches = (filtroMesFallidas === 'acumulado') || (idxTimeline === parseInt(filtroMesFallidas, 10));
+        if (matches) {
+          const esFallida = (t.resultadoVisita || '').toLowerCase() === 'fallida';
+          if (esFallida) {
+            totFa++;
+            if (t.gestionFallida) faGest++; else faPend++;
+          } else {
+            totEf++;
           }
         }
       }
     }
   });
 
-  const ctxDonut = document.getElementById('chartFallidasDonut').getContext('2d');
-  if (chartFallidasDonutInstance) chartFallidasDonutInstance.destroy();
+  const totSalidas = totEf + totFa;
+  const sinDatos = (totSalidas === 0);
+  const pctEf = totSalidas > 0 ? ((totEf / totSalidas) * 100).toFixed(1) : '0.0';
+  const pctFa = totSalidas > 0 ? ((totFa / totSalidas) * 100).toFixed(1) : '0.0';
 
-  let totEf = efectivasPorMes[0] + efectivasPorMes[1];
-  let totFa = fallidasPorMes[0] + fallidasPorMes[1];
-  const sinDatos = (totEf === 0 && totFa === 0);
+  const lblSub = document.getElementById('lblSubtituloFallidas');
+  if (lblSub) {
+    if (filtroMesFallidas === 'acumulado') {
+      lblSub.textContent = 'Distribución acumulada de visitas efectivas y fallidas en todo el ciclo';
+    } else {
+      const idx = parseInt(filtroMesFallidas, 10);
+      const pt = PROYECTO_TIMELINE[idx];
+      lblSub.textContent = `Distribución de visitas efectivas y fallidas en ${pt ? pt.nombreCompleto : 'el período seleccionado'}`;
+    }
+  }
+
+  if (document.getElementById('lblTotEfPie')) document.getElementById('lblTotEfPie').textContent = `${totEf} (${pctEf}%)`;
+  if (document.getElementById('lblTotFaPie')) document.getElementById('lblTotFaPie').textContent = `${totFa} (${pctFa}%)`;
+  if (document.getElementById('lblTotFaGest')) document.getElementById('lblTotFaGest').textContent = faGest;
+  if (document.getElementById('lblTotFaPend')) document.getElementById('lblTotFaPend').textContent = faPend;
 
   chartFallidasDonutInstance = new Chart(ctxDonut, {
     type: 'doughnut',
@@ -2287,24 +2317,27 @@ function renderChartFallidas(efectivasPorMes, fallidasPorMes) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'right', labels: { font: { family: 'IBM Plex Sans', size: 13 }, usePointStyle: true } }
+        legend: {
+          position: 'right',
+          labels: { font: { family: 'IBM Plex Sans', size: 13 }, usePointStyle: true }
+        },
+        tooltip: {
+          titleFont: { family: 'IBM Plex Sans' },
+          bodyFont: { family: 'IBM Plex Mono' },
+          callbacks: {
+            label: function(ctx) {
+              if (sinDatos) return ' Sin visitas registradas en este período';
+              const val = ctx.parsed;
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+              return ` ${ctx.label}: ${val} (${pct}%)`;
+            }
+          }
+        }
       },
       cutout: '65%'
     }
   });
-}
-
-function toggleModoFallidas(modo) {
-  modoChartFallidas = modo;
-  document.getElementById('btnToggleFallidasStack').classList.toggle('on', modo === 'stack');
-  document.getElementById('btnToggleFallidasDonut').classList.toggle('on', modo === 'donut');
-
-  document.getElementById('boxChartFallidasStack').style.display = (modo === 'stack' ? 'block' : 'none');
-  document.getElementById('boxChartFallidasDonut').style.display = (modo === 'donut' ? 'block' : 'none');
-
-  if (modo === 'donut' && chartFallidasDonutInstance) {
-    chartFallidasDonutInstance.resize();
-  }
 }
 
 // TABLA RESUMEN CONSOLIDADO DEL AÑO DE PROYECTO (12 MESES INICIANDO EN M0)
@@ -2785,6 +2818,86 @@ function setResultadoForm(res) {
     btnFa.classList.remove('on');
   }
   actualizarPreviewNombreArchivo();
+  actualizarPrevisualizacionEstadoAside();
+}
+
+function actualizarPrevisualizacionEstadoAside() {
+  if (!TAREA_SELECCIONADA) return;
+
+  const fRealizadaVal = (document.getElementById('txtFechaRealizada') ? document.getElementById('txtFechaRealizada').value : '').trim();
+  const fHastaVal = (document.getElementById('txtInputFechaHasta') ? document.getElementById('txtInputFechaHasta').value : '').trim();
+  const btnFa = document.getElementById('btnResFallida');
+  const esFallida = btnFa && btnFa.classList.contains('on');
+
+  let estadoCalc = 'En término';
+  let badgeClass = 'badge-neutral';
+
+  if (fRealizadaVal) {
+    estadoCalc = 'Realizada';
+    badgeClass = 'badge-ok';
+  } else if (fHastaVal) {
+    const p = fHastaVal.split('-');
+    if (p.length === 3) {
+      const dH = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      dH.setHours(0, 0, 0, 0);
+      if (dH < hoy) {
+        estadoCalc = 'Vencida';
+        badgeClass = 'badge-alert';
+      } else {
+        estadoCalc = 'En término';
+        badgeClass = 'badge-neutral';
+      }
+    }
+  } else if (TAREA_SELECCIONADA.fechaHasta) {
+    const p = TAREA_SELECCIONADA.fechaHasta.split('/');
+    if (p.length === 3) {
+      const y = p[2].length === 2 ? '20' + p[2] : p[2];
+      const dH = new Date(parseInt(y, 10), parseInt(p[1], 10) - 1, parseInt(p[0], 10));
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      dH.setHours(0, 0, 0, 0);
+      if (dH < hoy) {
+        estadoCalc = 'Vencida';
+        badgeClass = 'badge-alert';
+      } else {
+        estadoCalc = 'En término';
+        badgeClass = 'badge-neutral';
+      }
+    }
+  }
+
+  const badge = document.getElementById('detBadgeEstado');
+  if (badge) {
+    badge.textContent = estadoCalc;
+    badge.className = 'badge ' + badgeClass;
+  }
+  const badge2 = document.getElementById('detBadgeEstado2');
+  if (badge2) {
+    badge2.textContent = estadoCalc;
+    badge2.className = 'badge ' + badgeClass;
+  }
+
+  // Previsualizar aviso de fallida
+  const boxAlerta = document.getElementById('boxAlertaFallida');
+  if (boxAlerta) {
+    if (esFallida && fRealizadaVal) {
+      boxAlerta.style.display = 'block';
+      const detObs = document.getElementById('detObsFallida');
+      if (detObs) detObs.textContent = 'Al registrarse como Fallida, pasará automáticamente a estado "Pendiente evaluación".';
+    } else if (!esFallida && (!TAREA_SELECCIONADA.resultadoVisita || TAREA_SELECCIONADA.resultadoVisita.toLowerCase() !== 'fallida')) {
+      boxAlerta.style.display = 'none';
+    }
+  }
+
+  actualizarPreviewNombreArchivo();
+}
+
+function limpiarFechaRealizadaForm() {
+  const el = document.getElementById('txtFechaRealizada');
+  if (el) el.value = '';
+  actualizarPrevisualizacionEstadoAside();
 }
 
 function configurarDragAndDrop() {
@@ -2887,12 +3000,8 @@ async function guardarSoloPlazos() {
   TAREA_SELECCIONADA.fechaDesde = fechaDesdeStr;
   TAREA_SELECCIONADA.fechaHasta = fechaHastaStr;
 
-  // Recalcular estado operativo
-  TAREA_SELECCIONADA.estadoTarea = calcularEstadoParaPlazo(
-    fechaHastaStr,
-    TAREA_SELECCIONADA.fechaRealizada || '',
-    TAREA_SELECCIONADA.documentoAdjunto || ''
-  );
+  // Recalcular estado operativo automáticamente
+  calcularEstadosAutomaticos(TAREA_SELECCIONADA);
 
   const btn = document.getElementById('btnGuardarSoloPlazos');
   if (btn) {
@@ -2912,7 +3021,9 @@ async function guardarSoloPlazos() {
           fechaDesde: fechaDesdeStr,
           fechaHasta: fechaHastaStr,
           fechaRealizada: TAREA_SELECCIONADA.fechaRealizada || '',
-          resultadoVisita: TAREA_SELECCIONADA.resultadoVisita || ''
+          resultadoVisita: TAREA_SELECCIONADA.resultadoVisita || '',
+          estadoTarea: TAREA_SELECCIONADA.estadoTarea,
+          gestionFallida: TAREA_SELECCIONADA.gestionFallida || ''
         })
       });
     } catch(err) {
@@ -2922,6 +3033,7 @@ async function guardarSoloPlazos() {
 
   guardarEnCacheLocal();
   actualizarKpis();
+  renderizarTableroKPIs();
   filtrarYRenderizar();
   seleccionarTarea(TAREA_SELECCIONADA);
 
@@ -2930,27 +3042,17 @@ async function guardarSoloPlazos() {
     btn.textContent = '📅 Guardar Plazos (Desde / Hasta)';
   }
 
-  alert(`✓ Plazo asignado correctamente:\nDesde: ${fechaDesdeStr}\nHasta: ${fechaHastaStr}\nEstado actual: ${TAREA_SELECCIONADA.estadoTarea}`);
+  alert(`✓ Plazo asignado correctamente:\nDesde: ${fechaDesdeStr}\nHasta: ${fechaHastaStr}\nEstado actual calculado: ${TAREA_SELECCIONADA.estadoTarea}`);
 }
 
 function calcularEstadoParaPlazo(fechaHastaStr, fechaRealizadaStr, docAdjunto) {
-  if (fechaRealizadaStr) {
-    return docAdjunto ? 'Terminada' : 'Realizada sin documento';
-  }
-  if (!fechaHastaStr) {
-    return 'Pendiente plazo';
-  }
-  const parts = fechaHastaStr.split('/');
-  if (parts.length === 3) {
-    const fHasta = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
-    const hoy = new Date();
-    hoy.setHours(0,0,0,0);
-    const diffDias = Math.round((fHasta - hoy) / (1000 * 60 * 60 * 24));
-    if (diffDias < 0) return 'Vencida';
-    if (diffDias <= 7) return 'Próxima a vencer';
-    return 'En término';
-  }
-  return 'En término';
+  const dummy = {
+    fechaHasta: fechaHastaStr,
+    fechaRealizada: fechaRealizadaStr,
+    documentoAdjunto: docAdjunto
+  };
+  calcularEstadosAutomaticos(dummy);
+  return dummy.estadoTarea;
 }
 
 async function guardarVisitaActual(e) {
@@ -2958,11 +3060,29 @@ async function guardarVisitaActual(e) {
   if (!TAREA_SELECCIONADA) return;
 
   const resultado = document.getElementById('btnResFallida').classList.contains('on') ? 'Fallida' : 'Efectiva';
-  const fechaVal = document.getElementById('txtFechaRealizada').value;
+  const fechaVal = (document.getElementById('txtFechaRealizada').value || '').trim();
+
+  // Si el usuario dejó la fecha en blanco pero la tarea ya estaba realizada, permitir desmarcarla
   if (!fechaVal) {
+    if (TAREA_SELECCIONADA.fechaRealizada) {
+      if (confirm("La fecha realizada está vacía. ¿Confirmás quitar la visita registrada y recalcular automáticamente el estado a pendiente según vencimiento?")) {
+        TAREA_SELECCIONADA.fechaRealizada = '';
+        TAREA_SELECCIONADA.resultadoVisita = '';
+        TAREA_SELECCIONADA.gestionFallida = '';
+        calcularEstadosAutomaticos(TAREA_SELECCIONADA);
+        guardarEnCacheLocal();
+        actualizarKpis();
+        renderizarTableroKPIs();
+        filtrarYRenderizar();
+        seleccionarTarea(TAREA_SELECCIONADA);
+        alert(`✓ Visita desmarcada. El estado operativo se recalculó automáticamente a: ${TAREA_SELECCIONADA.estadoTarea}`);
+        return;
+      }
+    }
     alert("Por favor ingresá la fecha realizada para completar el registro de la visita.");
     return;
   }
+
   const parts = fechaVal.split('-');
   const fechaRealizadaStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
@@ -3012,6 +3132,8 @@ async function guardarVisitaActual(e) {
         resultadoVisita: resultado,
         nroSiniestro: nroSiniestro,
         observaciones: observaciones,
+        estadoTarea: 'Realizada',
+        gestionFallida: resultado === 'Fallida' ? 'Pendiente evaluacion' : '',
         fileBase64: ARCHIVO_ASIDE_BASE64,
         fileName: ARCHIVO_ASIDE_NOMBRE,
         mimeType: ARCHIVO_ASIDE_MIME
@@ -3042,23 +3164,19 @@ async function guardarVisitaActual(e) {
     TAREA_SELECCIONADA.documentoAdjunto = fileUrl;
   }
 
-  if (resultado === 'Fallida') {
-    TAREA_SELECCIONADA.estadoTarea = fileUrl ? 'Fallida con documento' : 'Fallida sin documento';
-    TAREA_SELECCIONADA.gestionFallida = 'Pendiente evaluacion';
-  } else {
-    TAREA_SELECCIONADA.estadoTarea = fileUrl ? 'Terminada' : 'Realizada sin documento';
-    TAREA_SELECCIONADA.gestionFallida = '';
-  }
+  // Recalcular todos los estados automáticos
+  calcularEstadosAutomaticos(TAREA_SELECCIONADA);
 
   guardarEnCacheLocal();
   actualizarKpis();
+  renderizarTableroKPIs();
   filtrarYRenderizar();
   seleccionarTarea(TAREA_SELECCIONADA);
 
   btn.disabled = false;
   btn.textContent = '✓ Guardar Visita Realizada y Documento';
 
-  alert(`✓ Tarea registrada con éxito.\nNuevas Fechas: Desde ${TAREA_SELECCIONADA.fechaDesde || '--'} | Hasta ${TAREA_SELECCIONADA.fechaHasta || '--'}\nRealizada: ${fechaRealizadaStr}\nEstado: ${TAREA_SELECCIONADA.estadoTarea}\nDocumento: ${fileUrl ? 'Vinculado a Google Drive' : 'Pendiente'}`);
+  alert(`✓ Tarea registrada con éxito.\nNuevas Fechas: Desde ${TAREA_SELECCIONADA.fechaDesde || '--'} | Hasta ${TAREA_SELECCIONADA.fechaHasta || '--'}\nRealizada: ${fechaRealizadaStr}\nResultado: ${TAREA_SELECCIONADA.resultadoVisita}\nEstado automático: ${TAREA_SELECCIONADA.estadoTarea}${TAREA_SELECCIONADA.gestionFallida ? ' (' + TAREA_SELECCIONADA.gestionFallida + ')' : ''}\nDocumento: ${fileUrl ? 'Vinculado a Google Drive' : 'Pendiente'}`);
 }
 
 // GESTIÓN DE FALLIDA: CERRAR O REPROGRAMAR
@@ -3068,9 +3186,10 @@ async function gestionarFallidaActual(decision) {
   if (decision === 'cerrar') {
     if (!confirm("¿Confirmás que la visita fallida no requiere nueva visita y queda cerrada definitivamente?")) return;
     TAREA_SELECCIONADA.gestionFallida = 'Cerrada sin nueva visita';
-    TAREA_SELECCIONADA.estadoTarea = 'Cerrada por fallida';
+    TAREA_SELECCIONADA.estadoTarea = 'Realizada';
     guardarEnCacheLocal();
     actualizarKpis();
+    renderizarTableroKPIs();
     filtrarYRenderizar();
     seleccionarTarea(TAREA_SELECCIONADA);
     alert("✓ Visita fallida cerrada definitivamente.");
@@ -3091,6 +3210,7 @@ async function gestionarFallidaActual(decision) {
       preventor: TAREA_SELECCIONADA.preventor,
       capitas: TAREA_SELECCIONADA.capitas,
       tarea: TAREA_SELECCIONADA.tarea,
+      origenPlan: 'Alta Sep 2026',
       fechaDesde: Utilities_formatDate(new Date()),
       fechaHasta: nuevaHasta,
       fechaRealizada: '',
@@ -3098,17 +3218,20 @@ async function gestionarFallidaActual(decision) {
       nroSiniestro: TAREA_SELECCIONADA.nroSiniestro || '',
       observaciones: `Reprogramación extemporánea de visita previa fallida (Fila ${TAREA_SELECCIONADA.rowId})`,
       documentoAdjunto: '',
-      estadoTarea: 'En término',
+      estadoTarea: '',
       gestionFallida: ''
     };
+
+    calcularEstadosAutomaticos(nuevaFila);
 
     TASKS.unshift(nuevaFila);
     guardarEnCacheLocal();
     actualizarKpis();
+    renderizarTableroKPIs();
     filtrarYRenderizar();
     seleccionarTarea(nuevaFila);
 
-    alert(`✓ Nueva visita extemporánea generada (Fila ${nuevaFila.rowId}) con vencimiento el ${nuevaHasta}.`);
+    alert(`✓ Nueva visita extemporánea generada (Fila ${nuevaFila.rowId}) con estado automático: ${nuevaFila.estadoTarea} y vencimiento el ${nuevaHasta}.`);
   }
 }
 
@@ -3187,6 +3310,7 @@ async function guardarNuevaTarea(e) {
     preventor: '',
     capitas: '',
     tarea: tarea,
+    origenPlan: 'Alta Sep 2026',
     fechaDesde: fDesdeStr,
     fechaHasta: fHastaStr,
     fechaRealizada: '',
@@ -3194,9 +3318,11 @@ async function guardarNuevaTarea(e) {
     nroSiniestro: nroSiniestro,
     observaciones: obs,
     documentoAdjunto: '',
-    estadoTarea: 'En término',
+    estadoTarea: '',
     gestionFallida: ''
   };
+
+  calcularEstadosAutomaticos(nuevaFila);
 
   // Enviar a Apps Script si está configurado
   const webAppUrl = localStorage.getItem(LS_CONFIG_URL);
@@ -3213,10 +3339,12 @@ async function guardarNuevaTarea(e) {
           nroEstab: nroEstab,
           localidad: localidad,
           tarea: tarea,
+          origenPlan: 'Alta Sep 2026',
           fechaDesde: fDesdeStr,
           fechaHasta: fHastaStr,
           nroSiniestro: nroSiniestro,
-          observaciones: obs
+          observaciones: obs,
+          estadoTarea: nuevaFila.estadoTarea
         })
       });
       const json = await res.json();
@@ -3231,6 +3359,7 @@ async function guardarNuevaTarea(e) {
   TASKS.unshift(nuevaFila);
   guardarEnCacheLocal();
   actualizarKpis();
+  renderizarTableroKPIs();
   filtrarYRenderizar();
   seleccionarTarea(nuevaFila);
 
@@ -3782,7 +3911,7 @@ async function confirmarSubidaLote() {
       tareaMatch.fechaRealizada = item.fechaVisitaStr;
       tareaMatch.resultadoVisita = 'Efectiva';
       tareaMatch.documentoAdjunto = driveUrlSimulada;
-      tareaMatch.estadoTarea = 'Terminada';
+      calcularEstadosAutomaticos(tareaMatch);
       cargados++;
 
       itemsParaBackend.push({
@@ -3794,6 +3923,7 @@ async function confirmarSubidaLote() {
         tarea: item.tarea,
         fechaRealizada: item.fechaVisitaStr,
         resultadoVisita: 'Efectiva',
+        estadoTarea: tareaMatch.estadoTarea,
         fileBase64: item.fileBase64,
         fileName: item.fileName,
         mimeType: item.mimeType
@@ -3816,9 +3946,10 @@ async function confirmarSubidaLote() {
         nroSiniestro: '',
         observaciones: 'Visita cargada mediante Alta Masiva OCR',
         documentoAdjunto: driveUrlSimulada,
-        estadoTarea: 'Terminada',
+        estadoTarea: '',
         gestionFallida: ''
       };
+      calcularEstadosAutomaticos(nuevaFila);
       TASKS.unshift(nuevaFila);
       cargados++;
 
@@ -3832,6 +3963,7 @@ async function confirmarSubidaLote() {
         tarea: item.tarea,
         fechaRealizada: item.fechaVisitaStr,
         resultadoVisita: 'Efectiva',
+        estadoTarea: nuevaFila.estadoTarea,
         fileBase64: item.fileBase64,
         fileName: item.fileName,
         mimeType: item.mimeType
@@ -3867,6 +3999,7 @@ async function confirmarSubidaLote() {
 
   guardarEnCacheLocal();
   actualizarKpis();
+  renderizarTableroKPIs();
   filtrarYRenderizar();
 
   btn.disabled = false;
