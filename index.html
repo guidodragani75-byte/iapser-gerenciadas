@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <title>IAPSER ART · Control y Gestión de Visitas Gerenciadas</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -1410,8 +1413,8 @@
   </div>
 </div>
 
-<!-- CARGA DE DATOS PRECARGADOS -->
-<script src="datos_precargados.js"></script>
+<!-- CARGA DE DATOS PRECARGADOS (CON CACHE-BUSTER) -->
+<script src="datos_precargados.js?v=20261026_1745"></script>
 
 <!-- LÓGICA DE LA APLICACIÓN -->
 <script>
@@ -1438,8 +1441,8 @@ let chartFallidasDonutInstance = null;
 let modoChartPresupuesto = 'mensual';
 let filtroMesFallidas = 'acumulado';
 
-// Claves LocalStorage (V13: Deduplicación e imputación de visitas de arranque en Septiembre 2026)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V13';
+// Claves LocalStorage (V14: Base completa 1.082 registros + 153 visitas únicas deduplicadas)
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V14';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -1721,11 +1724,16 @@ function normalizarTarea(t, idx) {
 }
 
 function inicializarDatos() {
+  // Limpiar versiones obsoletas de localStorage para evitar datos desactualizados
+  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13'].forEach(k => {
+    try { localStorage.removeItem(k); } catch(e) {}
+  });
+
   const cached = localStorage.getItem(LS_TASKS_KEY);
   if (cached) {
     try {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed) && parsed.length >= 1082) {
         TASKS = parsed.map((item, idx) => normalizarTarea(item, idx));
       }
     } catch(e) {
@@ -1733,9 +1741,12 @@ function inicializarDatos() {
     }
   }
 
-  // Si no hay caché o si el archivo precargado tiene más registros (nuevas altas desde Google Sheets), actualizar
-  if (!TASKS || TASKS.length === 0 || (window.DATOS_INICIALES_IAPSER && window.DATOS_INICIALES_IAPSER.length > TASKS.length)) {
-    if (window.DATOS_INICIALES_IAPSER && window.DATOS_INICIALES_IAPSER.length > 0) {
+  // Si no hay caché válida o si la base precargada tiene la totalidad de datos (>= 1.082 registros), cargarla directamente
+  if (!TASKS || TASKS.length < 1082) {
+    if (window.DATOS_INICIALES_IAPSER && window.DATOS_INICIALES_IAPSER.length >= 1082) {
+      TASKS = window.DATOS_INICIALES_IAPSER.map((item, idx) => normalizarTarea(item, idx));
+      guardarEnCacheLocal();
+    } else if (window.DATOS_INICIALES_IAPSER && window.DATOS_INICIALES_IAPSER.length > 0) {
       TASKS = window.DATOS_INICIALES_IAPSER.map((item, idx) => normalizarTarea(item, idx));
       guardarEnCacheLocal();
     }
@@ -4196,14 +4207,22 @@ async function sincronizarConBackend() {
 
 function restablecerDatosLocales() {
   if (!confirm("¿Deseás reiniciar los datos locales del navegador y recargar desde la base precargada?")) return;
-  localStorage.removeItem(LS_TASKS_KEY);
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.includes('IAPSER_GERENCIADAS_TASKS')) keysToRemove.push(k);
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+  } catch(e) {}
   TASKS = [];
   inicializarDatos();
   llenarFiltroLocalidades();
   actualizarKpis();
+  renderizarTableroKPIs();
   filtrarYRenderizar();
   cerrarModalConfig();
-  alert("✓ Datos base recargados exitosamente.");
+  alert(`✓ Base local restablecida con éxito (${TASKS.length} registros cargados).`);
 }
 
 function escapeHtml(str) {
