@@ -1723,7 +1723,7 @@
 </div>
 
 <!-- CARGA DE DATOS PRECARGADOS (CON CACHE-BUSTER) -->
-<script src="datos_precargados.js?v=20261101_1850"></script>
+<script src="datos_precargados.js?v=20261101_1859"></script>
 
 <!-- LÓGICA DE LA APLICACIÓN -->
 <script>
@@ -1757,7 +1757,7 @@ let modoChartPresupuesto = 'mensual';
 let filtroMesFallidas = 'acumulado';
 
 // Claves LocalStorage (V14: Base completa 1.082 registros + 153 visitas únicas deduplicadas)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V16';
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V17';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -1887,12 +1887,8 @@ function calcularEstadosAutomaticos(t) {
   const esResid = (t.origenPlan || '').toLowerCase().includes('residual');
   const esVT = (t.tarea || '').toLowerCase().includes('visita tecnica');
   if (esResid) {
-    if (!t.fechaDesde || t.fechaDesde === '01/01/2026' || t.fechaDesde.includes('Qwen')) {
-      t.fechaDesde = '01/11/2026';
-    }
-    if (!t.fechaHasta || t.fechaHasta === '31/12/26' || t.fechaHasta === '31/12/2026') {
-      t.fechaHasta = '31/12/2026';
-    }
+    t.fechaDesde = '01/11/2026';
+    t.fechaHasta = '31/12/2026';
   } else if (esVT) {
     if (!t.fechaDesde) t.fechaDesde = '01/09/2026';
     if (!t.fechaHasta) t.fechaHasta = '30/09/2026';
@@ -2003,6 +1999,11 @@ function normalizarTarea(t, idx) {
   let rawHasta = (t.fechaHasta || t["Fecha Hasta"] || "").toString().trim();
   let fechaHasta = normalizarFecha(rawHasta);
 
+  if (origenPlan.toLowerCase().includes('residual')) {
+    fechaDesde = '01/11/2026';
+    fechaHasta = '31/12/2026';
+  }
+
   // Columna F: Solo Columna F es Fecha Realizada (la visita efectuada)
   let rawReal = (t.fechaRealizada || t["Fecha Realizada"] || "").toString().trim();
   const fechaRealizada = normalizarFecha(rawReal);
@@ -2048,7 +2049,7 @@ function normalizarTarea(t, idx) {
 
 function inicializarDatos() {
   // Limpiar versiones obsoletas de localStorage para evitar datos desactualizados
-  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13', 'IAPSER_GERENCIADAS_TASKS_V14', 'IAPSER_GERENCIADAS_TASKS_V15'].forEach(k => {
+  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13', 'IAPSER_GERENCIADAS_TASKS_V14', 'IAPSER_GERENCIADAS_TASKS_V15', 'IAPSER_GERENCIADAS_TASKS_V16'].forEach(k => {
     try { localStorage.removeItem(k); } catch(e) {}
   });
 
@@ -3233,13 +3234,21 @@ function matcheaMesRealizada(t, fMesY) {
 // Filtro 2: Matchea por Mes de Alta / Planificación (Desde/Hasta u Origen Plan)
 function matcheaMesAlta(t, fMesY) {
   if (!fMesY || fMesY === 'todas') return true;
+  const orig = (t.origenPlan || '').toLowerCase();
+  const esResidual = orig.includes('residual');
+
   if (fMesY === 'residual') {
-    return (t.origenPlan || '').toLowerCase().includes('residual');
+    return esResidual;
   }
+
+  // Si se filtra por un mes de Altas (ej: 2026-09), NUNCA debe incluir tareas Residuales
+  if (esResidual) {
+    return false;
+  }
+
   const [fAnio, fMes] = fMesY.split('-');
 
   // 1. Matchear por Origen Plan (ej: "Alta Sep 2026", "Alta Oct 2026")
-  const orig = (t.origenPlan || '').toLowerCase();
   const aliasMes = {
     '01': ['ene', 'enero'],
     '02': ['feb', 'febrero'],
