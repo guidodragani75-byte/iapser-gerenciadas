@@ -1288,20 +1288,20 @@
               <span style="font-size:13px; font-weight:600; color:#17202A;">Ventana de Ejecución (2 Meses):</span>
               <label style="font-size:12px; color:#5B6670; display:inline-flex; align-items:center; gap:6px;">
                 Fecha Desde:
-                <input type="date" id="txtResidualDesde" value="2026-11-09" onchange="cambiarFechasResidual()" style="min-height:34px; font-size:12px; font-weight:600; padding:0 8px;">
+                <input type="date" id="txtResidualDesde" value="2026-11-01" onchange="cambiarFechasResidual()" style="min-height:34px; font-size:12px; font-weight:600; padding:0 8px;">
               </label>
               <label style="font-size:12px; color:#5B6670; display:inline-flex; align-items:center; gap:6px;">
                 Fecha Hasta:
-                <input type="date" id="txtResidualHasta" value="2027-01-09" onchange="cambiarFechasResidual()" style="min-height:34px; font-size:12px; font-weight:600; padding:0 8px;">
+                <input type="date" id="txtResidualHasta" value="2026-12-31" onchange="cambiarFechasResidual()" style="min-height:34px; font-size:12px; font-weight:600; padding:0 8px;">
               </label>
             </div>
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
               <span style="font-size:11px; color:#5B6670;">Ajustes rápidos:</span>
-              <button type="button" class="chip" onclick="fijarVentanaResidual('2026-11-09', '2027-01-09')">09/11/26 al 09/01/27</button>
-              <button type="button" class="chip" onclick="fijarVentanaResidual('2026-11-01', '2026-12-31')">01/11/26 al 31/12/26</button>
+              <button type="button" class="chip on" id="btnPresetResidActual" onclick="fijarVentanaResidual('2026-11-01', '2026-12-31')">01/11/26 al 31/12/26 (Tabla actual)</button>
+              <button type="button" class="chip" id="btnPresetResidNov" onclick="fijarVentanaResidual('2026-11-09', '2027-01-09')">09/11/26 al 09/01/27</button>
               <button type="button" class="chip" onclick="fijarVentanaResidualDosMeses()">+2 Meses exactos</button>
               <span id="lblResidualDuracion" class="badge" style="background:#FEF3C7; color:#92400E; font-size:12px; font-weight:600; padding:6px 10px;">
-                Ventana: 61 días corridos (~43 días hábiles)
+                Ventana: 61 días corridos (~44 días hábiles)
               </span>
             </div>
           </div>
@@ -1369,13 +1369,13 @@
                 <span class="badge" style="background:#FEF3C7; color:#92400E; font-size:11px; font-weight:600;">Cuenta Regresiva</span>
               </div>
               <div class="stat-number" style="font-size:24px; padding-top:4px;" id="kpiResidEstadoCountdown">
-                Faltan 8 días
+                En curso (Día 1)
               </div>
-              <div class="stat-callout alert" id="calloutResidEstado">
-                <span id="lblResidEstadoTexto">Inicio previsto: 09/11/2026</span>
+              <div class="stat-callout ok" id="calloutResidEstado">
+                <span id="lblResidEstadoTexto">Inició: 01/11/2026 · Restan 60 días</span>
               </div>
               <div class="stat-meta">
-                Ventana total: 60 días corridos hasta <span id="lblResidFechaCierre">09/01/2027</span>
+                Ventana total: 61 días corridos hasta <span id="lblResidFechaCierre">31/12/2026</span>
               </div>
             </div>
           </div>
@@ -1723,7 +1723,7 @@
 </div>
 
 <!-- CARGA DE DATOS PRECARGADOS (CON CACHE-BUSTER) -->
-<script src="datos_precargados.js?v=20261101_1830"></script>
+<script src="datos_precargados.js?v=20261101_1850"></script>
 
 <!-- LÓGICA DE LA APLICACIÓN -->
 <script>
@@ -1751,13 +1751,13 @@ let chartResidualBurnDownInstance = null;
 let chartResidualTipologiaInstance = null;
 let chartConsolidadoInstance = null;
 let KPI_UNIVERSE = 'altas'; // 'altas', 'residual', 'consolidado'
-let RESIDUAL_FECHA_DESDE = '2026-11-09';
-let RESIDUAL_FECHA_HASTA = '2027-01-09';
+let RESIDUAL_FECHA_DESDE = '2026-11-01';
+let RESIDUAL_FECHA_HASTA = '2026-12-31';
 let modoChartPresupuesto = 'mensual';
 let filtroMesFallidas = 'acumulado';
 
 // Claves LocalStorage (V14: Base completa 1.082 registros + 153 visitas únicas deduplicadas)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V15';
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V16';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -1883,11 +1883,19 @@ function calcularEstadosAutomaticos(t) {
     t.origenPlan = 'Residual 2026';
   }
 
-  // 3. Fechas para Visitas Técnicas si faltan
+  // 3. Fechas para tareas residuales y altas
+  const esResid = (t.origenPlan || '').toLowerCase().includes('residual');
   const esVT = (t.tarea || '').toLowerCase().includes('visita tecnica');
-  if (esVT) {
-    if (!t.fechaDesde) t.fechaDesde = '01/01/2026';
-    if (!t.fechaHasta) t.fechaHasta = '31/12/2026';
+  if (esResid) {
+    if (!t.fechaDesde || t.fechaDesde === '01/01/2026' || t.fechaDesde.includes('Qwen')) {
+      t.fechaDesde = '01/11/2026';
+    }
+    if (!t.fechaHasta || t.fechaHasta === '31/12/26' || t.fechaHasta === '31/12/2026') {
+      t.fechaHasta = '31/12/2026';
+    }
+  } else if (esVT) {
+    if (!t.fechaDesde) t.fechaDesde = '01/09/2026';
+    if (!t.fechaHasta) t.fechaHasta = '30/09/2026';
   }
 
   if (tieneVisitaRealizada(t)) {
@@ -2040,7 +2048,7 @@ function normalizarTarea(t, idx) {
 
 function inicializarDatos() {
   // Limpiar versiones obsoletas de localStorage para evitar datos desactualizados
-  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13', 'IAPSER_GERENCIADAS_TASKS_V14'].forEach(k => {
+  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13', 'IAPSER_GERENCIADAS_TASKS_V14', 'IAPSER_GERENCIADAS_TASKS_V15'].forEach(k => {
     try { localStorage.removeItem(k); } catch(e) {}
   });
 
@@ -2962,7 +2970,7 @@ function renderChartResidualBurnDown(totalResidual, realizadasResidual, diasCorr
   const ctx = canvas.getContext('2d');
   if (chartResidualBurnDownInstance) chartResidualBurnDownInstance.destroy();
 
-  const labels = ['Inicio (09/11)', 'Semana 1', 'Semana 2', 'Semana 3', 'Semana 4', 'Semana 5', 'Semana 6', 'Semana 7', 'Semana 8', 'Fin 2M (09/01)'];
+  const labels = ['Inicio (01/11)', 'Semana 1', 'Semana 2', 'Semana 3', 'Semana 4', 'Semana 5', 'Semana 6', 'Semana 7', 'Semana 8', 'Fin 2M (31/12)'];
   const pasos = labels.length - 1;
   const idealCurve = [];
   for (let i = 0; i <= pasos; i++) {

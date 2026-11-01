@@ -134,11 +134,21 @@ async function run() {
     const origenPlan = row[colIdx['Origen Plan']] || 'Residual 2026';
     
     let rawDesde = row[colIdx['Fecha Desde']] || '';
-    if (!rawDesde && tarea.toLowerCase().includes('visita tecnica')) rawDesde = '01/01/2026';
+    if (origenPlan.includes('Residual')) {
+      if (!rawDesde || rawDesde === '1/1/2026' || rawDesde === '01/01/2026' || rawDesde.includes('Qwen')) {
+        rawDesde = '01/11/2026';
+      }
+    } else if (!rawDesde && tarea.toLowerCase().includes('visita tecnica')) {
+      rawDesde = '01/09/2026';
+    }
     const fechaDesde = normalizarFecha(rawDesde);
 
     let rawHasta = row[colIdx['Fecha Hasta']] || '';
-    if (!rawHasta) {
+    if (origenPlan.includes('Residual')) {
+      if (!rawHasta || rawHasta === '31/12/26' || rawHasta === '31/12/2026') {
+        rawHasta = '31/12/2026';
+      }
+    } else if (!rawHasta) {
       rawHasta = row[colIdx['Fecha Visita']] || (tarea.toLowerCase().includes('visita tecnica') ? '31/12/2026' : '');
     }
     const fechaHasta = normalizarFecha(rawHasta);
