@@ -5,10 +5,11 @@
     "cuit": "27-12182180-5",
     "rs": "ROLANDO LILIAN ELISABET",
     "nro_establecimiento": "3",
-    "fecha_visita": "28/05/2026",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1UrWaBPr6OD-dUq17B-uEDBBCF8VrxV0A/view?usp=drivesdk"
+    "fecha_visita": "04/09/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "Establecimiento no encontrado en la dirección indicada (en su lugar se encuentra la Comisaría Nº 7 de Plottier). Sin firma de la empresa ni entrevistado. Cuenta con registro fotográfico de fachada adjunto.",
+    "link_doc": "https://drive.google.com/file/d/1UrWaBPr6OD-dUq17B-uEDBBCF8VrxV0A/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1UrWaBPr6OD-dUq17B-uEDBBCF8VrxV0A/view?usp=drivesdk"
   },
   {
     "nro": 2,
@@ -19,7 +20,8 @@
     "fecha_visita": "29/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1YPE2YLlAcP_XtP30jGMb8SbP_PbjeuMv/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1YPE2YLlAcP_XtP30jGMb8SbP_PbjeuMv/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1YPE2YLlAcP_XtP30jGMb8SbP_PbjeuMv/view?usp=drivesdk"
   },
   {
     "nro": 3,
@@ -30,7 +32,8 @@
     "fecha_visita": "28/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1inxBcWhT1XE7Or3ynx-QhfFYKZFXMwRM/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1inxBcWhT1XE7Or3ynx-QhfFYKZFXMwRM/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1inxBcWhT1XE7Or3ynx-QhfFYKZFXMwRM/view?usp=drivesdk"
   },
   {
     "nro": 4,
@@ -41,7 +44,8 @@
     "fecha_visita": "04/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/14rICZj2-_7APcpkPi6dvJLAcgde6NFhX/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/14rICZj2-_7APcpkPi6dvJLAcgde6NFhX/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/14rICZj2-_7APcpkPi6dvJLAcgde6NFhX/view?usp=drivesdk"
   },
   {
     "nro": 5,
@@ -49,10 +53,11 @@
     "cuit": "27-95654074-2",
     "rs": "SANCHEZ SILVIA VICTORIA ELENA",
     "nro_establecimiento": "1",
-    "fecha_visita": "01/01/2025",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/16ZlZfJEavUE4G638FDXFj17wo7-5IneM/view?usp=drivesdk"
+    "fecha_visita": "07/09/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "Establecimiento no encontrado en el lugar al momento de la visita; preventor asienta 'Visita fallida'. Sin firma de recepción de la empresa ni entrevistado.",
+    "link_doc": "https://drive.google.com/file/d/16ZlZfJEavUE4G638FDXFj17wo7-5IneM/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/16ZlZfJEavUE4G638FDXFj17wo7-5IneM/view?usp=drivesdk"
   },
   {
     "nro": 6,
@@ -63,7 +68,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1hRDYs1RcDccg6pTdsZxErlrmc7TaTGiw/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1hRDYs1RcDccg6pTdsZxErlrmc7TaTGiw/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1hRDYs1RcDccg6pTdsZxErlrmc7TaTGiw/view?usp=drivesdk"
   },
   {
     "nro": 7,
@@ -74,7 +80,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1XIey1go9YxYK16QOchMqvsqkOBAogqXH/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1XIey1go9YxYK16QOchMqvsqkOBAogqXH/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1XIey1go9YxYK16QOchMqvsqkOBAogqXH/view?usp=drivesdk"
   },
   {
     "nro": 8,
@@ -85,7 +92,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1rB4UYmo-jDCFEcPahlskzx2I-tWSy4bd/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1rB4UYmo-jDCFEcPahlskzx2I-tWSy4bd/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1rB4UYmo-jDCFEcPahlskzx2I-tWSy4bd/view?usp=drivesdk"
   },
   {
     "nro": 9,
@@ -96,7 +104,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1lYm5VjCTXJ9BtNqirxUec1mS6SU7VA49/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1lYm5VjCTXJ9BtNqirxUec1mS6SU7VA49/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1lYm5VjCTXJ9BtNqirxUec1mS6SU7VA49/view?usp=drivesdk"
   },
   {
     "nro": 10,
@@ -107,7 +116,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1gLJD0kJuBFUgOCWt8rOYDMDadN5jqxu2/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1gLJD0kJuBFUgOCWt8rOYDMDadN5jqxu2/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1gLJD0kJuBFUgOCWt8rOYDMDadN5jqxu2/view?usp=drivesdk"
   },
   {
     "nro": 11,
@@ -118,7 +128,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/15FP4C8rffMIkZAiwZYv3IOeTpTscTsrj/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/15FP4C8rffMIkZAiwZYv3IOeTpTscTsrj/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/15FP4C8rffMIkZAiwZYv3IOeTpTscTsrj/view?usp=drivesdk"
   },
   {
     "nro": 12,
@@ -129,7 +140,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1BELgwZYu1mC4lD18Ezae39sCczbRMIfQ/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1BELgwZYu1mC4lD18Ezae39sCczbRMIfQ/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1BELgwZYu1mC4lD18Ezae39sCczbRMIfQ/view?usp=drivesdk"
   },
   {
     "nro": 13,
@@ -140,7 +152,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1pZQelZoTiY8ZjO4MyTbFqosGO7PmRjnu/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1pZQelZoTiY8ZjO4MyTbFqosGO7PmRjnu/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1pZQelZoTiY8ZjO4MyTbFqosGO7PmRjnu/view?usp=drivesdk"
   },
   {
     "nro": 14,
@@ -151,7 +164,8 @@
     "fecha_visita": "29/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1ELcjpV_EQlsmdGW4hE24f60Dg4eETA2h/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1ELcjpV_EQlsmdGW4hE24f60Dg4eETA2h/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1ELcjpV_EQlsmdGW4hE24f60Dg4eETA2h/view?usp=drivesdk"
   },
   {
     "nro": 15,
@@ -162,7 +176,8 @@
     "fecha_visita": "29/09/2024",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1G9AK8aOO4829c4WAFHN5H6UKw0T0d_Xu/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1G9AK8aOO4829c4WAFHN5H6UKw0T0d_Xu/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1G9AK8aOO4829c4WAFHN5H6UKw0T0d_Xu/view?usp=drivesdk"
   },
   {
     "nro": 16,
@@ -173,7 +188,8 @@
     "fecha_visita": "28/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1NPq0mTcCkYtRDqMlw4Ik_T9P9EkJYsIQ/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1NPq0mTcCkYtRDqMlw4Ik_T9P9EkJYsIQ/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1NPq0mTcCkYtRDqMlw4Ik_T9P9EkJYsIQ/view?usp=drivesdk"
   },
   {
     "nro": 17,
@@ -184,7 +200,8 @@
     "fecha_visita": "02/10/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1qJV_sMrjL2J6KMOOStpY30bsCfbHKzUP/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1qJV_sMrjL2J6KMOOStpY30bsCfbHKzUP/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1qJV_sMrjL2J6KMOOStpY30bsCfbHKzUP/view?usp=drivesdk"
   },
   {
     "nro": 18,
@@ -195,7 +212,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1qsP1v4tk-yADN0p2pIkoLDdF6CEuSwaB/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1qsP1v4tk-yADN0p2pIkoLDdF6CEuSwaB/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1qsP1v4tk-yADN0p2pIkoLDdF6CEuSwaB/view?usp=drivesdk"
   },
   {
     "nro": 19,
@@ -206,7 +224,8 @@
     "fecha_visita": "06/10/2025",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1c7vXHnIpO0FVxDI2gsVoAymJwbGJh_s6/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1c7vXHnIpO0FVxDI2gsVoAymJwbGJh_s6/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1c7vXHnIpO0FVxDI2gsVoAymJwbGJh_s6/view?usp=drivesdk"
   },
   {
     "nro": 20,
@@ -217,7 +236,8 @@
     "fecha_visita": "25/03/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1CbzeR7XDfV7rt7BbgKsezSuEFs-7XFc3/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1CbzeR7XDfV7rt7BbgKsezSuEFs-7XFc3/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1CbzeR7XDfV7rt7BbgKsezSuEFs-7XFc3/view?usp=drivesdk"
   },
   {
     "nro": 21,
@@ -228,7 +248,8 @@
     "fecha_visita": "28/05/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1ruvlJ0CdUaoB6e09cb2u64Jx4iVFV8M7/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1ruvlJ0CdUaoB6e09cb2u64Jx4iVFV8M7/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1ruvlJ0CdUaoB6e09cb2u64Jx4iVFV8M7/view?usp=drivesdk"
   },
   {
     "nro": 22,
@@ -239,7 +260,8 @@
     "fecha_visita": "02/06/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/19828kDyBlPmB3Qm-Vs_k8qbu6fZ34b6N/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/19828kDyBlPmB3Qm-Vs_k8qbu6fZ34b6N/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/19828kDyBlPmB3Qm-Vs_k8qbu6fZ34b6N/view?usp=drivesdk"
   },
   {
     "nro": 23,
@@ -247,10 +269,11 @@
     "cuit": "30-70967710-8",
     "rs": "MALVICINI S.R.L.",
     "nro_establecimiento": "1",
-    "fecha_visita": "No especificada en acta",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1P4UycTfT1nWDSYNkbkvjj1O24gGU2Ht5/view?usp=drivesdk"
+    "fecha_visita": "07/09/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "Establecimiento no encontrado en la dirección al momento de la visita; preventor asienta 'Visita fallida'. Sin firma de recepción de la empresa ni entrevistado.",
+    "link_doc": "https://drive.google.com/file/d/1P4UycTfT1nWDSYNkbkvjj1O24gGU2Ht5/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1P4UycTfT1nWDSYNkbkvjj1O24gGU2Ht5/view?usp=drivesdk"
   },
   {
     "nro": 24,
@@ -258,10 +281,11 @@
     "cuit": "30-70967710-8",
     "rs": "MALVICINI S.R.L.",
     "nro_establecimiento": "4",
-    "fecha_visita": "No especificada en acta",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/10FU-mTrlWftPeJG7ygp_TmsqkJyrkJlB/view?usp=drivesdk"
+    "fecha_visita": "07/09/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "Establecimiento cerrado en remodelación por cese/cierre informado por el empleador vía telefónica. Sin firma de recepción de la empresa ni entrevistado.",
+    "link_doc": "https://drive.google.com/file/d/10FU-mTrlWftPeJG7ygp_TmsqkJyrkJlB/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/10FU-mTrlWftPeJG7ygp_TmsqkJyrkJlB/view?usp=drivesdk"
   },
   {
     "nro": 25,
@@ -272,7 +296,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1mVfA0DGKybHuy20oo9nsCGBx1dypgBy8/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1mVfA0DGKybHuy20oo9nsCGBx1dypgBy8/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1mVfA0DGKybHuy20oo9nsCGBx1dypgBy8/view?usp=drivesdk"
   },
   {
     "nro": 26,
@@ -283,7 +308,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1x5TXW1k2q8m6pwn2dv76qIe2kz_2tPXY/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1x5TXW1k2q8m6pwn2dv76qIe2kz_2tPXY/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1x5TXW1k2q8m6pwn2dv76qIe2kz_2tPXY/view?usp=drivesdk"
   },
   {
     "nro": 27,
@@ -294,7 +320,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1tBUXrTwAmnETRiWs3hE-XaHMxpXWC02Z/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1tBUXrTwAmnETRiWs3hE-XaHMxpXWC02Z/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1tBUXrTwAmnETRiWs3hE-XaHMxpXWC02Z/view?usp=drivesdk"
   },
   {
     "nro": 28,
@@ -305,7 +332,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/15IarS2rTxSa5dKKR8vDu_zKTPOLzgW-e/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/15IarS2rTxSa5dKKR8vDu_zKTPOLzgW-e/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/15IarS2rTxSa5dKKR8vDu_zKTPOLzgW-e/view?usp=drivesdk"
   },
   {
     "nro": 29,
@@ -316,7 +344,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/15IarS2rTxSa5dKKR8vDu_zKTPOLzgW-e/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/15IarS2rTxSa5dKKR8vDu_zKTPOLzgW-e/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1Dxloz-HgLKiC9bHJVVlHSlHNCnaRZlcB/view?usp=drivesdk"
   },
   {
     "nro": 30,
@@ -327,7 +356,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1pv_v7XXSQ68HhiQHn-v1s21H8VFqdNnP/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1pv_v7XXSQ68HhiQHn-v1s21H8VFqdNnP/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1pv_v7XXSQ68HhiQHn-v1s21H8VFqdNnP/view?usp=drivesdk"
   },
   {
     "nro": 31,
@@ -338,7 +368,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1m-pTMsSIoZ0b97BlsPuyfenNgRw2joqF/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1m-pTMsSIoZ0b97BlsPuyfenNgRw2joqF/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1m-pTMsSIoZ0b97BlsPuyfenNgRw2joqF/view?usp=drivesdk"
   },
   {
     "nro": 32,
@@ -349,7 +380,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1UMCi4NEqCDbWeiLs_jbfvQAdAV5NK5BQ/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1UMCi4NEqCDbWeiLs_jbfvQAdAV5NK5BQ/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1UMCi4NEqCDbWeiLs_jbfvQAdAV5NK5BQ/view?usp=drivesdk"
   },
   {
     "nro": 33,
@@ -360,7 +392,8 @@
     "fecha_visita": "10/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1HK63Jlqu1np9mqoaoqx87PFuZsN6zG4F/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1HK63Jlqu1np9mqoaoqx87PFuZsN6zG4F/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1HK63Jlqu1np9mqoaoqx87PFuZsN6zG4F/view?usp=drivesdk"
   },
   {
     "nro": 34,
@@ -371,7 +404,8 @@
     "fecha_visita": "03/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1Xa26BKl8LCoWbFzO2uz624mnGsdZ79Xr/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1Xa26BKl8LCoWbFzO2uz624mnGsdZ79Xr/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1Xa26BKl8LCoWbFzO2uz624mnGsdZ79Xr/view?usp=drivesdk"
   },
   {
     "nro": 35,
@@ -382,7 +416,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/105MI92C-JmChxatERZ34k3ID5knF6lqh/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/105MI92C-JmChxatERZ34k3ID5knF6lqh/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/105MI92C-JmChxatERZ34k3ID5knF6lqh/view?usp=drivesdk"
   },
   {
     "nro": 36,
@@ -390,10 +425,11 @@
     "cuit": "30-71899328-4",
     "rs": "TECHSERV SOLUTIONS (EN FORMACION) S.R.L.",
     "nro_establecimiento": "1",
-    "fecha_visita": "No especificada en acta",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1hxbcvLwUDFZc6ZbYeHlI2ZtStY31wEfN/view?usp=drivesdk"
+    "fecha_visita": "04/09/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "Establecimiento cerrado; no se encontró personal para recibir la auditoría preventiva. Sin firma de la empresa ni entrevistado. Cuenta con registro fotográfico de fachada cerrado adjunto.",
+    "link_doc": "https://drive.google.com/file/d/1hxbcvLwUDFZc6ZbYeHlI2ZtStY31wEfN/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1hxbcvLwUDFZc6ZbYeHlI2ZtStY31wEfN/view?usp=drivesdk"
   },
   {
     "nro": 37,
@@ -404,7 +440,8 @@
     "fecha_visita": "04/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1yAP1KLZQ0lP5vDkoSoe2_l8CztEnYIza/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1yAP1KLZQ0lP5vDkoSoe2_l8CztEnYIza/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1yAP1KLZQ0lP5vDkoSoe2_l8CztEnYIza/view?usp=drivesdk"
   },
   {
     "nro": 38,
@@ -415,7 +452,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/13HZu4Gz1PRPS9pwHWdq2Rmiuo50FZicg/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/13HZu4Gz1PRPS9pwHWdq2Rmiuo50FZicg/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/13HZu4Gz1PRPS9pwHWdq2Rmiuo50FZicg/view?usp=drivesdk"
   },
   {
     "nro": 39,
@@ -426,7 +464,8 @@
     "fecha_visita": "12/03/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1Z5Am31iRWmp6ToG1tI1Ri8i8qoelHBVb/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1Z5Am31iRWmp6ToG1tI1Ri8i8qoelHBVb/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1Z5Am31iRWmp6ToG1tI1Ri8i8qoelHBVb/view?usp=drivesdk"
   },
   {
     "nro": 40,
@@ -437,7 +476,8 @@
     "fecha_visita": "12/02/2027",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1AfCGbgu1L3FPAwUFfLNqwwc7GTv308nr/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1AfCGbgu1L3FPAwUFfLNqwwc7GTv308nr/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1AfCGbgu1L3FPAwUFfLNqwwc7GTv308nr/view?usp=drivesdk"
   },
   {
     "nro": 41,
@@ -448,7 +488,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1PLnVpA40QXvirIedyziwcJdkDh9CnvbK/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1PLnVpA40QXvirIedyziwcJdkDh9CnvbK/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1PLnVpA40QXvirIedyziwcJdkDh9CnvbK/view?usp=drivesdk"
   },
   {
     "nro": 42,
@@ -459,7 +500,8 @@
     "fecha_visita": "08/04/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/19R4dnEHV6eE1KnWSr9hpIWvQS3I4xiF5/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/19R4dnEHV6eE1KnWSr9hpIWvQS3I4xiF5/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/19R4dnEHV6eE1KnWSr9hpIWvQS3I4xiF5/view?usp=drivesdk"
   },
   {
     "nro": 43,
@@ -470,7 +512,8 @@
     "fecha_visita": "14/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1J8VNL9A9H_2Z3NodPh_TGbG9f4em_To_/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1J8VNL9A9H_2Z3NodPh_TGbG9f4em_To_/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1J8VNL9A9H_2Z3NodPh_TGbG9f4em_To_/view?usp=drivesdk"
   },
   {
     "nro": 44,
@@ -481,7 +524,8 @@
     "fecha_visita": "14/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1N8Ul1PIO0Nt-HIOlG6lNBJNYvZKvK4Ij/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1N8Ul1PIO0Nt-HIOlG6lNBJNYvZKvK4Ij/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1N8Ul1PIO0Nt-HIOlG6lNBJNYvZKvK4Ij/view?usp=drivesdk"
   },
   {
     "nro": 45,
@@ -492,7 +536,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1uwvep8T1TyiL1OGxfYhQiuWqli40CLNy/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1uwvep8T1TyiL1OGxfYhQiuWqli40CLNy/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1uwvep8T1TyiL1OGxfYhQiuWqli40CLNy/view?usp=drivesdk"
   },
   {
     "nro": 46,
@@ -500,10 +545,11 @@
     "cuit": "27-35360980-8",
     "rs": "BUENANUEVA FLORENCIA R.",
     "nro_establecimiento": "1",
-    "fecha_visita": "No especificada en acta",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/16fwKxwdQOZ0ZoeUhhrX_H3XATwpBySqb/view?usp=drivesdk"
+    "fecha_visita": "07/09/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "Dirección establecida no encontrada al momento de la visita; preventor asienta 'Visita fallida'. Sin firma de recepción de la empresa ni entrevistado.",
+    "link_doc": "https://drive.google.com/file/d/16fwKxwdQOZ0ZoeUhhrX_H3XATwpBySqb/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/16fwKxwdQOZ0ZoeUhhrX_H3XATwpBySqb/view?usp=drivesdk"
   },
   {
     "nro": 47,
@@ -511,10 +557,11 @@
     "cuit": "20-29547076-0",
     "rs": "BILBAO PEREYRA LEONARDO NARCISO",
     "nro_establecimiento": "1",
-    "fecha_visita": "No especificada en acta",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1f95z5G5r5HzlaYmO5W9_268CpxSmsoj1/view?usp=drivesdk"
+    "fecha_visita": "04/09/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "Ingreso no permitido; la encargada no autoriza el acceso al establecimiento por órdenes del propietario. Preventor asienta 'Visita FALLIDA'. Sin firma de la empresa.",
+    "link_doc": "https://drive.google.com/file/d/1f95z5G5r5HzlaYmO5W9_268CpxSmsoj1/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1f95z5G5r5HzlaYmO5W9_268CpxSmsoj1/view?usp=drivesdk"
   },
   {
     "nro": 48,
@@ -522,10 +569,11 @@
     "cuit": "20-32912711-8",
     "rs": "ALVAREZ NAHUEL",
     "nro_establecimiento": "1",
-    "fecha_visita": "No especificada en acta",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1XUmgy0eWuYZ5ZstC4ApvsR03ZZ_1lfTh/view?usp=drivesdk"
+    "fecha_visita": "08/10/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "No recibido; en el domicilio consultan por la asegurada y manifiestan desconocerla. Sin firma de la empresa ni entrevistado. Adjunta fotografía en página 4 con cartel 'SE ALQUILA'.",
+    "link_doc": "https://drive.google.com/file/d/1XUmgy0eWuYZ5ZstC4ApvsR03ZZ_1lfTh/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1XUmgy0eWuYZ5ZstC4ApvsR03ZZ_1lfTh/view?usp=drivesdk"
   },
   {
     "nro": 49,
@@ -536,7 +584,8 @@
     "fecha_visita": "13/05/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1WAhdp1i9XZ7ruyTLGiXI4t1Pd2EdfRT0/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1WAhdp1i9XZ7ruyTLGiXI4t1Pd2EdfRT0/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1WAhdp1i9XZ7ruyTLGiXI4t1Pd2EdfRT0/view?usp=drivesdk"
   },
   {
     "nro": 50,
@@ -544,10 +593,11 @@
     "cuit": "20-31627993-6",
     "rs": "FLORES FABIAN JESUS",
     "nro_establecimiento": "1",
-    "fecha_visita": "No especificada en acta",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1uK03Fd7t6U1fmSMIdoFkGwJaZ09vd00u/view?usp=drivesdk"
+    "fecha_visita": "04/09/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "La persona entrevistada manifiesta no haber contratado el servicio de ART y niega la toma de fotografías del establecimiento. Preventor asienta 'Visita FALLIDA'. Sin firma de la empresa.",
+    "link_doc": "https://drive.google.com/file/d/1uK03Fd7t6U1fmSMIdoFkGwJaZ09vd00u/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1uK03Fd7t6U1fmSMIdoFkGwJaZ09vd00u/view?usp=drivesdk"
   },
   {
     "nro": 51,
@@ -558,7 +608,8 @@
     "fecha_visita": "07/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1G9tbKXHhGiLejPkFDwGc1oFNB1bzqTdt/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1G9tbKXHhGiLejPkFDwGc1oFNB1bzqTdt/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1G9tbKXHhGiLejPkFDwGc1oFNB1bzqTdt/view?usp=drivesdk"
   },
   {
     "nro": 52,
@@ -566,10 +617,11 @@
     "cuit": "30-71171887-3",
     "rs": "COOPERATIVA DE VIVIENDA LA JARILLA LIMITADA",
     "nro_establecimiento": "1",
-    "fecha_visita": "No especificada en acta",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1PIbhSXjiQ4fgWKKgDnbJNjW5xSP48fRQ/view?usp=drivesdk"
+    "fecha_visita": "04/09/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "Establecimiento no encontrado en la dirección registrada; preventor asienta explícitamente 'Visita FALLIDA'. Sin firma de recepción de la empresa ni entrevistado.",
+    "link_doc": "https://drive.google.com/file/d/1PIbhSXjiQ4fgWKKgDnbJNjW5xSP48fRQ/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1PIbhSXjiQ4fgWKKgDnbJNjW5xSP48fRQ/view?usp=drivesdk"
   },
   {
     "nro": 53,
@@ -577,10 +629,11 @@
     "cuit": "20-28454556-8",
     "rs": "FREDES MIGUEL ANGEL",
     "nro_establecimiento": "1",
-    "fecha_visita": "No especificada en acta",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/177LWqEMpw6-BwDr6H_4RYbAp51L6MrHN/view?usp=drivesdk"
+    "fecha_visita": "08/10/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "Establecimiento cerrado con cartel de venta en puerta; sin personal en el lugar. Sin firma de la empresa ni entrevistado. Adjunta fotografía en página 4 con cartel 'VENTA BODEGA COMERCIAL'.",
+    "link_doc": "https://drive.google.com/file/d/177LWqEMpw6-BwDr6H_4RYbAp51L6MrHN/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/177LWqEMpw6-BwDr6H_4RYbAp51L6MrHN/view?usp=drivesdk"
   },
   {
     "nro": 54,
@@ -591,7 +644,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1qkbXAo835njiN5jWJgR7Ls0-VEVXU2B7/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1qkbXAo835njiN5jWJgR7Ls0-VEVXU2B7/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1qkbXAo835njiN5jWJgR7Ls0-VEVXU2B7/view?usp=drivesdk"
   },
   {
     "nro": 55,
@@ -602,7 +656,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1euBCYRpv2obnrpy23QDiucbQnXIcdKNJ/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1euBCYRpv2obnrpy23QDiucbQnXIcdKNJ/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1euBCYRpv2obnrpy23QDiucbQnXIcdKNJ/view?usp=drivesdk"
   },
   {
     "nro": 56,
@@ -610,10 +665,11 @@
     "cuit": "33-71246140-9",
     "rs": "TELEMOVIL RADIO TAXI S.R.L.",
     "nro_establecimiento": "1",
-    "fecha_visita": "No especificada en acta",
+    "fecha_visita": "04/09/2026",
     "resultado": "Fallida",
-    "observacion_fallida": "Establecimiento sin personal / sin actividad al momento de la visita en Tomás Orell 23, Allen (adjunta acta y registro fotográfico).",
-    "link_doc": "https://drive.google.com/file/d/1gQImmWGfhieQk3Gu3nf9z5qeN89pt2ih/view?usp=drivesdk"
+    "observacion_fallida": "Servicio no activo; preventor registra visita fallida y 'N/A' en entrevistado. Sin firma de recepción de la empresa. Cuenta con registro fotográfico exterior adjunto.",
+    "link_doc": "https://drive.google.com/file/d/1gQImmWGfhieQk3Gu3nf9z5qeN89pt2ih/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1gQImmWGfhieQk3Gu3nf9z5qeN89pt2ih/view?usp=drivesdk"
   },
   {
     "nro": 57,
@@ -621,10 +677,11 @@
     "cuit": "20-32668624-8",
     "rs": "MURGIER GUIDO",
     "nro_establecimiento": "3",
-    "fecha_visita": "No especificada en acta",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1kqbZbGOsDxsoOini1nLTQzblKRNN5a3R/view?usp=drivesdk"
+    "fecha_visita": "08/10/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "Domicilio particular sin personal en el lugar; el portero manifiesta desconocer a la empresa. Sin firma de la empresa ni entrevistado. Adjunta fotografía respaldatoria en página 4.",
+    "link_doc": "https://drive.google.com/file/d/1kqbZbGOsDxsoOini1nLTQzblKRNN5a3R/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1kqbZbGOsDxsoOini1nLTQzblKRNN5a3R/view?usp=drivesdk"
   },
   {
     "nro": 58,
@@ -635,7 +692,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1rY3eUVtT_9VrVBYSfHtnXnKhybE_o1l4/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1rY3eUVtT_9VrVBYSfHtnXnKhybE_o1l4/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1rY3eUVtT_9VrVBYSfHtnXnKhybE_o1l4/view?usp=drivesdk"
   },
   {
     "nro": 59,
@@ -646,7 +704,8 @@
     "fecha_visita": "14/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1xeNN95U82oilOCokBubLiLSUsXmv_wx5/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1xeNN95U82oilOCokBubLiLSUsXmv_wx5/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1xeNN95U82oilOCokBubLiLSUsXmv_wx5/view?usp=drivesdk"
   },
   {
     "nro": 60,
@@ -657,7 +716,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1CroWrOYY3D1dUIAAj9NNTS3NP3jydVBJ/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1CroWrOYY3D1dUIAAj9NNTS3NP3jydVBJ/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1CroWrOYY3D1dUIAAj9NNTS3NP3jydVBJ/view?usp=drivesdk"
   },
   {
     "nro": 61,
@@ -668,7 +728,8 @@
     "fecha_visita": "27/06/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/18fOk5xGaaSGGJVvhrSLMsplGUNDpLE1N/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/18fOk5xGaaSGGJVvhrSLMsplGUNDpLE1N/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/18fOk5xGaaSGGJVvhrSLMsplGUNDpLE1N/view?usp=drivesdk"
   },
   {
     "nro": 62,
@@ -679,7 +740,8 @@
     "fecha_visita": "30/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/11TRhKYFkxhSeFJE_fxQiei2JXPLGMES1/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/11TRhKYFkxhSeFJE_fxQiei2JXPLGMES1/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/11TRhKYFkxhSeFJE_fxQiei2JXPLGMES1/view?usp=drivesdk"
   },
   {
     "nro": 63,
@@ -690,7 +752,8 @@
     "fecha_visita": "14/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/132hQb88hgyOXl7HM-MXqK2THLwshYRgg/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/132hQb88hgyOXl7HM-MXqK2THLwshYRgg/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/132hQb88hgyOXl7HM-MXqK2THLwshYRgg/view?usp=drivesdk"
   },
   {
     "nro": 64,
@@ -701,7 +764,8 @@
     "fecha_visita": "10/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1cWGkhCDFrSb6RVIADFM6sbLgperGEBws/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1cWGkhCDFrSb6RVIADFM6sbLgperGEBws/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1cWGkhCDFrSb6RVIADFM6sbLgperGEBws/view?usp=drivesdk"
   },
   {
     "nro": 65,
@@ -712,7 +776,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1l33lIbkQ3iQt1wKy14r5ZTqN4ImkR43X/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1l33lIbkQ3iQt1wKy14r5ZTqN4ImkR43X/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1l33lIbkQ3iQt1wKy14r5ZTqN4ImkR43X/view?usp=drivesdk"
   },
   {
     "nro": 66,
@@ -723,7 +788,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1sfHjNu5cHoK_9z4dJSVDd_UB0iYHX2Yo/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1sfHjNu5cHoK_9z4dJSVDd_UB0iYHX2Yo/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1sfHjNu5cHoK_9z4dJSVDd_UB0iYHX2Yo/view?usp=drivesdk"
   },
   {
     "nro": 67,
@@ -734,7 +800,8 @@
     "fecha_visita": "14/08/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1yA3kAS6Y9_vnzOkMNoY6wR1XM6AC8dk0/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1yA3kAS6Y9_vnzOkMNoY6wR1XM6AC8dk0/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1yA3kAS6Y9_vnzOkMNoY6wR1XM6AC8dk0/view?usp=drivesdk"
   },
   {
     "nro": 68,
@@ -745,7 +812,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1yVhIlH5GFkVmIC1CK-60TA0mFxsqt1jd/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1yVhIlH5GFkVmIC1CK-60TA0mFxsqt1jd/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1yVhIlH5GFkVmIC1CK-60TA0mFxsqt1jd/view?usp=drivesdk"
   },
   {
     "nro": 69,
@@ -756,7 +824,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1Tqh_zLUWjvW7EVOf_CQagXWn6Bt5N88-/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1Tqh_zLUWjvW7EVOf_CQagXWn6Bt5N88-/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1Tqh_zLUWjvW7EVOf_CQagXWn6Bt5N88-/view?usp=drivesdk"
   },
   {
     "nro": 70,
@@ -767,7 +836,8 @@
     "fecha_visita": "20/10/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1poEoAF2DmFBimVkLJHBspKEzkErNE66t/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1poEoAF2DmFBimVkLJHBspKEzkErNE66t/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1poEoAF2DmFBimVkLJHBspKEzkErNE66t/view?usp=drivesdk"
   },
   {
     "nro": 71,
@@ -778,7 +848,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1xG-6EfszAAqJgpZE6BsJ548MC7DXGx42/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1xG-6EfszAAqJgpZE6BsJ548MC7DXGx42/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1xG-6EfszAAqJgpZE6BsJ548MC7DXGx42/view?usp=drivesdk"
   },
   {
     "nro": 72,
@@ -789,7 +860,8 @@
     "fecha_visita": "30/07/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1X0LrCIw57jtGfKIQNq0dg9YI4MTaVYfn/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1X0LrCIw57jtGfKIQNq0dg9YI4MTaVYfn/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1X0LrCIw57jtGfKIQNq0dg9YI4MTaVYfn/view?usp=drivesdk"
   },
   {
     "nro": 73,
@@ -800,7 +872,8 @@
     "fecha_visita": "30/07/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1KmMDqjcwzhl_Y8yqKZxPBO9xWznBOjuJ/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1KmMDqjcwzhl_Y8yqKZxPBO9xWznBOjuJ/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1KmMDqjcwzhl_Y8yqKZxPBO9xWznBOjuJ/view?usp=drivesdk"
   },
   {
     "nro": 74,
@@ -811,7 +884,8 @@
     "fecha_visita": "13/10/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1xwbbAjddLv9RLSIiH-mkWL0URTVQRvTN/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1xwbbAjddLv9RLSIiH-mkWL0URTVQRvTN/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1xwbbAjddLv9RLSIiH-mkWL0URTVQRvTN/view?usp=drivesdk"
   },
   {
     "nro": 75,
@@ -822,7 +896,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1gUJpD0XVr3fWT2NvenEYdu1vUGScOnQs/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1gUJpD0XVr3fWT2NvenEYdu1vUGScOnQs/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1gUJpD0XVr3fWT2NvenEYdu1vUGScOnQs/view?usp=drivesdk"
   },
   {
     "nro": 76,
@@ -833,7 +908,8 @@
     "fecha_visita": "01/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1vhMrrWPp8vx7MfaJnhor-iJ4CGi8_Y97/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1vhMrrWPp8vx7MfaJnhor-iJ4CGi8_Y97/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1vhMrrWPp8vx7MfaJnhor-iJ4CGi8_Y97/view?usp=drivesdk"
   },
   {
     "nro": 77,
@@ -844,7 +920,8 @@
     "fecha_visita": "01/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1avlH_aCsW0TSYg45If6I_ycO9O0rbtqg/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1avlH_aCsW0TSYg45If6I_ycO9O0rbtqg/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1avlH_aCsW0TSYg45If6I_ycO9O0rbtqg/view?usp=drivesdk"
   },
   {
     "nro": 78,
@@ -855,7 +932,8 @@
     "fecha_visita": "19/10/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1hRHEedEAI5BWaIvMo3-OXCZsPiBVY_4o/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1hRHEedEAI5BWaIvMo3-OXCZsPiBVY_4o/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1hRHEedEAI5BWaIvMo3-OXCZsPiBVY_4o/view?usp=drivesdk"
   },
   {
     "nro": 79,
@@ -866,7 +944,8 @@
     "fecha_visita": "19/10/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1KsFxO54x4fZ1mTHeX-bhWSeNvJCwxZUX/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1KsFxO54x4fZ1mTHeX-bhWSeNvJCwxZUX/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1KsFxO54x4fZ1mTHeX-bhWSeNvJCwxZUX/view?usp=drivesdk"
   },
   {
     "nro": 80,
@@ -877,7 +956,8 @@
     "fecha_visita": "02/10/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/14GtQdwFRAzJtMyc1__Hgogasf2p2w81c/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/14GtQdwFRAzJtMyc1__Hgogasf2p2w81c/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/14GtQdwFRAzJtMyc1__Hgogasf2p2w81c/view?usp=drivesdk"
   },
   {
     "nro": 81,
@@ -888,7 +968,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1bZFMNoRqUOwpWUvsEqwgBz4QgkO5LRBY/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1bZFMNoRqUOwpWUvsEqwgBz4QgkO5LRBY/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1bZFMNoRqUOwpWUvsEqwgBz4QgkO5LRBY/view?usp=drivesdk"
   },
   {
     "nro": 82,
@@ -899,7 +980,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1wjv0d95K24CqvR1hAQ0GjZebCYePNFmn/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1wjv0d95K24CqvR1hAQ0GjZebCYePNFmn/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1wjv0d95K24CqvR1hAQ0GjZebCYePNFmn/view?usp=drivesdk"
   },
   {
     "nro": 83,
@@ -910,7 +992,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1kVf4vm8TorcJIAB_DSCIge--_ZPRDtuy/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1kVf4vm8TorcJIAB_DSCIge--_ZPRDtuy/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1kVf4vm8TorcJIAB_DSCIge--_ZPRDtuy/view?usp=drivesdk"
   },
   {
     "nro": 84,
@@ -921,7 +1004,8 @@
     "fecha_visita": "20/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1nNfi3RN4WzTNwyXZGy9RltiD2stBGQK6/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1nNfi3RN4WzTNwyXZGy9RltiD2stBGQK6/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1nNfi3RN4WzTNwyXZGy9RltiD2stBGQK6/view?usp=drivesdk"
   },
   {
     "nro": 85,
@@ -932,7 +1016,8 @@
     "fecha_visita": "14/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1OGLX94acGo7PQt4Q84UcdJzk1WZ6TJuG/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1OGLX94acGo7PQt4Q84UcdJzk1WZ6TJuG/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1OGLX94acGo7PQt4Q84UcdJzk1WZ6TJuG/view?usp=drivesdk"
   },
   {
     "nro": 86,
@@ -943,7 +1028,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/17lxOEz4lHovy_YsXx-wAz5o9QYeLdY-s/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/17lxOEz4lHovy_YsXx-wAz5o9QYeLdY-s/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/17lxOEz4lHovy_YsXx-wAz5o9QYeLdY-s/view?usp=drivesdk"
   },
   {
     "nro": 87,
@@ -954,7 +1040,8 @@
     "fecha_visita": "06/08/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1r9ne3IGi9BUqHK-Y2iFwy-BvpRb-1LZC/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1r9ne3IGi9BUqHK-Y2iFwy-BvpRb-1LZC/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1r9ne3IGi9BUqHK-Y2iFwy-BvpRb-1LZC/view?usp=drivesdk"
   },
   {
     "nro": 88,
@@ -965,7 +1052,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1hgqfdB_vlpEwqKpqgB4TVbVG4zW1GGBx/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1hgqfdB_vlpEwqKpqgB4TVbVG4zW1GGBx/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1hgqfdB_vlpEwqKpqgB4TVbVG4zW1GGBx/view?usp=drivesdk"
   },
   {
     "nro": 89,
@@ -976,7 +1064,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/12zj3NOT2tLo3Gmvdi4a_cKzSicnoyVfl/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/12zj3NOT2tLo3Gmvdi4a_cKzSicnoyVfl/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/12zj3NOT2tLo3Gmvdi4a_cKzSicnoyVfl/view?usp=drivesdk"
   },
   {
     "nro": 90,
@@ -987,7 +1076,8 @@
     "fecha_visita": "28/06/2027",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1UZwaUmxfK8VFdf5IZydrWC3Dhxt40-_d/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1UZwaUmxfK8VFdf5IZydrWC3Dhxt40-_d/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1UZwaUmxfK8VFdf5IZydrWC3Dhxt40-_d/view?usp=drivesdk"
   },
   {
     "nro": 91,
@@ -998,7 +1088,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/148fsv3EtWkYBY4k5BZkuPPfEJDyGPX4V/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/148fsv3EtWkYBY4k5BZkuPPfEJDyGPX4V/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/148fsv3EtWkYBY4k5BZkuPPfEJDyGPX4V/view?usp=drivesdk"
   },
   {
     "nro": 92,
@@ -1009,7 +1100,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1fCR9fKVaqRoObrZNiueqbBDNoSqPcp9S/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1fCR9fKVaqRoObrZNiueqbBDNoSqPcp9S/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1fCR9fKVaqRoObrZNiueqbBDNoSqPcp9S/view?usp=drivesdk"
   },
   {
     "nro": 93,
@@ -1020,7 +1112,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1k2rp9Euc-NHLnglasRp_doRgghIJhqbN/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1k2rp9Euc-NHLnglasRp_doRgghIJhqbN/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1k2rp9Euc-NHLnglasRp_doRgghIJhqbN/view?usp=drivesdk"
   },
   {
     "nro": 94,
@@ -1031,7 +1124,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1huLBAAcC9ZwbgI_yoHLTmSkx3bVyMpm7/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1huLBAAcC9ZwbgI_yoHLTmSkx3bVyMpm7/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1huLBAAcC9ZwbgI_yoHLTmSkx3bVyMpm7/view?usp=drivesdk"
   },
   {
     "nro": 95,
@@ -1042,7 +1136,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1l5SiB9AkNHfPgabAp7SkHEw9V1a_RNys/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1l5SiB9AkNHfPgabAp7SkHEw9V1a_RNys/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1l5SiB9AkNHfPgabAp7SkHEw9V1a_RNys/view?usp=drivesdk"
   },
   {
     "nro": 96,
@@ -1053,7 +1148,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1MyoIg1fiDok5DtiJFUjWASqYuc2No21T/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1MyoIg1fiDok5DtiJFUjWASqYuc2No21T/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1MyoIg1fiDok5DtiJFUjWASqYuc2No21T/view?usp=drivesdk"
   },
   {
     "nro": 97,
@@ -1064,7 +1160,8 @@
     "fecha_visita": "27/08/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1Uh7TOp2Jai8asNkpEgHd7vpp_94Ezc4z/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1Uh7TOp2Jai8asNkpEgHd7vpp_94Ezc4z/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1Uh7TOp2Jai8asNkpEgHd7vpp_94Ezc4z/view?usp=drivesdk"
   },
   {
     "nro": 98,
@@ -1075,7 +1172,8 @@
     "fecha_visita": "15/09/2026",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1aUptFFI97UwlsCzixYuGrPUpoCMaluGo/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1aUptFFI97UwlsCzixYuGrPUpoCMaluGo/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1aUptFFI97UwlsCzixYuGrPUpoCMaluGo/view?usp=drivesdk"
   },
   {
     "nro": 99,
@@ -1086,7 +1184,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1wNE-PCdxvcQty3MMCx9vtK6iwLKrW72_/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1wNE-PCdxvcQty3MMCx9vtK6iwLKrW72_/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1wNE-PCdxvcQty3MMCx9vtK6iwLKrW72_/view?usp=drivesdk"
   },
   {
     "nro": 100,
@@ -1097,7 +1196,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1fLhZy1wt3RRal2xlp8OdHDNHcV8DsUNI/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1fLhZy1wt3RRal2xlp8OdHDNHcV8DsUNI/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1fLhZy1wt3RRal2xlp8OdHDNHcV8DsUNI/view?usp=drivesdk"
   },
   {
     "nro": 101,
@@ -1108,7 +1208,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1vl1ZwlacEuZr3yybjWOt3YJ_kT99mPqv/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1vl1ZwlacEuZr3yybjWOt3YJ_kT99mPqv/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1vl1ZwlacEuZr3yybjWOt3YJ_kT99mPqv/view?usp=drivesdk"
   },
   {
     "nro": 102,
@@ -1119,7 +1220,8 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1k-RlgtAF0JwmHuMtGRN4Ml_P0TPkLBLP/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1k-RlgtAF0JwmHuMtGRN4Ml_P0TPkLBLP/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1k-RlgtAF0JwmHuMtGRN4Ml_P0TPkLBLP/view?usp=drivesdk"
   },
   {
     "nro": 103,
@@ -1127,10 +1229,11 @@
     "cuit": "20-10555128-3",
     "rs": "ALAIS MARCELO JORGE",
     "nro_establecimiento": "1",
-    "fecha_visita": "01/03/2024",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1XpuM5xz2aQFgoysM6mRl1sEFf_00UByE/view?usp=drivesdk"
+    "fecha_visita": "07/09/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "No fue posible encontrar la dirección establecida en zona rural; preventor asienta 'Fallida'. Sin firma de recepción de la empresa ni entrevistado.",
+    "link_doc": "https://drive.google.com/file/d/1XpuM5xz2aQFgoysM6mRl1sEFf_00UByE/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1XpuM5xz2aQFgoysM6mRl1sEFf_00UByE/view?usp=drivesdk"
   },
   {
     "nro": 104,
@@ -1138,10 +1241,11 @@
     "cuit": "20-10555128-3",
     "rs": "ALAIS MARCELO JORGE",
     "nro_establecimiento": "2",
-    "fecha_visita": "21/02/2024",
-    "resultado": "Efectiva",
-    "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1I1rOBixqShQEKYsROO6O6KDjWn2mzyZv/view?usp=drivesdk"
+    "fecha_visita": "07/09/2026",
+    "resultado": "Fallida",
+    "observacion_fallida": "No fue posible encontrar la dirección establecida en zona rural; preventor asienta 'Visita fallida'. Sin firma de recepción de la empresa ni entrevistado.",
+    "link_doc": "https://drive.google.com/file/d/1I1rOBixqShQEKYsROO6O6KDjWn2mzyZv/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1I1rOBixqShQEKYsROO6O6KDjWn2mzyZv/view?usp=drivesdk"
   },
   {
     "nro": 105,
@@ -1152,6 +1256,7 @@
     "fecha_visita": "No especificada en acta",
     "resultado": "Efectiva",
     "observacion_fallida": "",
-    "link_doc": "https://drive.google.com/file/d/1u-unOWIeeMd0SvVu3RGo5FWgEXlY_OAq/view?usp=drivesdk"
+    "link_doc": "https://drive.google.com/file/d/1u-unOWIeeMd0SvVu3RGo5FWgEXlY_OAq/view?usp=drivesdk",
+    "link_documento": "https://drive.google.com/file/d/1u-unOWIeeMd0SvVu3RGo5FWgEXlY_OAq/view?usp=drivesdk"
   }
 ]

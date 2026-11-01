@@ -560,6 +560,78 @@
       height: 280px;
     }
 
+    /* Universe Switcher & Multi-Universe Panels */
+    .kpi-universe-switcher {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 22px;
+      background: #E3E5E1;
+      padding: 6px;
+      border-radius: 4px;
+      width: fit-content;
+      flex-wrap: wrap;
+    }
+    .chip-universe {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 3px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: #5B6670;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .chip-universe:hover {
+      background: rgba(255, 255, 255, 0.7);
+      color: #17202A;
+    }
+    .chip-universe.on {
+      background: #fff;
+      color: #17202A;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+      font-weight: 600;
+    }
+    .dot-univ {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot-univ.altas { background: #0F4C5C; }
+    .dot-univ.residual { background: #D97706; }
+    .dot-univ.consolidado { background: #17202A; }
+    
+    .date-window-panel {
+      background: #fff;
+      border: 1px solid #D5D8D3;
+      padding: 14px 18px;
+      border-radius: 2px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .consolidado-banner {
+      background: #EBF3F5;
+      border: 1px solid #B0CDD4;
+      border-left: 4px solid #0F4C5C;
+      padding: 12px 16px;
+      border-radius: 2px;
+      font-size: 13px;
+      color: #17202A;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
     @media (max-width: 1024px) {
       .shell { flex-direction: column; }
       .rail { width: 100%; }
@@ -977,253 +1049,475 @@
       </div>
     </div>
 
-    <!-- VISTA 2: PLAN Y MÉTRICAS (PROYECTO INICIADO EN SEPTIEMBRE 2026 = MES 0) -->
+        <!-- VISTA 2: PLAN Y MÉTRICAS (PROYECTO INICIADO EN SEPTIEMBRE 2026 = MES 0) -->
     <div id="viewKpis" style="display:none; flex-direction:column; flex:1; overflow-y:auto;">
       <div class="kpi-view-container">
 
-        <!-- FILA DE ENCABEZADO Y FILTROS DEL TABLERO -->
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
-          <div>
-            <div style="font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:#0F4C5C; font-weight:600;">
-              Línea Base · Proyecto Iniciado en Septiembre 2026 (Mes 0)
-            </div>
-            <h2 style="font-size:24px; font-weight:700; margin-top:2px;">Tablero de Cumplimiento Anual (1 Año de Plan)</h2>
-            <div style="font-size:13px; color:#5B6670;">Presupuesto de referencia: <strong>100 visitas efectivas mensuales</strong> (1.200 anuales entre Sep 2026 y Ago 2027)</div>
-          </div>
-          <div style="display:flex; gap:8px;">
-            <button type="button" class="chip on" id="btnToggleChartMensual" onclick="toggleModoPresupuesto('mensual')">Visión Mensual</button>
-            <button type="button" class="chip" id="btnToggleChartAcumulado" onclick="toggleModoPresupuesto('acumulado')">Curva Acumulada</button>
-          </div>
+        <!-- SELECTOR SUPERIOR DE UNIVERSOS -->
+        <div class="kpi-universe-switcher">
+          <button type="button" class="chip-universe on" id="btnUnivAltas" onclick="setKpiUniverse('altas')">
+            <span class="dot-univ altas"></span>
+            <span><strong>Universo 1: Altas Mensuales</strong> (Meta 1.200 / año · 100/mes)</span>
+          </button>
+          <button type="button" class="chip-universe" id="btnUnivResidual" onclick="setKpiUniverse('residual')">
+            <span class="dot-univ residual"></span>
+            <span><strong>Universo 2: Stock Residual 2026</strong> (925 en 2 Meses)</span>
+          </button>
+          <button type="button" class="chip-universe" id="btnUnivConsolidado" onclick="setKpiUniverse('consolidado')">
+            <span class="dot-univ consolidado"></span>
+            <span><strong>Vista Consolidada</strong> (Multiserie · Sin mezclar metas)</span>
+          </button>
         </div>
 
-
-
-        <!-- FILA 1: DATOS FUERTES EN ETIQUETAS (STAT CARDS EJECUTIVAS) -->
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:24px;">
-          
-          <!-- Stat 1: Plan Anual de Visitas (1.200 contratadas) -->
-          <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-title">Plan Anual de Visitas</span>
-              <span class="badge" style="background:#E3EDEF; color:#0F4C5C; border:1px solid #C4DDE2; font-size:11px; font-weight:600;">Sep 26 – Ago 27</span>
-            </div>
-            <div class="stat-number">
-              <span id="kpiDashEfectivasTotal">0</span>
-              <span style="font-size:18px; font-weight:400; color:#5B6670;">/ <span id="kpiDashMetaTotal">1.200</span></span>
-            </div>
-            <div class="stat-callout ok" id="calloutCumplimientoTotal">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              Avance del Plan: <span id="kpiDashPctTotal">0.0%</span>
-            </div>
-            <div class="stat-meta">
-              Meta contractual: <strong>100 visitas/mes</strong> · Efectivas: <strong id="kpiDashStatEf" style="color:#0F4C5C;">0</strong> · Fallidas: <strong id="kpiDashStatFa" style="color:#A8470A;">0</strong> · Restantes: <strong id="kpiDashResidualProv">1.200</strong>
-            </div>
-          </div>
-
-          <!-- Stat 2: Cortes Trimestrales (Compensación de Desvíos) -->
-          <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-title">Cortes Trimestrales (300/Q)</span>
-              <span class="m" style="color:#0F4C5C; font-weight:600; font-size:12px;" id="lblDashQActualBadge">Q1 En curso</span>
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin: 6px 0;">
-              <div class="trimestre-card">
-                <div class="trimestre-header">
-                  <span>Q1 (Sep-Nov)</span>
-                  <span class="m" id="dashQ1Val">0/300</span>
-                </div>
-                <div class="trimestre-bar"><div class="trimestre-bar-fill" id="dashQ1Bar" style="width:0%;"></div></div>
-              </div>
-              <div class="trimestre-card">
-                <div class="trimestre-header">
-                  <span>Q2 (Dic-Feb)</span>
-                  <span class="m" id="dashQ2Val">0/300</span>
-                </div>
-                <div class="trimestre-bar"><div class="trimestre-bar-fill" id="dashQ2Bar" style="width:0%;"></div></div>
-              </div>
-              <div class="trimestre-card">
-                <div class="trimestre-header">
-                  <span>Q3 (Mar-May)</span>
-                  <span class="m" id="dashQ3Val">0/300</span>
-                </div>
-                <div class="trimestre-bar"><div class="trimestre-bar-fill" id="dashQ3Bar" style="width:0%;"></div></div>
-              </div>
-              <div class="trimestre-card">
-                <div class="trimestre-header">
-                  <span>Q4 (Jun-Ago)</span>
-                  <span class="m" id="dashQ4Val">0/300</span>
-                </div>
-                <div class="trimestre-bar"><div class="trimestre-bar-fill" id="dashQ4Bar" style="width:0%;"></div></div>
-              </div>
-            </div>
-            <div class="stat-meta" id="lblCompensacionTrimestral">
-              Ventana trimestral para absorber y corregir desvíos mensuales.
-            </div>
-          </div>
-
-          <!-- Stat 3: Stock Residual 2026 (Tabla Base) -->
-          <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-title">Stock Residual 2026</span>
-              <span class="badge" style="background:#ECEEEA; color:#5B6670; border:1px solid #D5D8D3; font-size:11px; font-weight:600;">925 Inicial</span>
-            </div>
-            <div class="stat-number">
-              <span id="kpiDashRealizadasResid">0</span>
-              <span style="font-size:18px; font-weight:400; color:#5B6670;">/ 925</span>
-            </div>
-            <div class="stat-callout ok" id="calloutResidualStock">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              Avance residual: <span id="kpiDashPctResid">0.0%</span>
-            </div>
-            <div class="stat-meta">
-              736 Técnicas (01/01/26 – 31/12/26) · 189 Especiales (Plazo manual)
-            </div>
-          </div>
-
-          <!-- Stat 4: Ritmo & Cadencia (Control de Desvíos) -->
-          <div class="stat-card">
-            <div class="stat-header">
-              <span class="stat-title">Ritmo & Cadencia</span>
-              <span class="m" style="font-size:12px; color:#5B6670;">Inicio Sep 2026</span>
-            </div>
-            <div class="stat-number" id="boxRitmoNumero">
-              <span id="kpiDashRitmoEfectivas">0</span>
-              <span style="font-size:18px; font-weight:400; color:#5B6670;">visitas en período</span>
-            </div>
-            <div class="stat-callout alert" id="calloutRitmoAlerta">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span id="kpiDashDesvioBadge">Con retraso (-200 vs meta acum.)</span>
-            </div>
-            <div class="stat-meta">
-              Cadencia prevista: <strong>100 visitas / mes</strong> · Efectividad: <strong id="kpiDashTasaEfSmall">100%</strong>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- FILA 2: GRÁFICO 1: REALIZADAS VS PRESUPUESTADAS (MES 0 A MES 12) -->
-        <div class="chart-panel">
-          <div class="chart-header">
+        <!-- ======================================================== -->
+        <!-- SECCIÓN 1: UNIVERSO 1 - ALTAS MENSUALES (1.200 / AÑO)    -->
+        <!-- ======================================================== -->
+        <div id="secKpisAltas">
+          <!-- Encabezado Altas -->
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
             <div>
-              <div class="chart-title" id="lblTituloChart1">Conteo de Visitas Realizadas vs Presupuestadas (Meta: 100/mes)</div>
-              <div class="chart-subtitle" id="lblSubtituloChart1">Barras apiladas de visitas efectivas y fallidas frente al presupuesto mensual (Sep 2026 = M0)</div>
+              <div style="font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:#0F4C5C; font-weight:600;">
+                Universo 1 · Control Contractual del Prestador (Sep 2026 – Ago 2027)
+              </div>
+              <h2 style="font-size:24px; font-weight:700; margin-top:2px;">Plan Anual de Altas Mensuales (1.200 Visitas)</h2>
+              <div style="font-size:13px; color:#5B6670;">Presupuesto contractual: <strong>100 visitas mensuales</strong> (1.200 anuales entre Sep 2026 y Ago 2027)</div>
             </div>
-            <div style="font-size:12px; color:#5B6670; font-family:'IBM Plex Mono', monospace;">
-              Ejecutadas Proyecto: <strong id="lblTotalEfectivasBox" style="color:#0F4C5C;">0</strong> / 1.200 Presupuesto Anual
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="chip on" id="btnToggleChartMensual" onclick="toggleModoPresupuesto('mensual')">Visión Mensual</button>
+              <button type="button" class="chip" id="btnToggleChartAcumulado" onclick="toggleModoPresupuesto('acumulado')">Curva Acumulada</button>
             </div>
           </div>
 
-          <div class="chart-canvas-box">
-            <canvas id="chartPresupuesto"></canvas>
+          <!-- 4 Stat Cards Altas -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:24px;">
+            <!-- Stat 1: Altas Realizadas vs 1.200 -->
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Plan Anual de Altas</span>
+                <span class="badge" style="background:#E3EDEF; color:#0F4C5C; border:1px solid #C4DDE2; font-size:11px; font-weight:600;">Sep 26 – Ago 27</span>
+              </div>
+              <div class="stat-number">
+                <span id="kpiDashEfectivasTotal">123</span>
+                <span style="font-size:18px; font-weight:400; color:#5B6670;">/ <span id="kpiDashMetaTotal">1.200</span></span>
+              </div>
+              <div class="stat-callout ok" id="calloutCumplimientoTotal">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Avance del Plan: <span id="kpiDashPctTotal">10.3%</span>
+              </div>
+              <div class="stat-meta">
+                Meta contractual: <strong>100 visitas/mes</strong> · Efectivas: <strong id="kpiDashStatEf" style="color:#0F4C5C;">71</strong> · Fallidas: <strong id="kpiDashStatFa" style="color:#A8470A;">52</strong> · Restantes: <strong id="kpiDashResidualProv">1.077</strong>
+              </div>
+            </div>
+
+            <!-- Stat 2: Cortes Trimestrales -->
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Cortes Trimestrales (300/Q)</span>
+                <span class="m" style="color:#0F4C5C; font-weight:600; font-size:12px;" id="lblDashQActualBadge">Q1 En curso</span>
+              </div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin: 6px 0;">
+                <div class="trimestre-card">
+                  <div class="trimestre-header"><span>Q1 (Sep-Nov)</span><span class="m" id="dashQ1Val">123/300</span></div>
+                  <div class="trimestre-bar"><div class="trimestre-bar-fill" id="dashQ1Bar" style="width:41%;"></div></div>
+                </div>
+                <div class="trimestre-card">
+                  <div class="trimestre-header"><span>Q2 (Dic-Feb)</span><span class="m" id="dashQ2Val">0/300</span></div>
+                  <div class="trimestre-bar"><div class="trimestre-bar-fill" id="dashQ2Bar" style="width:0%;"></div></div>
+                </div>
+                <div class="trimestre-card">
+                  <div class="trimestre-header"><span>Q3 (Mar-May)</span><span class="m" id="dashQ3Val">0/300</span></div>
+                  <div class="trimestre-bar"><div class="trimestre-bar-fill" id="dashQ3Bar" style="width:0%;"></div></div>
+                </div>
+                <div class="trimestre-card">
+                  <div class="trimestre-header"><span>Q4 (Jun-Ago)</span><span class="m" id="dashQ4Val">0/300</span></div>
+                  <div class="trimestre-bar"><div class="trimestre-bar-fill" id="dashQ4Bar" style="width:0%;"></div></div>
+                </div>
+              </div>
+              <div class="stat-meta" id="lblCompensacionTrimestral">
+                Q1: Restan 177 visitas en Oct y Nov (~89/mes) para cerrar en meta de 300.
+              </div>
+            </div>
+
+            <!-- Stat 3: Cadencia Mensual -->
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Cadencia & Desvío</span>
+                <span class="m" style="font-size:12px; color:#5B6670;">Meta: 100/mes</span>
+              </div>
+              <div class="stat-number">
+                <span id="kpiDashRitmoEfectivas">123</span>
+                <span style="font-size:18px; font-weight:400; color:#5B6670;">ejecutadas M0</span>
+              </div>
+              <div class="stat-callout ok" id="calloutRitmoAlerta">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span id="kpiDashDesvioBadge">En meta (+23 vs meta mensual)</span>
+              </div>
+              <div class="stat-meta">
+                Cadencia prevista: <strong>100 visitas / mes</strong> · Efectividad: <strong id="kpiDashTasaEfSmall">57.7%</strong>
+              </div>
+            </div>
+
+            <!-- Stat 4: Estado Operativo de Altas -->
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Efectivas vs Fallidas</span>
+                <span class="badge" style="background:#ECEEEA; color:#5B6670; border:1px solid #D5D8D3; font-size:11px; font-weight:600;">Altas M0</span>
+              </div>
+              <div class="stat-number">
+                <span style="color:#0F4C5C;">71</span> <span style="font-size:18px; font-weight:400; color:#5B6670;">/ <span style="color:#A8470A;">52</span></span>
+              </div>
+              <div class="stat-callout ok">
+                <span>Efectividad: 57.7% (71 visitas)</span>
+              </div>
+              <div class="stat-meta">
+                Fallidas: <strong>52 visitas</strong> (requieren gestión / reprogramación)
+              </div>
+            </div>
           </div>
 
-          <div style="display:flex; gap:24px; margin-top:16px; padding-top:14px; border-top:1px solid #D5D8D3; flex-wrap:wrap; font-size:12px; color:#5B6670;">
-            <div>Mes cerrado M0 (Sep 26): <strong style="color:#0F4C5C;" id="lblMejorMes">92 visitas efectivas (92% de la meta)</strong></div>
-            <div>Mes en curso M1 (Oct 26): <strong id="lblPromedioMensual">57 visitas (al día 22/10)</strong></div>
-            <div>Desvío acumulado a la fecha: <strong style="color:#A8470A;" id="lblDesvioMensual">-51 visitas vs meta de 200</strong></div>
-          </div>
-        </div>
-
-        <!-- FILA 3: DOS COLUMNAS DE GRÁFICOS (VENCIDAS + PARTICIPACIÓN FALLIDAS VS EFECTIVAS EN ANILLO) -->
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap:24px; margin-bottom:24px;">
-
-          <!-- Gráfico 2: Evolución de Visitas Vencidas (Solo barras de cantidades) -->
-          <div class="chart-panel" style="margin-bottom:0;">
+          <!-- Gráfico Altas vs Presupuesto -->
+          <div class="chart-panel">
             <div class="chart-header">
               <div>
-                <div class="chart-title">Evolución de Visitas Vencidas</div>
-                <div class="chart-subtitle">Cantidad de visitas vencidas por período mensual (Sep 2026 = Mes 0)</div>
+                <div class="chart-title" id="lblTituloChart1">Conteo de Altas Realizadas vs Presupuestadas (Meta: 100/mes)</div>
+                <div class="chart-subtitle" id="lblSubtituloChart1">Barras apiladas de visitas efectivas y fallidas frente al presupuesto mensual (Sep 2026 = M0)</div>
               </div>
-              <span class="badge badge-alert" id="badgeStockVencidas">0 vencidas</span>
+              <div style="font-size:12px; color:#5B6670; font-family:'IBM Plex Mono', monospace;">
+                Ejecutadas Altas: <strong id="lblTotalEfectivasBox" style="color:#0F4C5C;">123</strong> / 1.200 Presupuesto Anual
+              </div>
             </div>
-
             <div class="chart-canvas-box">
-              <canvas id="chartVencidas"></canvas>
+              <canvas id="chartPresupuesto"></canvas>
             </div>
-
-            <div style="display:flex; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid #D5D8D3; font-size:12px; color:#5B6670;">
-              <div>Vencidas en M0 (Sep 26): <strong id="lblVencM0">0 visitas</strong></div>
-              <div>Vencidas en M1 (Oct 26): <strong id="lblVencM1">0 visitas</strong></div>
-              <div>Total vencidas en mora: <strong style="color:#A8470A;" id="lblVencTotal">0 vencidas</strong></div>
+            <div style="display:flex; gap:24px; margin-top:16px; padding-top:14px; border-top:1px solid #D5D8D3; flex-wrap:wrap; font-size:12px; color:#5B6670;">
+              <div>Mes cerrado M0 (Sep 26): <strong style="color:#0F4C5C;" id="lblMejorMes">123 visitas (71 efec. + 52 fall.)</strong></div>
+              <div>Mes en curso M1 (Oct 26): <strong id="lblPromedioMensual">0 visitas registradas</strong></div>
+              <div>Desvío M0 vs meta: <strong style="color:#0F4C5C;" id="lblDesvioMensual">+23 visitas sobre meta de 100</strong></div>
             </div>
           </div>
 
-          <!-- Gráfico 3: Participación y Evolución Fallidas vs Efectivas (Anillo acumulado con filtro por mes) -->
-          <div class="chart-panel" style="margin-bottom:0;">
+          <!-- Fila de Gráficos Secundarios Altas -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap:24px; margin-bottom:24px;">
+            <div class="chart-panel" style="margin-bottom:0;">
+              <div class="chart-header">
+                <div>
+                  <div class="chart-title">Evolución de Visitas Vencidas (Altas)</div>
+                  <div class="chart-subtitle">Cantidad de visitas vencidas por período mensual</div>
+                </div>
+                <span class="badge badge-ok" id="badgeStockVencidas">0 vencidas</span>
+              </div>
+              <div class="chart-canvas-box">
+                <canvas id="chartVencidas"></canvas>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid #D5D8D3; font-size:12px; color:#5B6670;">
+                <div>Vencidas en M0 (Sep 26): <strong id="lblVencM0">0 visitas</strong></div>
+                <div>Vencidas en M1 (Oct 26): <strong id="lblVencM1">0 visitas</strong></div>
+                <div>Total vencidas Altas: <strong style="color:#0F4C5C;" id="lblVencTotal">0 vencidas</strong></div>
+              </div>
+            </div>
+
+            <div class="chart-panel" style="margin-bottom:0;">
+              <div class="chart-header">
+                <div>
+                  <div class="chart-title">Participación: Fallidas vs Efectivas (Altas)</div>
+                  <div class="chart-subtitle" id="lblSubtituloFallidas">Distribución de visitas efectivas y fallidas en Altas</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                  <button type="button" class="chip on" id="chipFiltroFallidasAcum" onclick="setFiltroMesFallidas('acumulado')" style="min-height:30px; font-size:11px; padding:2px 8px;">Acumulado</button>
+                  <button type="button" class="chip" id="chipFiltroFallidasM0" onclick="setFiltroMesFallidas('0')" style="min-height:30px; font-size:11px; padding:2px 8px;">Sep 26</button>
+                </div>
+              </div>
+              <div class="chart-canvas-box" id="boxChartFallidasDonut">
+                <canvas id="chartFallidasDonut"></canvas>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid #D5D8D3; font-size:12px; color:#5B6670;">
+                <div>Efectivas: <strong style="color:#0F4C5C;" id="lblTotEfPie">71 (57.7%)</strong></div>
+                <div>Fallidas: <strong style="color:#A8470A;" id="lblTotFaPie">52 (42.3%)</strong></div>
+                <div>Gestionadas: <strong id="lblTotFaGest">52</strong> | Pendientes: <strong style="color:#5B6670;" id="lblTotFaPend">0</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla Resumen Altas -->
+          <div class="chart-panel">
             <div class="chart-header">
               <div>
-                <div class="chart-title">Participación y Evolución: Fallidas vs Efectivas</div>
-                <div class="chart-subtitle" id="lblSubtituloFallidas">Distribución acumulada de visitas efectivas y fallidas en todo el ciclo</div>
-              </div>
-              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-                <button type="button" class="chip on" id="chipFiltroFallidasAcum" onclick="setFiltroMesFallidas('acumulado')" style="min-height:30px; font-size:11px; padding:2px 8px;">Acumulado</button>
-                <button type="button" class="chip" id="chipFiltroFallidasM0" onclick="setFiltroMesFallidas('0')" style="min-height:30px; font-size:11px; padding:2px 8px;">Sep 26</button>
-                <button type="button" class="chip" id="chipFiltroFallidasM1" onclick="setFiltroMesFallidas('1')" style="min-height:30px; font-size:11px; padding:2px 8px;">Oct 26</button>
-                <select id="selFiltroMesFallidas" onchange="setFiltroMesFallidas(this.value)" style="min-height:30px; font-size:11px; padding:2px 6px; border:1px solid #D5D8D3; border-radius:3px; background:#fff; color:#17202A; cursor:pointer;" title="Filtrar por mes específico">
-                  <option value="acumulado">📊 Acumulado Total</option>
-                  <option value="0">M0: Sep 2026</option>
-                  <option value="1">M1: Oct 2026</option>
-                  <option value="2">M2: Nov 2026</option>
-                  <option value="3">M3: Dic 2026</option>
-                  <option value="4">M4: Ene 2027</option>
-                  <option value="5">M5: Feb 2027</option>
-                  <option value="6">M6: Mar 2027</option>
-                  <option value="7">M7: Abr 2027</option>
-                  <option value="8">M8: May 2027</option>
-                  <option value="9">M9: Jun 2027</option>
-                  <option value="10">M10: Jul 2027</option>
-                  <option value="11">M11: Ago 2027</option>
-                </select>
+                <div class="chart-title">Resumen Mensual de Altas del Proyecto (1 Año · Sep 2026 a Ago 2027)</div>
+                <div class="chart-subtitle">Detalle mes a mes de visitas de altas presupuestadas (100/mes), efectivas, fallidas y total salidas</div>
               </div>
             </div>
-
-            <div class="chart-canvas-box" id="boxChartFallidasDonut">
-              <canvas id="chartFallidasDonut"></canvas>
-            </div>
-
-            <div style="display:flex; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid #D5D8D3; font-size:12px; color:#5B6670;">
-              <div>Efectivas: <strong style="color:#0F4C5C;" id="lblTotEfPie">0 (0.0%)</strong></div>
-              <div>Fallidas: <strong style="color:#A8470A;" id="lblTotFaPie">0 (0.0%)</strong></div>
-              <div>Gestionadas: <strong id="lblTotFaGest">0</strong> | Pendientes: <strong style="color:#A8470A;" id="lblTotFaPend">0</strong></div>
+            <div class="table-container" style="margin-top:0;">
+              <table class="t">
+                <thead>
+                  <tr>
+                    <th>Período del Proyecto</th>
+                    <th class="m" style="text-align:right;">Meta Presup.</th>
+                    <th class="m" style="text-align:right;">Efectivas</th>
+                    <th class="m" style="text-align:right;">Fallidas</th>
+                    <th class="m" style="text-align:right;">Total Salidas</th>
+                    <th class="m" style="text-align:right;">Cumplimiento vs 100</th>
+                    <th class="m" style="text-align:right;">% Efectividad</th>
+                    <th class="m" style="text-align:right;">Vencidas Acum.</th>
+                    <th>Semáforo</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaResumenMensualBody"></tbody>
+              </table>
             </div>
           </div>
-
         </div>
 
-        <!-- FILA 4: TABLA DE RESUMEN EJECUTIVO MENSUAL DEL PROYECTO (1 AÑO) -->
-        <div class="chart-panel">
-          <div class="chart-header">
-            <div>
-              <div class="chart-title">Resumen Mensual del Año de Proyecto (Septiembre 2026 = Mes 0)</div>
-              <div class="chart-subtitle">Detalle numérico mes a mes de visitas presupuestadas (100/mes), efectivas logradas, fallidas y stock acumulado</div>
+        <!-- ======================================================== -->
+        <!-- SECCIÓN 2: UNIVERSO 2 - PLAN RESIDUAL (STOCK 925 · 2M)   -->
+        <!-- ======================================================== -->
+        <div id="secKpisResidual" style="display:none;">
+          <!-- Encabezado Residual -->
+          <div style="margin-bottom:18px;">
+            <div style="font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:#D97706; font-weight:600;">
+              Universo 2 · Plan de Liquidación de Stock Residual 2026 (Stock Inicial: 925 Tareas)
+            </div>
+            <h2 style="font-size:24px; font-weight:700; margin-top:2px;">Seguimiento y Extinción de Stock Residual</h2>
+            <div style="font-size:13px; color:#5B6670;">
+              Meta: <strong>925 tareas a liquidar en 2 meses</strong> contados desde la <strong>Fecha Desde</strong> y hasta la <strong>Fecha Hasta</strong>.
             </div>
           </div>
 
-          <div class="table-container" style="margin-top:0;">
-            <table class="t">
-              <thead>
-                <tr>
-                  <th>Período del Proyecto</th>
-                  <th class="m" style="text-align:right;">Meta Presup.</th>
-                  <th class="m" style="text-align:right;">Efectivas</th>
-                  <th class="m" style="text-align:right;">Fallidas</th>
-                  <th class="m" style="text-align:right;">Total Salidas</th>
-                  <th class="m" style="text-align:right;">Cumplimiento vs 100</th>
-                  <th class="m" style="text-align:right;">% Efectividad</th>
-                  <th class="m" style="text-align:right;">Vencidas Acum.</th>
-                  <th>Semáforo</th>
-                </tr>
-              </thead>
-              <tbody id="tablaResumenMensualBody">
-                <!-- Generado dinámicamente -->
-              </tbody>
-            </table>
+          <!-- Barra de Control de la Ventana Temporal de 2 Meses -->
+          <div class="date-window-panel">
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+              <span style="font-size:13px; font-weight:600; color:#17202A;">Ventana de Ejecución (2 Meses):</span>
+              <label style="font-size:12px; color:#5B6670; display:inline-flex; align-items:center; gap:6px;">
+                Fecha Desde:
+                <input type="date" id="txtResidualDesde" value="2026-11-09" onchange="cambiarFechasResidual()" style="min-height:34px; font-size:12px; font-weight:600; padding:0 8px;">
+              </label>
+              <label style="font-size:12px; color:#5B6670; display:inline-flex; align-items:center; gap:6px;">
+                Fecha Hasta:
+                <input type="date" id="txtResidualHasta" value="2027-01-09" onchange="cambiarFechasResidual()" style="min-height:34px; font-size:12px; font-weight:600; padding:0 8px;">
+              </label>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <span style="font-size:11px; color:#5B6670;">Ajustes rápidos:</span>
+              <button type="button" class="chip" onclick="fijarVentanaResidual('2026-11-09', '2027-01-09')">09/11/26 al 09/01/27</button>
+              <button type="button" class="chip" onclick="fijarVentanaResidual('2026-11-01', '2026-12-31')">01/11/26 al 31/12/26</button>
+              <button type="button" class="chip" onclick="fijarVentanaResidualDosMeses()">+2 Meses exactos</button>
+              <span id="lblResidualDuracion" class="badge" style="background:#FEF3C7; color:#92400E; font-size:12px; font-weight:600; padding:6px 10px;">
+                Ventana: 61 días corridos (~43 días hábiles)
+              </span>
+            </div>
+          </div>
+
+          <!-- 4 Stat Cards Residual -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:24px;">
+            <!-- Stat 1: Avance Stock Residual -->
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Avance Stock Residual</span>
+                <span class="badge" style="background:#ECEEEA; color:#5B6670; border:1px solid #D5D8D3; font-size:11px; font-weight:600;">925 Base</span>
+              </div>
+              <div class="stat-number">
+                <span id="kpiResidRealizadas">0</span>
+                <span style="font-size:18px; font-weight:400; color:#5B6670;">/ 925</span>
+              </div>
+              <div class="stat-callout ok" id="calloutResidualStock">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Avance residual: <span id="kpiResidPct">0.0%</span>
+              </div>
+              <div class="stat-meta">
+                Remanente a liquidar: <strong id="kpiResidPendientes" style="color:#D97706;">925 tareas</strong>
+              </div>
+            </div>
+
+            <!-- Stat 2: Composición del Stock -->
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Composición del Stock</span>
+                <span class="m" style="font-size:12px; color:#5B6670;">736 VT + 189 Esp.</span>
+              </div>
+              <div class="stat-number" style="font-size:24px; padding-top:4px;">
+                <span style="color:#0F4C5C;">736</span> <span style="font-size:16px; color:#5B6670;">VT</span> · <span style="color:#A8470A;">189</span> <span style="font-size:16px; color:#5B6670;">Especiales</span>
+              </div>
+              <div class="stat-callout ok">
+                <span>736 Técnicas (Plazo Anual) · 176 Vero · 13 Siniestros</span>
+              </div>
+              <div class="stat-meta">
+                189 Tareas Especiales pendientes de fijar fecha límite manual
+              </div>
+            </div>
+
+            <!-- Stat 3: Cadencia Requerida -->
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Cadencia Requerida (2 Meses)</span>
+                <span class="m" style="font-size:12px; color:#D97706; font-weight:600;">Meta: 462.5/mes</span>
+              </div>
+              <div class="stat-number">
+                <span id="kpiResidCadenciaDiaria">~21.5</span>
+                <span style="font-size:18px; font-weight:400; color:#5B6670;">visitas / día hábil</span>
+              </div>
+              <div class="stat-callout ok">
+                <span>Meta mensual: 462.5 visitas en c/u de los 2 meses</span>
+              </div>
+              <div class="stat-meta">
+                Para extinguir las 925 tareas en los días hábiles de la ventana
+              </div>
+            </div>
+
+            <!-- Stat 4: Estado del Cronograma -->
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Estado de la Ventana</span>
+                <span class="badge" style="background:#FEF3C7; color:#92400E; font-size:11px; font-weight:600;">Cuenta Regresiva</span>
+              </div>
+              <div class="stat-number" style="font-size:24px; padding-top:4px;" id="kpiResidEstadoCountdown">
+                Faltan 8 días
+              </div>
+              <div class="stat-callout alert" id="calloutResidEstado">
+                <span id="lblResidEstadoTexto">Inicio previsto: 09/11/2026</span>
+              </div>
+              <div class="stat-meta">
+                Ventana total: 60 días corridos hasta <span id="lblResidFechaCierre">09/01/2027</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gráficos Residuales -->
+          <div style="display:grid; grid-template-columns: 2fr 1fr; gap:24px; margin-bottom:24px;">
+            <!-- Burn-down Chart -->
+            <div class="chart-panel" style="margin-bottom:0;">
+              <div class="chart-header">
+                <div>
+                  <div class="chart-title">Curva de Extinción de Stock Residual (Burn-down Chart · 925 a 0)</div>
+                  <div class="chart-subtitle">Trayectoria teórica de liquidación semanal vs stock remanente real en la ventana de 2 meses</div>
+                </div>
+              </div>
+              <div class="chart-canvas-box">
+                <canvas id="chartResidualBurnDown"></canvas>
+              </div>
+            </div>
+
+            <!-- Tipología Residual -->
+            <div class="chart-panel" style="margin-bottom:0;">
+              <div class="chart-header">
+                <div>
+                  <div class="chart-title">Tipología del Stock Residual</div>
+                  <div class="chart-subtitle">Desglose de las 925 tareas base</div>
+                </div>
+              </div>
+              <div class="chart-canvas-box">
+                <canvas id="chartResidualTipologia"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- SECCIÓN 3: VISTA CONSOLIDADA (AMBOS UNIVERSOS)          -->
+        <!-- ======================================================== -->
+        <div id="secKpisConsolidado" style="display:none;">
+          <div class="consolidado-banner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F4C5C" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div>
+              <strong>Control Consolidado Multiserie:</strong> Los dos universos se visualizan juntos pero con <strong>metas estrictamente independientes</strong> para evitar distorsiones. La meta contractual del prestador rige a razón de <strong>100 visitas/mes (1.200 al año)</strong> para las altas, mientras que el stock residual de <strong>925 tareas</strong> tiene su propio cronograma de extinción en 2 meses.
+            </div>
+          </div>
+
+          <!-- 4 Stat Cards Consolidado -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:24px;">
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Universo 1: Altas Mensuales</span>
+                <span class="badge" style="background:#E3EDEF; color:#0F4C5C; border:1px solid #C4DDE2; font-size:11px; font-weight:600;">Meta: 1.200/año</span>
+              </div>
+              <div class="stat-number">
+                <span style="color:#0F4C5C;">123</span> <span style="font-size:18px; font-weight:400; color:#5B6670;">/ 1.200</span>
+              </div>
+              <div class="stat-callout ok"><span>Avance: 10.3% del plan anual de altas</span></div>
+              <div class="stat-meta">Efectivas: <strong>71</strong> · Fallidas: <strong>52</strong> · Restan: <strong>1.077</strong></div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Universo 2: Stock Residual</span>
+                <span class="badge" style="background:#FEF3C7; color:#92400E; font-size:11px; font-weight:600;">Meta: 925 en 2 Meses</span>
+              </div>
+              <div class="stat-number">
+                <span style="color:#D97706;">0</span> <span style="font-size:18px; font-weight:400; color:#5B6670;">/ 925</span>
+              </div>
+              <div class="stat-callout ok"><span>Avance: 0.0% · 925 tareas pendientes</span></div>
+              <div class="stat-meta">736 Técnicas + 189 Especiales a ejecutar en 2 meses</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Total Salidas a Terreno</span>
+                <span class="m" style="font-size:12px; color:#5B6670;">Global</span>
+              </div>
+              <div class="stat-number">
+                123 <span style="font-size:18px; font-weight:400; color:#5B6670;">visitas ejecutadas</span>
+              </div>
+              <div class="stat-callout ok"><span>123 Altas + 0 Residuales</span></div>
+              <div class="stat-meta">Total de inspecciones y visitas efectuadas a la fecha</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Efectividad Global</span>
+                <span class="badge" style="background:#ECEEEA; color:#5B6670; border:1px solid #D5D8D3; font-size:11px; font-weight:600;">Consolidado</span>
+              </div>
+              <div class="stat-number">
+                57.7%
+              </div>
+              <div class="stat-callout ok"><span>71 Efectivas / 52 Fallidas</span></div>
+              <div class="stat-meta">Tasa calculada sobre el total de salidas a terreno</div>
+            </div>
+          </div>
+
+          <!-- Gráfico Consolidado Multi-Serie -->
+          <div class="chart-panel">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">Comparativa Consolidada: Altas Mensuales vs Stock Residual</div>
+                <div class="chart-subtitle">Barras discriminadas por universo frente a sus respectivas metas (100/mes para Altas vs 462.5/mes para Residual)</div>
+              </div>
+            </div>
+            <div class="chart-canvas-box">
+              <canvas id="chartConsolidado"></canvas>
+            </div>
+          </div>
+
+          <!-- Tabla Consolidada -->
+          <div class="chart-panel">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title">Tabla Resumen Consolidada (Ambos Universos)</div>
+                <div class="chart-subtitle">Desglose integral de visitas realizadas y metas independientes mes a mes</div>
+              </div>
+            </div>
+            <div class="table-container" style="margin-top:0;">
+              <table class="t">
+                <thead>
+                  <tr>
+                    <th>Período</th>
+                    <th class="m" style="text-align:right;">Altas Efectivas</th>
+                    <th class="m" style="text-align:right;">Altas Fallidas</th>
+                    <th class="m" style="text-align:right;">Total Altas</th>
+                    <th class="m" style="text-align:right;">Meta Altas</th>
+                    <th class="m" style="text-align:right;">Residual Ejec.</th>
+                    <th class="m" style="text-align:right;">Meta Residual</th>
+                    <th class="m" style="text-align:right;">Total Terreno</th>
+                    <th class="m" style="text-align:right;">% Eficacia</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaConsolidadaBody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
       </div>
     </div>
-  </div>
+</div>
 </div>
 
 <!-- MODAL: ALTA MASIVA CON OCR (POR CUIT / EMPRESA) -->
@@ -1429,7 +1723,7 @@
 </div>
 
 <!-- CARGA DE DATOS PRECARGADOS (CON CACHE-BUSTER) -->
-<script src="datos_precargados.js?v=20261026_1745"></script>
+<script src="datos_precargados.js?v=20261101_1830"></script>
 
 <!-- LÓGICA DE LA APLICACIÓN -->
 <script>
@@ -1453,11 +1747,17 @@ let LOTE_MASIVO = [];
 let chartPresupuestoInstance = null;
 let chartVencidasInstance = null;
 let chartFallidasDonutInstance = null;
+let chartResidualBurnDownInstance = null;
+let chartResidualTipologiaInstance = null;
+let chartConsolidadoInstance = null;
+let KPI_UNIVERSE = 'altas'; // 'altas', 'residual', 'consolidado'
+let RESIDUAL_FECHA_DESDE = '2026-11-09';
+let RESIDUAL_FECHA_HASTA = '2027-01-09';
 let modoChartPresupuesto = 'mensual';
 let filtroMesFallidas = 'acumulado';
 
 // Claves LocalStorage (V14: Base completa 1.082 registros + 153 visitas únicas deduplicadas)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V14';
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V15';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -1740,7 +2040,7 @@ function normalizarTarea(t, idx) {
 
 function inicializarDatos() {
   // Limpiar versiones obsoletas de localStorage para evitar datos desactualizados
-  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13'].forEach(k => {
+  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13', 'IAPSER_GERENCIADAS_TASKS_V14'].forEach(k => {
     try { localStorage.removeItem(k); } catch(e) {}
   });
 
@@ -1902,16 +2202,6 @@ function actualizarKpis() {
     const tieneRealizada = tieneVisitaRealizada(t);
 
     if (tieneRealizada) {
-      const claveVisita = obtenerClaveVisita(t);
-      if (claveVisita && visitasContadas.has(claveVisita)) {
-        // Coincide CUIT + Nro Estab Intercambio + Tarea + Fecha Realizada:
-        // Se computa como 1 en el conteo de visitas
-        return;
-      }
-      if (claveVisita) {
-        visitasContadas.add(claveVisita);
-      }
-
       realizadasTotal++;
       if (esResidual) realizadasResidual++; else realizadasAltas++;
       const resultado = (t.resultadoVisita || '').toLowerCase();
@@ -1946,15 +2236,15 @@ function actualizarKpis() {
   const q3 = (efectivasPorMes[6] || 0) + (efectivasPorMes[7] || 0) + (efectivasPorMes[8] || 0) + (fallidasPorMes[6] || 0) + (fallidasPorMes[7] || 0) + (fallidasPorMes[8] || 0);
   const q4 = (efectivasPorMes[9] || 0) + (efectivasPorMes[10] || 0) + (efectivasPorMes[11] || 0) + (fallidasPorMes[9] || 0) + (fallidasPorMes[10] || 0) + (fallidasPorMes[11] || 0);
 
-  // Meta del Proveedor (1.200 al año, 100/mes)
+  // Meta del Proveedor (1.200 al año para altas mensuales, 100/mes)
   const metaTotalProv = 1200;
-  const pctProv = ((realizadasTotal / metaTotalProv) * 100).toFixed(1);
-  const metaAcumM1 = 200; // Mes 0 (Sep) + Mes 1 (Oct) = 200 visitas acumuladas
-  const desvioAcum = realizadasTotal - metaAcumM1;
+  const pctProv = ((realizadasAltas / metaTotalProv) * 100).toFixed(1);
+  const metaAcumM0 = 100; // Mes 0 (Sep) meta contractual
+  const desvioAcum = realizadasAltas - metaAcumM0;
 
-  // Actualizar Card 1: Control Prestador
+  // Actualizar Card 1: Control Prestador (Solo Altas Mensuales)
   const elRealProv = document.getElementById('kpiRealizadasProv');
-  if (elRealProv) elRealProv.textContent = realizadasTotal;
+  if (elRealProv) elRealProv.textContent = realizadasAltas;
   const elPctProv = document.getElementById('kpiPctProv');
   if (elPctProv) elPctProv.textContent = pctProv + '%';
   const elBarProv = document.getElementById('kpiBarProv');
@@ -2061,109 +2351,177 @@ function actualizarKpis() {
 // =========================================================================
 // TABLERO DE KPIS Y GRÁFICOS (PROYECTO INICIADO EN SEPTIEMBRE 2026 = MES 0)
 // =========================================================================
+function setKpiUniverse(univ) {
+  KPI_UNIVERSE = univ;
+  
+  const btnAltas = document.getElementById('btnUnivAltas');
+  const btnRes = document.getElementById('btnUnivResidual');
+  const btnCons = document.getElementById('btnUnivConsolidado');
+  
+  if (btnAltas) btnAltas.classList.toggle('on', univ === 'altas');
+  if (btnRes) btnRes.classList.toggle('on', univ === 'residual');
+  if (btnCons) btnCons.classList.toggle('on', univ === 'consolidado');
+  
+  const secAltas = document.getElementById('secKpisAltas');
+  const secRes = document.getElementById('secKpisResidual');
+  const secCons = document.getElementById('secKpisConsolidado');
+  
+  if (secAltas) secAltas.style.display = (univ === 'altas') ? 'block' : 'none';
+  if (secRes) secRes.style.display = (univ === 'residual') ? 'block' : 'none';
+  if (secCons) secCons.style.display = (univ === 'consolidado') ? 'block' : 'none';
+  
+  renderizarTableroKPIs();
+}
+
+function cambiarFechasResidual() {
+  const elDesde = document.getElementById('txtResidualDesde');
+  const elHasta = document.getElementById('txtResidualHasta');
+  if (elDesde && elDesde.value) RESIDUAL_FECHA_DESDE = elDesde.value;
+  if (elHasta && elHasta.value) RESIDUAL_FECHA_HASTA = elHasta.value;
+  renderizarTableroKPIs();
+}
+
+function fijarVentanaResidual(desde, hasta) {
+  RESIDUAL_FECHA_DESDE = desde;
+  RESIDUAL_FECHA_HASTA = hasta;
+  const elDesde = document.getElementById('txtResidualDesde');
+  const elHasta = document.getElementById('txtResidualHasta');
+  if (elDesde) elDesde.value = desde;
+  if (elHasta) elHasta.value = hasta;
+  renderizarTableroKPIs();
+}
+
+function fijarVentanaResidualDosMeses() {
+  const elDesde = document.getElementById('txtResidualDesde');
+  if (!elDesde || !elDesde.value) return;
+  const d = new Date(elDesde.value + 'T00:00:00');
+  d.setMonth(d.getMonth() + 2);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hasta = `${y}-${m}-${day}`;
+  fijarVentanaResidual(elDesde.value, hasta);
+}
+
+function calcularDiasVentana(fechaDesdeStr, fechaHastaStr) {
+  const d1 = new Date(fechaDesdeStr + 'T00:00:00');
+  const d2 = new Date(fechaHastaStr + 'T00:00:00');
+  const diffTime = d2 - d1;
+  const diasCorridos = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1);
+  
+  let diasHabiles = 0;
+  let cur = new Date(d1);
+  while (cur <= d2) {
+    const day = cur.getDay();
+    if (day !== 0 && day !== 6) {
+      diasHabiles++;
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return { diasCorridos, diasHabiles: Math.max(1, diasHabiles) };
+}
+
+// =========================================================================
+// TABLERO DE KPIS Y GRÁFICOS: DOS UNIVERSOS TOTALMENTE SEPARADOS
+// 1. Altas Mensuales (1.200 / año · 100/mes)
+// 2. Stock Residual (925 en 2 meses desde Fecha Desde hasta Fecha Hasta)
+// 3. Vista Consolidada Multi-Serie (Metas independientes)
+// =========================================================================
 function renderizarTableroKPIs() {
-  const efectivasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
-  const fallidasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
-  const vencidasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
+  const efectivasAltasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
+  const fallidasAltasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
+  const residualPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
+  const vencidasAltasPorMes = new Array(PROYECTO_TIMELINE.length).fill(0);
 
   let totalResidual = 0;
   let realizadasResidual = 0;
+  let efectivasResidual = 0;
+  let fallidasResidual = 0;
+  let tecnicasResidual = 0;
+  let especialesResidual = 0;
+  let vencidasResidual = 0;
+
   let totalAltas = 0;
   let realizadasAltas = 0;
-  let totalVencidasStock = 0;
-  let totalProximas = 0;
-  let fallidasGestionadas = 0;
-  let fallidasPendientes = 0;
-
-  // Registro de visitas contadas para deduplicar por CUIT + Nro Estab Intercambio + Tarea + Fecha Realizada
-  const visitasContadas = new Set();
+  let efectivasAltas = 0;
+  let fallidasAltas = 0;
+  let vencidasAltas = 0;
 
   TASKS.forEach(t => {
     const origen = (t.origenPlan || 'Residual 2026').toLowerCase();
     const esResidual = origen.includes('residual');
-    if (esResidual) totalResidual++; else totalAltas++;
+
+    if (esResidual) {
+      totalResidual++;
+      const tar = (t.tarea || '').toLowerCase();
+      if (tar.includes('visita tecnica')) tecnicasResidual++;
+      else especialesResidual++;
+    } else {
+      totalAltas++;
+    }
 
     const tieneRealizada = tieneVisitaRealizada(t);
+
     if (tieneRealizada) {
-      const claveVisita = obtenerClaveVisita(t);
-      if (claveVisita && visitasContadas.has(claveVisita)) {
-        // Coincide CUIT + Nro Estab Intercambio + Tarea + Fecha Realizada:
-        // Se computa como 1 en el conteo de visitas
-        return;
-      }
-      if (claveVisita) {
-        visitasContadas.add(claveVisita);
-      }
-
-      if (esResidual) realizadasResidual++; else realizadasAltas++;
-
       const esFallida = (t.resultadoVisita || '').toLowerCase() === 'fallida';
-      if (esFallida) {
-        if (t.gestionFallida) fallidasGestionadas++; else fallidasPendientes++;
-      }
-
       const claveYM = obtenerClaveMesRealizada(t.fechaRealizada);
-      if (claveYM) {
-        const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
-        if (idxTimeline !== -1) {
-          if (esFallida) {
-            fallidasPorMes[idxTimeline]++;
-          } else {
-            efectivasPorMes[idxTimeline]++;
-          }
+      const idxTimeline = claveYM ? PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM) : -1;
+
+      if (esResidual) {
+        realizadasResidual++;
+        if (esFallida) fallidasResidual++; else efectivasResidual++;
+        if (idxTimeline !== -1) residualPorMes[idxTimeline]++;
+      } else {
+        realizadasAltas++;
+        if (esFallida) {
+          fallidasAltas++;
+          if (idxTimeline !== -1) fallidasAltasPorMes[idxTimeline]++;
+        } else {
+          efectivasAltas++;
+          if (idxTimeline !== -1) efectivasAltasPorMes[idxTimeline]++;
         }
       }
     } else if (esVisitaVencida(t)) {
-      // Vencida ÚNICAMENTE si no se realizó la visita y el hasta es pasado
-      totalVencidasStock++;
-      const fh = t.fechaHasta;
-      if (fh) {
-        const parts = fh.split('/');
-        if (parts.length === 3) {
-          const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
-          const m = parts[1].padStart(2, '0');
-          const claveYM = `${y}-${m}`;
-          const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
-          if (idxTimeline !== -1) {
-            vencidasPorMes[idxTimeline]++;
-          } else {
-            vencidasPorMes[0]++;
+      if (esResidual) {
+        vencidasResidual++;
+      } else {
+        vencidasAltas++;
+        const fh = t.fechaHasta;
+        if (fh) {
+          const parts = fh.split('/');
+          if (parts.length === 3) {
+            const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+            const m = parts[1].padStart(2, '0');
+            const claveYM = `${y}-${m}`;
+            const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
+            if (idxTimeline !== -1) vencidasAltasPorMes[idxTimeline]++;
+            else vencidasAltasPorMes[0]++;
           }
         }
       }
     }
   });
 
-  const metaMensual = 100;
-  const metaTotalAnual = 1200;
-  const mesActualIdx = 1; // Octubre 2026 es el mes en curso (Mes 1)
-  const metaYTD = (mesActualIdx + 1) * metaMensual; // 200
+  // -------------------------------------------------------------
+  // UNIVERSO 1: ALTAS MENSUALES (Meta 1.200 al año, 100/mes)
+  // -------------------------------------------------------------
+  const metaTotalAltas = 1200;
+  const pctAltas = ((realizadasAltas / metaTotalAltas) * 100).toFixed(1);
+  const q1 = (efectivasAltasPorMes[0] || 0) + (efectivasAltasPorMes[1] || 0) + (efectivasAltasPorMes[2] || 0) + (fallidasAltasPorMes[0] || 0) + (fallidasAltasPorMes[1] || 0) + (fallidasAltasPorMes[2] || 0);
+  const q2 = (efectivasAltasPorMes[3] || 0) + (efectivasAltasPorMes[4] || 0) + (efectivasAltasPorMes[5] || 0) + (fallidasAltasPorMes[3] || 0) + (fallidasAltasPorMes[4] || 0) + (fallidasAltasPorMes[5] || 0);
+  const q3 = (efectivasAltasPorMes[6] || 0) + (efectivasAltasPorMes[7] || 0) + (efectivasAltasPorMes[8] || 0) + (fallidasAltasPorMes[6] || 0) + (fallidasAltasPorMes[7] || 0) + (fallidasAltasPorMes[8] || 0);
+  const q4 = (efectivasAltasPorMes[9] || 0) + (efectivasAltasPorMes[10] || 0) + (efectivasAltasPorMes[11] || 0) + (fallidasAltasPorMes[9] || 0) + (fallidasAltasPorMes[10] || 0) + (fallidasAltasPorMes[11] || 0);
 
-  // Total visitas realizadas en Columna F (efectivas y fallidas)
-  let totalEfectivasCiclo = 0;
-  let totalFallidasCiclo = 0;
-  efectivasPorMes.forEach(v => totalEfectivasCiclo += v);
-  fallidasPorMes.forEach(v => totalFallidasCiclo += v);
-  const totalRealizadasCiclo = totalEfectivasCiclo + totalFallidasCiclo;
-  const tasaEfectividad = totalRealizadasCiclo > 0 ? ((totalEfectivasCiclo / totalRealizadasCiclo) * 100).toFixed(1) : '100.0';
+  const desvioM0 = (efectivasAltasPorMes[0] + fallidasAltasPorMes[0]) - 100;
+  const tasaEfAltas = realizadasAltas > 0 ? ((efectivasAltas / realizadasAltas) * 100).toFixed(1) : '100.0';
 
-  const totalEfectivasYTD = totalEfectivasCiclo;
-  const totalFallidasYTD = totalFallidasCiclo;
+  if (document.getElementById('kpiDashEfectivasTotal')) document.getElementById('kpiDashEfectivasTotal').textContent = realizadasAltas;
+  if (document.getElementById('kpiDashMetaTotal')) document.getElementById('kpiDashMetaTotal').textContent = metaTotalAltas;
+  if (document.getElementById('kpiDashPctTotal')) document.getElementById('kpiDashPctTotal').textContent = pctAltas + '%';
+  if (document.getElementById('kpiDashResidualProv')) document.getElementById('kpiDashResidualProv').textContent = `${Math.max(0, metaTotalAltas - realizadasAltas)}`;
+  if (document.getElementById('kpiDashStatEf')) document.getElementById('kpiDashStatEf').textContent = efectivasAltas;
+  if (document.getElementById('kpiDashStatFa')) document.getElementById('kpiDashStatFa').textContent = fallidasAltas;
 
-  // Trimestres (suman todas las visitas realizadas en el período)
-  const q1 = (efectivasPorMes[0] || 0) + (efectivasPorMes[1] || 0) + (efectivasPorMes[2] || 0) + (fallidasPorMes[0] || 0) + (fallidasPorMes[1] || 0) + (fallidasPorMes[2] || 0);
-  const q2 = (efectivasPorMes[3] || 0) + (efectivasPorMes[4] || 0) + (efectivasPorMes[5] || 0) + (fallidasPorMes[3] || 0) + (fallidasPorMes[4] || 0) + (fallidasPorMes[5] || 0);
-  const q3 = (efectivasPorMes[6] || 0) + (efectivasPorMes[7] || 0) + (efectivasPorMes[8] || 0) + (fallidasPorMes[6] || 0) + (fallidasPorMes[7] || 0) + (fallidasPorMes[8] || 0);
-  const q4 = (efectivasPorMes[9] || 0) + (efectivasPorMes[10] || 0) + (efectivasPorMes[11] || 0) + (fallidasPorMes[9] || 0) + (fallidasPorMes[10] || 0) + (fallidasPorMes[11] || 0);
-
-  // Actualizar Stat Cards Ejecutivas
-  if (document.getElementById('kpiDashEfectivasTotal')) document.getElementById('kpiDashEfectivasTotal').textContent = totalRealizadasCiclo;
-  if (document.getElementById('kpiDashMetaTotal')) document.getElementById('kpiDashMetaTotal').textContent = metaTotalAnual;
-  const pctTotal = ((totalRealizadasCiclo / metaTotalAnual) * 100).toFixed(1);
-  if (document.getElementById('kpiDashPctTotal')) document.getElementById('kpiDashPctTotal').textContent = pctTotal + '%';
-  if (document.getElementById('kpiDashResidualProv')) document.getElementById('kpiDashResidualProv').textContent = `${Math.max(0, metaTotalAnual - totalRealizadasCiclo)} visitas`;
-
-  // Cortes Trimestrales
   if (document.getElementById('dashQ1Val')) document.getElementById('dashQ1Val').textContent = `${q1}/300`;
   if (document.getElementById('dashQ1Bar')) document.getElementById('dashQ1Bar').style.width = Math.min(100, (q1 / 300) * 100) + '%';
   if (document.getElementById('dashQ2Val')) document.getElementById('dashQ2Val').textContent = `${q2}/300`;
@@ -2173,69 +2531,86 @@ function renderizarTableroKPIs() {
   if (document.getElementById('dashQ4Val')) document.getElementById('dashQ4Val').textContent = `${q4}/300`;
   if (document.getElementById('dashQ4Bar')) document.getElementById('dashQ4Bar').style.width = Math.min(100, (q4 / 300) * 100) + '%';
 
-  // Stock Residual 2026
-  if (document.getElementById('kpiDashRealizadasResid')) document.getElementById('kpiDashRealizadasResid').textContent = realizadasResidual;
-  const pctResid = totalResidual > 0 ? ((realizadasResidual / totalResidual) * 100).toFixed(1) : '0.0';
-  if (document.getElementById('kpiDashPctResid')) document.getElementById('kpiDashPctResid').textContent = pctResid + '%';
+  if (document.getElementById('kpiDashRitmoEfectivas')) document.getElementById('kpiDashRitmoEfectivas').textContent = realizadasAltas;
+  if (document.getElementById('kpiDashTasaEfSmall')) document.getElementById('kpiDashTasaEfSmall').textContent = tasaEfAltas + '%';
+  if (document.getElementById('kpiDashDesvioBadge')) {
+    document.getElementById('kpiDashDesvioBadge').textContent = (desvioM0 >= 0) ? `En meta (+${desvioM0} vs meta mensual)` : `Con retraso (${desvioM0} vs meta)`;
+  }
+  if (document.getElementById('lblTotalEfectivasBox')) document.getElementById('lblTotalEfectivasBox').textContent = realizadasAltas;
 
-  // Ritmo & Cadencia
-  if (document.getElementById('kpiDashRitmoEfectivas')) document.getElementById('kpiDashRitmoEfectivas').textContent = totalRealizadasCiclo;
-  const desvioRitmo = totalRealizadasCiclo - metaYTD;
-  const badgeDesvio = document.getElementById('kpiDashDesvioBadge');
-  const calloutRitmo = document.getElementById('calloutRitmoAlerta');
-  if (badgeDesvio && calloutRitmo) {
-    if (desvioRitmo >= 0) {
-      badgeDesvio.textContent = `En meta (+${desvioRitmo} vs meta acum.)`;
-      calloutRitmo.className = 'stat-callout ok';
+  const m0Tot = efectivasAltasPorMes[0] + fallidasAltasPorMes[0];
+  const m1Tot = efectivasAltasPorMes[1] + fallidasAltasPorMes[1];
+  if (document.getElementById('lblMejorMes')) document.getElementById('lblMejorMes').textContent = `${m0Tot} visitas (${efectivasAltasPorMes[0]} efec. + ${fallidasAltasPorMes[0]} fall.)`;
+  if (document.getElementById('lblPromedioMensual')) document.getElementById('lblPromedioMensual').textContent = `${m1Tot} visitas registradas`;
+  if (document.getElementById('lblDesvioMensual')) document.getElementById('lblDesvioMensual').textContent = `${desvioM0 >= 0 ? '+' : ''}${desvioM0} visitas sobre meta de 100`;
+
+  // -------------------------------------------------------------
+  // UNIVERSO 2: STOCK RESIDUAL (925 en 2 Meses)
+  // -------------------------------------------------------------
+  const { diasCorridos, diasHabiles } = calcularDiasVentana(RESIDUAL_FECHA_DESDE, RESIDUAL_FECHA_HASTA);
+  const cadenciaDiaria = (totalResidual / diasHabiles).toFixed(1);
+  const cadenciaMensual = (totalResidual / 2).toFixed(1);
+
+  if (document.getElementById('kpiResidRealizadas')) document.getElementById('kpiResidRealizadas').textContent = realizadasResidual;
+  const pctResid = totalResidual > 0 ? ((realizadasResidual / totalResidual) * 100).toFixed(1) : '0.0';
+  if (document.getElementById('kpiResidPct')) document.getElementById('kpiResidPct').textContent = pctResid + '%';
+  if (document.getElementById('kpiResidPendientes')) document.getElementById('kpiResidPendientes').textContent = `${totalResidual - realizadasResidual} tareas`;
+  if (document.getElementById('kpiResidCadenciaDiaria')) document.getElementById('kpiResidCadenciaDiaria').textContent = `~${cadenciaDiaria}`;
+  if (document.getElementById('lblResidualDuracion')) {
+    document.getElementById('lblResidualDuracion').textContent = `Ventana: ${diasCorridos} días corridos (~${diasHabiles} días hábiles)`;
+  }
+
+  // Cuenta regresiva
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const dInicio = new Date(RESIDUAL_FECHA_DESDE + 'T00:00:00');
+  const dFin = new Date(RESIDUAL_FECHA_HASTA + 'T00:00:00');
+  
+  if (document.getElementById('kpiResidEstadoCountdown') && document.getElementById('lblResidEstadoTexto')) {
+    if (hoy < dInicio) {
+      const faltan = Math.ceil((dInicio - hoy) / (1000 * 60 * 60 * 24));
+      document.getElementById('kpiResidEstadoCountdown').textContent = `Faltan ${faltan} días`;
+      document.getElementById('lblResidEstadoTexto').textContent = `Inicio previsto: ${RESIDUAL_FECHA_DESDE}`;
+    } else if (hoy > dFin) {
+      document.getElementById('kpiResidEstadoCountdown').textContent = `Ventana cerrada`;
+      document.getElementById('lblResidEstadoTexto').textContent = `Finalizó el ${RESIDUAL_FECHA_HASTA}`;
     } else {
-      badgeDesvio.textContent = `Con retraso (${desvioRitmo} vs meta acum. de ${metaYTD})`;
-      calloutRitmo.className = 'stat-callout alert';
+      const restan = Math.ceil((dFin - hoy) / (1000 * 60 * 60 * 24));
+      document.getElementById('kpiResidEstadoCountdown').textContent = `Restan ${restan} días`;
+      document.getElementById('lblResidEstadoTexto').textContent = `En curso hasta ${RESIDUAL_FECHA_HASTA}`;
     }
   }
-  if (document.getElementById('kpiDashTasaEfSmall')) document.getElementById('kpiDashTasaEfSmall').textContent = tasaEfectividad + '%';
-  if (document.getElementById('lblTotalEfectivasBox')) document.getElementById('lblTotalEfectivasBox').textContent = totalRealizadasCiclo;
+  if (document.getElementById('lblResidFechaCierre')) {
+    document.getElementById('lblResidFechaCierre').textContent = RESIDUAL_FECHA_HASTA;
+  }
 
-  if (document.getElementById('kpiDashStatEf')) document.getElementById('kpiDashStatEf').textContent = totalEfectivasCiclo;
-  if (document.getElementById('kpiDashStatFa')) document.getElementById('kpiDashStatFa').textContent = totalFallidasCiclo;
-
-  if (document.getElementById('kpiDashVencidasStock')) document.getElementById('kpiDashVencidasStock').textContent = totalVencidasStock;
-  if (document.getElementById('kpiDashPctVencidas')) document.getElementById('kpiDashPctVencidas').textContent = ((totalVencidasStock / TASKS.length) * 100).toFixed(1) + '%';
-  if (document.getElementById('kpiDashProximasSemana')) document.getElementById('kpiDashProximasSemana').textContent = totalProximas;
-
-  if (document.getElementById('badgeStockVencidas')) document.getElementById('badgeStockVencidas').textContent = `${totalVencidasStock} vencidas`;
-  if (document.getElementById('lblVencM0')) document.getElementById('lblVencM0').textContent = `${vencidasPorMes[0] || 0} visitas`;
-  if (document.getElementById('lblVencM1')) document.getElementById('lblVencM1').textContent = `${vencidasPorMes[1] || 0} visitas`;
-  if (document.getElementById('lblVencTotal')) document.getElementById('lblVencTotal').textContent = `${totalVencidasStock} vencidas`;
-
-  const m0Ef = efectivasPorMes[0] || 0;
-  const m0Fa = fallidasPorMes[0] || 0;
-  const m0Tot = m0Ef + m0Fa;
-  const m1Ef = efectivasPorMes[1] || 0;
-  const m1Fa = fallidasPorMes[1] || 0;
-  const m1Tot = m1Ef + m1Fa;
-
-  document.getElementById('lblMejorMes').textContent = `${m0Tot} visitas (${m0Ef} efec. + ${m0Fa} fall.)`;
-  document.getElementById('lblPromedioMensual').textContent = `${m1Tot} visitas (${m1Ef} efec. + ${m1Fa} fall.)`;
-  document.getElementById('lblDesvioMensual').textContent = `${totalRealizadasCiclo - metaYTD} visitas vs meta acumulada de 200`;
-
-  // Renderizar Gráficos con Chart.js
-  renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual);
-  renderChartVencidas(vencidasPorMes);
-  renderChartFallidas();
-
-  // Renderizar Tabla Resumen Mensual
-  renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidasPorMes, metaMensual);
+  // Renderizar vistas según pestaña activa
+  if (KPI_UNIVERSE === 'altas') {
+    renderChartPresupuesto(efectivasAltasPorMes, fallidasAltasPorMes, 100);
+    renderChartVencidas(vencidasAltasPorMes);
+    renderChartFallidas();
+    renderizarTablaResumenMensual(efectivasAltasPorMes, fallidasAltasPorMes, vencidasAltasPorMes, 100);
+  } else if (KPI_UNIVERSE === 'residual') {
+    renderChartResidualBurnDown(totalResidual, realizadasResidual, diasCorridos);
+    renderChartResidualTipologia(tecnicasResidual, especialesResidual);
+  } else if (KPI_UNIVERSE === 'consolidado') {
+    renderChartConsolidado(efectivasAltasPorMes, fallidasAltasPorMes, residualPorMes);
+    renderizarTablaConsolidada(efectivasAltasPorMes, fallidasAltasPorMes, residualPorMes);
+  }
 }
 
-// GRÁFICO 1: CONTEO DE VISITAS REALIZADAS (EFECTIVAS + FALLIDAS EN BARRAS APILADAS) VS PRESUPUESTADAS
+// =========================================================================
+// GRÁFICOS UNIVERSO 1: ALTAS MENSUALES
+// =========================================================================
 function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual) {
-  const ctx = document.getElementById('chartPresupuesto').getContext('2d');
+  const canvas = document.getElementById('chartPresupuesto');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
   if (chartPresupuestoInstance) chartPresupuestoInstance.destroy();
 
   const labels = PROYECTO_TIMELINE.map(pt => pt.label);
   const presupuestoMensualData = new Array(PROYECTO_TIMELINE.length).fill(metaMensual);
 
-  // Curvas acumuladas
   const efectivasAcum = [];
   const fallidasAcum = [];
   const presupuestoAcum = [];
@@ -2247,7 +2622,7 @@ function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual) {
     sumPres += metaMensual;
     presupuestoAcum.push(sumPres);
 
-    if (i <= 1) { // M0 y M1 transcurridos
+    if (i <= 0) { // Sep 26 (M0) cerrado
       sumEf += (efectivasPorMes[i] || 0);
       sumFa += (fallidasPorMes[i] || 0);
       efectivasAcum.push(sumEf);
@@ -2263,23 +2638,23 @@ function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual) {
   if (modoChartPresupuesto === 'mensual') {
     datasets = [
       {
-        label: 'Visitas Efectivas',
-        data: efectivasPorMes.map((val, idx) => idx <= 1 ? val : null),
+        label: 'Altas Efectivas',
+        data: efectivasPorMes.map((val, idx) => idx <= 0 ? val : null),
         backgroundColor: '#0F4C5C',
         stack: 'visitas',
         borderRadius: 0,
         barPercentage: 0.65
       },
       {
-        label: 'Visitas Fallidas',
-        data: fallidasPorMes.map((val, idx) => idx <= 1 ? val : null),
+        label: 'Altas Fallidas',
+        data: fallidasPorMes.map((val, idx) => idx <= 0 ? val : null),
         backgroundColor: '#A8470A',
         stack: 'visitas',
         borderRadius: 2,
         barPercentage: 0.65
       },
       {
-        label: 'Presupuesto Mensual (100 visitas/mes)',
+        label: 'Presupuesto Contractual (100 visitas/mes)',
         data: presupuestoMensualData,
         type: 'line',
         borderColor: '#2E3A46',
@@ -2293,7 +2668,7 @@ function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual) {
   } else {
     datasets = [
       {
-        label: 'Efectivas Acumuladas',
+        label: 'Altas Efectivas Acumuladas',
         data: efectivasAcum,
         backgroundColor: '#0F4C5C',
         stack: 'visitasAcum',
@@ -2301,7 +2676,7 @@ function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual) {
         barPercentage: 0.65
       },
       {
-        label: 'Fallidas Acumuladas',
+        label: 'Altas Fallidas Acumuladas',
         data: fallidasAcum,
         backgroundColor: '#A8470A',
         stack: 'visitasAcum',
@@ -2309,7 +2684,7 @@ function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual) {
         barPercentage: 0.65
       },
       {
-        label: 'Presupuesto Acumulado (100/mes × 12)',
+        label: 'Presupuesto Acumulado (100/mes × 12 = 1.200)',
         data: presupuestoAcum,
         type: 'line',
         borderColor: '#2E3A46',
@@ -2368,23 +2743,26 @@ function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual) {
 
 function toggleModoPresupuesto(modo) {
   modoChartPresupuesto = modo;
-  document.getElementById('btnToggleChartMensual').classList.toggle('on', modo === 'mensual');
-  document.getElementById('btnToggleChartAcumulado').classList.toggle('on', modo === 'acumulado');
+  const btnM = document.getElementById('btnToggleChartMensual');
+  const btnA = document.getElementById('btnToggleChartAcumulado');
+  if (btnM) btnM.classList.toggle('on', modo === 'mensual');
+  if (btnA) btnA.classList.toggle('on', modo === 'acumulado');
 
   if (modo === 'mensual') {
-    document.getElementById('lblTituloChart1').textContent = 'Conteo de Visitas Realizadas vs Presupuestadas (Meta: 100/mes)';
-    document.getElementById('lblSubtituloChart1').textContent = 'Barras apiladas de visitas efectivas y fallidas frente al presupuesto mensual de 100 visitas (Sep 2026 = M0)';
+    if (document.getElementById('lblTituloChart1')) document.getElementById('lblTituloChart1').textContent = 'Conteo de Altas Realizadas vs Presupuestadas (Meta: 100/mes)';
+    if (document.getElementById('lblSubtituloChart1')) document.getElementById('lblSubtituloChart1').textContent = 'Barras apiladas de visitas efectivas y fallidas frente al presupuesto mensual de 100 visitas (Sep 2026 = M0)';
   } else {
-    document.getElementById('lblTituloChart1').textContent = 'Curva de Cumplimiento Acumulado del Proyecto (Inicio: Sep 2026)';
-    document.getElementById('lblSubtituloChart1').textContent = 'Evolución acumulativa en barras apiladas (efectivas + fallidas) frente al objetivo de 1.200';
+    if (document.getElementById('lblTituloChart1')) document.getElementById('lblTituloChart1').textContent = 'Curva de Cumplimiento Acumulado de Altas (Inicio: Sep 2026)';
+    if (document.getElementById('lblSubtituloChart1')) document.getElementById('lblSubtituloChart1').textContent = 'Evolución acumulativa en barras apiladas (efectivas + fallidas) frente al objetivo de 1.200';
   }
 
   renderizarTableroKPIs();
 }
 
-// GRÁFICO 2: EVOLUCIÓN DE VISITAS VENCIDAS (SOLO BARRAS DE CANTIDADES)
 function renderChartVencidas(vencidasPorMes) {
-  const ctx = document.getElementById('chartVencidas').getContext('2d');
+  const canvas = document.getElementById('chartVencidas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
   if (chartVencidasInstance) chartVencidasInstance.destroy();
 
   const labels = PROYECTO_TIMELINE.map(pt => pt.label);
@@ -2396,7 +2774,7 @@ function renderChartVencidas(vencidasPorMes) {
       labels: labels,
       datasets: [
         {
-          label: 'Visitas Vencidas',
+          label: 'Altas Vencidas',
           data: dataCantidades,
           backgroundColor: '#A8470A',
           borderRadius: 3,
@@ -2411,13 +2789,6 @@ function renderChartVencidas(vencidasPorMes) {
         legend: {
           position: 'top',
           labels: { font: { family: 'IBM Plex Sans', size: 12 }, usePointStyle: true }
-        },
-        tooltip: {
-          titleFont: { family: 'IBM Plex Sans' },
-          bodyFont: { family: 'IBM Plex Mono' },
-          callbacks: {
-            label: (ctx) => ` Visitas vencidas: ${ctx.parsed.y}`
-          }
         }
       },
       scales: {
@@ -2435,20 +2806,12 @@ function renderChartVencidas(vencidasPorMes) {
   });
 }
 
-// GRÁFICO 3: PARTICIPACIÓN Y EVOLUCIÓN FALLIDAS VS EFECTIVAS (ANILLO ACUMULADO CON FILTRO POR MES)
 function setFiltroMesFallidas(mesKey) {
   filtroMesFallidas = mesKey.toString();
-
   const btnAcum = document.getElementById('chipFiltroFallidasAcum');
   const btnM0 = document.getElementById('chipFiltroFallidasM0');
-  const btnM1 = document.getElementById('chipFiltroFallidasM1');
-  const selMes = document.getElementById('selFiltroMesFallidas');
-
   if (btnAcum) btnAcum.classList.toggle('on', filtroMesFallidas === 'acumulado');
   if (btnM0) btnM0.classList.toggle('on', filtroMesFallidas === '0');
-  if (btnM1) btnM1.classList.toggle('on', filtroMesFallidas === '1');
-  if (selMes && selMes.value !== filtroMesFallidas) selMes.value = filtroMesFallidas;
-
   renderChartFallidas();
 }
 
@@ -2463,14 +2826,11 @@ function renderChartFallidas() {
   let faGest = 0;
   let faPend = 0;
 
-  const visitasContadas = new Set();
-
   TASKS.forEach(t => {
-    if (tieneVisitaRealizada(t)) {
-      const claveVisita = obtenerClaveVisita(t);
-      if (claveVisita && visitasContadas.has(claveVisita)) return;
-      if (claveVisita) visitasContadas.add(claveVisita);
+    const origen = (t.origenPlan || '').toLowerCase();
+    if (origen.includes('residual')) return; // Solo Altas Mensuales
 
+    if (tieneVisitaRealizada(t)) {
       const claveYM = obtenerClaveMesRealizada(t.fechaRealizada);
       if (claveYM) {
         const idxTimeline = PROYECTO_TIMELINE.findIndex(pt => pt.clave === claveYM);
@@ -2493,17 +2853,6 @@ function renderChartFallidas() {
   const pctEf = totSalidas > 0 ? ((totEf / totSalidas) * 100).toFixed(1) : '0.0';
   const pctFa = totSalidas > 0 ? ((totFa / totSalidas) * 100).toFixed(1) : '0.0';
 
-  const lblSub = document.getElementById('lblSubtituloFallidas');
-  if (lblSub) {
-    if (filtroMesFallidas === 'acumulado') {
-      lblSub.textContent = 'Distribución acumulada de visitas efectivas y fallidas en todo el ciclo';
-    } else {
-      const idx = parseInt(filtroMesFallidas, 10);
-      const pt = PROYECTO_TIMELINE[idx];
-      lblSub.textContent = `Distribución de visitas efectivas y fallidas en ${pt ? pt.nombreCompleto : 'el período seleccionado'}`;
-    }
-  }
-
   if (document.getElementById('lblTotEfPie')) document.getElementById('lblTotEfPie').textContent = `${totEf} (${pctEf}%)`;
   if (document.getElementById('lblTotFaPie')) document.getElementById('lblTotFaPie').textContent = `${totFa} (${pctFa}%)`;
   if (document.getElementById('lblTotFaGest')) document.getElementById('lblTotFaGest').textContent = faGest;
@@ -2512,7 +2861,7 @@ function renderChartFallidas() {
   chartFallidasDonutInstance = new Chart(ctxDonut, {
     type: 'doughnut',
     data: {
-      labels: sinDatos ? ['Sin visitas registradas'] : ['Visitas Efectivas', 'Visitas Fallidas'],
+      labels: sinDatos ? ['Sin visitas'] : ['Efectivas (Altas)', 'Fallidas (Altas)'],
       datasets: [{
         data: sinDatos ? [1] : [totEf, totFa],
         backgroundColor: sinDatos ? ['#E3E5E1'] : ['#0F4C5C', '#A8470A'],
@@ -2527,19 +2876,6 @@ function renderChartFallidas() {
         legend: {
           position: 'right',
           labels: { font: { family: 'IBM Plex Sans', size: 13 }, usePointStyle: true }
-        },
-        tooltip: {
-          titleFont: { family: 'IBM Plex Sans' },
-          bodyFont: { family: 'IBM Plex Mono' },
-          callbacks: {
-            label: function(ctx) {
-              if (sinDatos) return ' Sin visitas registradas en este período';
-              const val = ctx.parsed;
-              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-              const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
-              return ` ${ctx.label}: ${val} (${pct}%)`;
-            }
-          }
         }
       },
       cutout: '65%'
@@ -2547,9 +2883,9 @@ function renderChartFallidas() {
   });
 }
 
-// TABLA RESUMEN CONSOLIDADO DEL AÑO DE PROYECTO (12 MESES INICIANDO EN M0)
 function renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidasPorMes, metaMensual) {
   const tbody = document.getElementById('tablaResumenMensualBody');
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   let sumMeta = 0;
@@ -2565,16 +2901,14 @@ function renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidas
     const tot = ef + fa;
     sumVencAcum += vencidasPorMes[m];
 
-    const esFuturo = (m > 1);
-    const cumplimientoPct = esFuturo ? '--' : `${((ef / meta) * 100).toFixed(1)}%`;
+    const esFuturo = (m > 0);
+    const cumplimientoPct = esFuturo ? '--' : `${((tot / meta) * 100).toFixed(1)}%`;
     const efectividadPct = (tot > 0) ? `${((ef / tot) * 100).toFixed(1)}%` : '--';
 
     let semaforoBadge = '<span class="badge badge-neutral">Planificado</span>';
     if (!esFuturo) {
       if (m === 0) {
-        semaforoBadge = '<span class="badge badge-ok">Mes 0 Cerrado</span>';
-      } else if (m === 1) {
-        semaforoBadge = '<span class="badge badge-warn">Mes 1 En curso</span>';
+        semaforoBadge = '<span class="badge badge-ok">Mes 0 Cerrado (123%)</span>';
       }
     }
 
@@ -2599,15 +2933,14 @@ function renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidas
     tbody.appendChild(tr);
   }
 
-  // Fila de Totales del Proyecto Acumulado a la fecha
   const trTotal = document.createElement('tr');
   trTotal.style.background = '#F8F9F7';
   trTotal.style.fontWeight = '700';
-  const pctTotalYTD = sumMeta > 0 ? ((sumEf / sumMeta) * 100).toFixed(1) : '0';
+  const pctTotalYTD = sumMeta > 0 ? (((sumEf + sumFa) / sumMeta) * 100).toFixed(1) : '0';
   const pctEfTotal = (sumEf + sumFa) > 0 ? ((sumEf / (sumEf + sumFa)) * 100).toFixed(1) : '0';
 
   trTotal.innerHTML = `
-    <td>TOTAL ACUMULADO PROYECTO (M0 + M1)</td>
+    <td>TOTAL ACUMULADO ALTAS (M0)</td>
     <td class="m" style="text-align:right;">${sumMeta}</td>
     <td class="m ok" style="text-align:right;">${sumEf}</td>
     <td class="m no" style="text-align:right;">${sumFa}</td>
@@ -2615,9 +2948,268 @@ function renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidas
     <td class="m" style="text-align:right;">${pctTotalYTD}%</td>
     <td class="m" style="text-align:right;">${pctEfTotal}%</td>
     <td class="m" style="text-align:right; color:#A8470A;">${sumVencAcum}</td>
-    <td><span class="badge badge-ok">Ejecución a la fecha</span></td>
+    <td><span class="badge badge-ok">Ejecución en meta (+23)</span></td>
   `;
   tbody.appendChild(trTotal);
+}
+
+// =========================================================================
+// GRÁFICOS UNIVERSO 2: STOCK RESIDUAL (925 en 2 Meses)
+// =========================================================================
+function renderChartResidualBurnDown(totalResidual, realizadasResidual, diasCorridos) {
+  const canvas = document.getElementById('chartResidualBurnDown');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (chartResidualBurnDownInstance) chartResidualBurnDownInstance.destroy();
+
+  const labels = ['Inicio (09/11)', 'Semana 1', 'Semana 2', 'Semana 3', 'Semana 4', 'Semana 5', 'Semana 6', 'Semana 7', 'Semana 8', 'Fin 2M (09/01)'];
+  const pasos = labels.length - 1;
+  const idealCurve = [];
+  for (let i = 0; i <= pasos; i++) {
+    const val = Math.round(totalResidual - (totalResidual / pasos) * i);
+    idealCurve.push(Math.max(0, val));
+  }
+
+  // Curva real de stock remanente
+  const realStockRemanente = [totalResidual - realizadasResidual];
+  for (let i = 1; i <= pasos; i++) {
+    realStockRemanente.push(null);
+  }
+
+  chartResidualBurnDownInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Trayectoria Teórica de Liquidación (925 a 0 en 2 Meses)',
+          data: idealCurve,
+          borderColor: '#D97706',
+          borderWidth: 2.5,
+          borderDash: [5, 5],
+          pointRadius: 4,
+          pointBackgroundColor: '#D97706',
+          fill: false,
+          tension: 0
+        },
+        {
+          label: 'Stock Remanente Real',
+          data: realStockRemanente,
+          borderColor: '#0F4C5C',
+          backgroundColor: '#0F4C5C',
+          borderWidth: 3,
+          pointRadius: 6,
+          fill: false,
+          tension: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { font: { family: 'IBM Plex Sans', size: 12 }, usePointStyle: true }
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y} tareas remanentes`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          suggestedMax: 1000,
+          grid: { color: '#E3E5E1' },
+          ticks: { font: { family: 'IBM Plex Mono', size: 11 } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'IBM Plex Sans', size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+function renderChartResidualTipologia(tecnicas, especiales) {
+  const canvas = document.getElementById('chartResidualTipologia');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (chartResidualTipologiaInstance) chartResidualTipologiaInstance.destroy();
+
+  chartResidualTipologiaInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Visitas Técnicas (736)', 'Tareas Especiales (189)'],
+      datasets: [{
+        data: [tecnicas, especiales],
+        backgroundColor: ['#0F4C5C', '#D97706'],
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { family: 'IBM Plex Sans', size: 12 }, usePointStyle: true }
+        }
+      },
+      cutout: '60%'
+    }
+  });
+}
+
+// =========================================================================
+// GRÁFICOS UNIVERSO 3: VISTA CONSOLIDADA (METAS INDEPENDIENTES)
+// =========================================================================
+function renderChartConsolidado(efectivasAltas, fallidasAltas, residualMes) {
+  const canvas = document.getElementById('chartConsolidado');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (chartConsolidadoInstance) chartConsolidadoInstance.destroy();
+
+  const labels = PROYECTO_TIMELINE.map(pt => pt.label);
+  const metaAltasData = new Array(PROYECTO_TIMELINE.length).fill(100);
+
+  // Meta residual activa únicamente en los 2 meses de su ventana (Noviembre y Diciembre / M2 y M3)
+  const metaResidualData = PROYECTO_TIMELINE.map((pt, idx) => (idx === 2 || idx === 3) ? 462.5 : null);
+
+  chartConsolidadoInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Altas Efectivas',
+          data: efectivasAltas.map((v, i) => i <= 0 ? v : null),
+          backgroundColor: '#0F4C5C',
+          stack: 'altas',
+          borderRadius: 0,
+          barPercentage: 0.6
+        },
+        {
+          label: 'Altas Fallidas',
+          data: fallidasAltas.map((v, i) => i <= 0 ? v : null),
+          backgroundColor: '#A8470A',
+          stack: 'altas',
+          borderRadius: 2,
+          barPercentage: 0.6
+        },
+        {
+          label: 'Residual Realizadas',
+          data: residualMes.map((v, i) => i <= 0 ? v : null),
+          backgroundColor: '#4A6B82',
+          stack: 'residual',
+          borderRadius: 2,
+          barPercentage: 0.6
+        },
+        {
+          label: 'Meta Altas Mensuales (100/mes)',
+          data: metaAltasData,
+          type: 'line',
+          borderColor: '#2E3A46',
+          borderWidth: 2.5,
+          borderDash: [5, 5],
+          pointRadius: 4,
+          pointBackgroundColor: '#2E3A46',
+          fill: false
+        },
+        {
+          label: 'Meta Residual (462.5/mes en ventana 2M)',
+          data: metaResidualData,
+          type: 'line',
+          borderColor: '#D97706',
+          borderWidth: 2.5,
+          borderDash: [6, 4],
+          pointRadius: 5,
+          pointBackgroundColor: '#D97706',
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { font: { family: 'IBM Plex Sans', size: 12 }, usePointStyle: true }
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y} visitas`,
+            footer: (items) => {
+              const bars = items.filter(i => i.dataset.type !== 'line');
+              const tot = bars.reduce((acc, curr) => acc + curr.parsed.y, 0);
+              return tot > 0 ? `Total salidas reales en el mes: ${tot} visitas` : '';
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          suggestedMax: 500,
+          grid: { color: '#E3E5E1' },
+          ticks: { font: { family: 'IBM Plex Mono', size: 11 } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'IBM Plex Sans', size: 11, weight: '500' } }
+        }
+      }
+    }
+  });
+}
+
+function renderizarTablaConsolidada(efectivasAltas, fallidasAltas, residualMes) {
+  const tbody = document.getElementById('tablaConsolidadaBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  for (let m = 0; m < PROYECTO_TIMELINE.length; m++) {
+    const pt = PROYECTO_TIMELINE[m];
+    const efA = efectivasAltas[m] || 0;
+    const faA = fallidasAltas[m] || 0;
+    const totA = efA + faA;
+    const metaA = 100;
+    const resid = residualMes[m] || 0;
+    const metaResid = (m === 2 || m === 3) ? 462.5 : '--';
+    const totalTerreno = totA + resid;
+    const esFuturo = (m > 0);
+
+    const eficacia = (totalTerreno > 0) ? `${(((efA + resid) / totalTerreno) * 100).toFixed(1)}%` : '--';
+
+    let estado = '<span class="badge badge-neutral">Planificado</span>';
+    if (m === 0) {
+      estado = '<span class="badge badge-ok">M0 Cerrado (+23 Altas)</span>';
+    } else if (m === 1) {
+      estado = '<span class="badge badge-warn">M1 En curso</span>';
+    } else if (m === 2 || m === 3) {
+      estado = '<span class="badge" style="background:#FEF3C7; color:#92400E; border:1px solid #FCD34D;">Ventana Residual (462.5/m)</span>';
+    }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${pt.nombreCompleto}</strong></td>
+      <td class="m ok" style="text-align:right;">${esFuturo ? '<span class="na">--</span>' : efA}</td>
+      <td class="m no" style="text-align:right;">${esFuturo ? '<span class="na">--</span>' : faA}</td>
+      <td class="m" style="text-align:right; font-weight:600;">${esFuturo ? '<span class="na">--</span>' : totA}</td>
+      <td class="m" style="text-align:right;">${metaA}</td>
+      <td class="m" style="text-align:right; color:#4A6B82; font-weight:600;">${esFuturo ? '<span class="na">--</span>' : resid}</td>
+      <td class="m" style="text-align:right; color:#D97706;">${metaResid}</td>
+      <td class="m" style="text-align:right; font-weight:700;">${esFuturo ? '<span class="na">--</span>' : totalTerreno}</td>
+      <td class="m" style="text-align:right;">${eficacia}</td>
+      <td>${estado}</td>
+    `;
+    tbody.appendChild(tr);
+  }
 }
 
 // Filtro 1: Matchea por Fecha Realizada (Mes de Ejecución de la visita)

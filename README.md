@@ -26,19 +26,23 @@ flowchart TD
     Planilla <--> Dashboard
 ```
 
-### 1. Cohorte 1: Plan Residual 2026 (Stock Inicial - 925 tareas)
-* **736 Visitas Técnicas**: Tienen su plazo precargado desde el **`01/01/2026`** hasta el **`31/12/2026`** (`Fecha Desde` y `Fecha Hasta`).
-* **189 Tareas Especiales** (176 *RGRL / Verosimilitud* y 13 *Siniestros*): Tienen plazos específicos a ingresar manualmente mediante el panel lateral de carga. El sistema las identifica como *Pendiente plazo* hasta que se fijen sus fechas.
-* **Métrica**: Avance respecto al total de la tabla actual (`Realizadas / 925`).
-
-### 2. Cohorte 2: Plan de Control del Proveedor (Ciclo Sep 2026 – Ago 2027)
-* **Meta Contractual**: **100 visitas efectivas / mes** $\rightarrow$ **1.200 visitas anuales**.
-* **Cortes Trimestrales de Compensación**: Diseñados para permitir que un desvío o déficit mensual sea compensado por el proveedor dentro de la ventana del trimestre:
-  * **Q1 (Sep 2026 – Nov 2026)**: Meta 300 visitas efectivas acumuladas.
+### 1. Universo 1: Altas Mensuales del Prestador (Ciclo Sep 2026 – Ago 2027)
+* **Meta Contractual**: **100 visitas / mes** $\rightarrow$ **1.200 visitas anuales**.
+* **Cortes Trimestrales de Compensación**: Diseñados para permitir que un desvío o déficit mensual sea compensado dentro de la ventana del trimestre:
+  * **Q1 (Sep 2026 – Nov 2026)**: Meta 300 visitas acumuladas (123 realizadas en Septiembre M0: 71 efectivas + 52 fallidas).
   * **Q2 (Dic 2026 – Feb 2027)**: Meta 600 visitas acumuladas (300 en el Q).
   * **Q3 (Mar 2027 – May 2027)**: Meta 900 visitas acumuladas (300 en el Q).
   * **Q4 (Jun 2027 – Ago 2027)**: Meta 1.200 visitas acumuladas (300 en el Q).
-* **Métricas**: Avance acumulado sobre 1.200, ritmo y cadencia vs meta acumulada de 100/mes, tasa de efectividad (efectivas vs fallidas) y evolución mensual.
+* **Métricas**: Avance acumulado sobre 1.200, cadencia vs meta acumulada de 100/mes, tasa de efectividad (efectivas vs fallidas) y evolución mensual.
+
+### 2. Universo 2: Plan Residual 2026 (Stock Inicial - 925 tareas en 2 Meses)
+* **Composición**: 736 Visitas Técnicas (plazo anual) + 189 Tareas Especiales (176 *RGRL / Verosimilitud* y 13 *Siniestros*).
+* **Plazo de Ejecución**: **2 meses exactos** contados desde la **Fecha Desde** y hasta la **Fecha Hasta** (ej. 09/11/2026 al 09/01/2027 o configurable dinámicamente).
+* **Cadencia de Extinción**: **462.5 visitas / mes** (~21.5 a 22 visitas diarias hábiles).
+* **Gráfico de Quemado (Burn-down)**: Trayectoria teórica de extinción de 925 a 0 en la ventana de 2 meses vs stock remanente real.
+
+### 3. Vista Consolidada (Multiserie · Sin Mezclar Metas)
+* Los dos universos se monitorean juntos pero preservando sus metas independientes para evitar distorsiones operativas.
 
 ---
 
