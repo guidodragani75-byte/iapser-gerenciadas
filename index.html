@@ -663,13 +663,13 @@
       <button type="button" class="nav" id="btnNavMensual" onclick="setMainView('mensual')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span>Plan Mensual Asignado</span>
-        <span class="nav-badge" id="badgeNavMensual">157</span>
+        <span class="nav-badge" id="badgeNavMensual">123</span>
       </button>
 
       <button type="button" class="nav" id="btnNavTodas" onclick="setMainView('sedes')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         <span>Padrón General (Todas)</span>
-        <span class="nav-badge" id="badgeNavTodas">1082</span>
+        <span class="nav-badge" id="badgeNavTodas">1048</span>
       </button>
 
       <button type="button" class="nav" id="btnNavKpis" onclick="setMainView('kpis')">
@@ -791,7 +791,7 @@
             </label>
             <label style="font-size:12px; color:#0F4C5C; font-weight:600; min-width:180px;">
               📋 Mes Alta / Vigencia
-              <select id="selMesAltaFiltro" onchange="actualizarKpis(); filtrarYRenderizar();" style="border-color:#0F4C5C;">
+              <select id="selMesAltaFiltro" onchange="onMesAltaChange();" style="border-color:#0F4C5C;">
                 <option value="todas">Todas las altas y períodos</option>
                 <option value="2026-09">Altas Septiembre 2026 (01/09 - 30/09)</option>
                 <option value="2026-10">Altas Octubre 2026 (01/10 - 31/10)</option>
@@ -1723,7 +1723,7 @@
 </div>
 
 <!-- CARGA DE DATOS PRECARGADOS (CON CACHE-BUSTER) -->
-<script src="datos_precargados.js?v=20261101_1859"></script>
+<script src="datos_precargados.js?v=20261101_1905"></script>
 
 <!-- LÓGICA DE LA APLICACIÓN -->
 <script>
@@ -1757,7 +1757,7 @@ let modoChartPresupuesto = 'mensual';
 let filtroMesFallidas = 'acumulado';
 
 // Claves LocalStorage (V14: Base completa 1.082 registros + 153 visitas únicas deduplicadas)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V17';
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V18';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -2112,6 +2112,26 @@ function llenarFiltroLocalidades() {
   });
 }
 
+// MANEJADOR DE CAMBIO DE MES DE ALTA / VIGENCIA
+function onMesAltaChange() {
+  const sel = document.getElementById('selMesAltaFiltro');
+  const val = sel ? sel.value : 'todas';
+  if (val !== 'todas' && val !== 'residual') {
+    // Si selecciona un mes del plan de altas (ej: Sep 2026), activar automáticamente Plan Mensual
+    if (VISTA_ACTIVA === 'pendientes') {
+      setMainView('mensual');
+      return;
+    }
+  } else if (val === 'residual') {
+    if (VISTA_ACTIVA === 'mensual') {
+      setMainView('pendientes');
+      return;
+    }
+  }
+  actualizarKpis();
+  filtrarYRenderizar();
+}
+
 // CAMBIO DE VISTA PRINCIPAL (PENDIENTES, MENSUAL ASIGNADO, PADRÓN GENERAL, KPIS)
 function setMainView(view) {
   VISTA_ACTIVA = view;
@@ -2133,6 +2153,10 @@ function setMainView(view) {
   if (view === 'pendientes') {
     if (viewSedesEl) viewSedesEl.style.display = 'flex';
     if (viewKpisEl) viewKpisEl.style.display = 'none';
+    const selMesAlta = document.getElementById('selMesAltaFiltro');
+    if (selMesAlta && selMesAlta.value !== 'todas' && selMesAlta.value !== 'residual') {
+      selMesAlta.value = 'todas';
+    }
     if (pageTitle) {
       pageTitle.innerHTML = 'Gerenciamiento - Actividades ART <span class="badge" style="background:#FBEAE5; color:#A8470A; border:1px solid #F5C6BC; font-size:12px; font-weight:600;">Visitas Pendientes de Realización</span>';
     }
@@ -2142,7 +2166,9 @@ function setMainView(view) {
     if (viewSedesEl) viewSedesEl.style.display = 'flex';
     if (viewKpisEl) viewKpisEl.style.display = 'none';
     const selMesAlta = document.getElementById('selMesAltaFiltro');
-    if (selMesAlta && selMesAlta.value === 'residual') selMesAlta.value = 'todas';
+    if (selMesAlta && (selMesAlta.value === 'residual' || selMesAlta.value === 'todas')) {
+      selMesAlta.value = '2026-09';
+    }
     const nomMes = selMesAlta && selMesAlta.value !== 'todas' ? (selMesAlta.options[selMesAlta.selectedIndex]?.text || '') : 'Todas las altas del plan';
     if (pageTitle) {
       pageTitle.innerHTML = `Gerenciamiento - Actividades ART <span class="badge" style="background:#E3EDEF; color:#0F4C5C; border:1px solid #C4DDE2; font-size:12px; font-weight:600;">Plan Mensual Asignado · ${escapeHtml(nomMes)}</span>`;
@@ -2173,6 +2199,16 @@ function setMainView(view) {
 function setFiltroCohorte(cohorte) {
   FILTRO_COHORTE = cohorte;
   PAGINA_ACTUAL = 1;
+  if (cohorte === 'altas_sep' && VISTA_ACTIVA === 'pendientes') {
+    const sel = document.getElementById('selMesAltaFiltro');
+    if (sel) sel.value = '2026-09';
+    setMainView('mensual');
+    return;
+  }
+  if (cohorte === 'residual' && VISTA_ACTIVA === 'mensual') {
+    setMainView('pendientes');
+    return;
+  }
   document.getElementById('chipCohorteTodos').classList.toggle('on', cohorte === 'todos');
   document.getElementById('chipCohorteResidual').classList.toggle('on', cohorte === 'residual');
   document.getElementById('chipCohorteAltas').classList.toggle('on', cohorte === 'altas_sep');
@@ -2316,7 +2352,15 @@ function actualizarKpis() {
   // Actualizar universo de chips según la vista activa
   let universoChips = TASKS;
   if (VISTA_ACTIVA === 'pendientes') {
-    universoChips = TASKS.filter(t => !tieneVisitaRealizada(t));
+    const filtrandoAltas = (filtroMesAlta !== 'todas' && filtroMesAlta !== 'residual') || FILTRO_COHORTE === 'altas_sep';
+    if (!filtrandoAltas) {
+      universoChips = TASKS.filter(t => !tieneVisitaRealizada(t));
+    } else {
+      universoChips = TASKS.filter(t => {
+        if (filtroMesAlta !== 'todas') return matcheaMesAlta(t, filtroMesAlta);
+        return !(t.origenPlan || '').toLowerCase().includes('residual');
+      });
+    }
   } else if (VISTA_ACTIVA === 'mensual') {
     universoChips = TASKS.filter(t => {
       if (filtroMesAlta === 'todas') {
@@ -3296,7 +3340,8 @@ function filtrarYRenderizar() {
   const filtrados = TASKS.filter(t => {
     // 0. Filtro base según Vista Activa
     if (VISTA_ACTIVA === 'pendientes') {
-      if (tieneVisitaRealizada(t)) return false;
+      const filtrandoAltas = (filtroMesAlta !== 'todas' && filtroMesAlta !== 'residual') || FILTRO_COHORTE === 'altas_sep';
+      if (!filtrandoAltas && tieneVisitaRealizada(t)) return false;
     } else if (VISTA_ACTIVA === 'mensual') {
       if (filtroMesAlta === 'todas') {
         const orig = (t.origenPlan || '').toLowerCase();
