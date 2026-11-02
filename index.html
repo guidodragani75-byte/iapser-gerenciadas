@@ -1226,19 +1226,26 @@
           </div>
         </div>
 
-        <!-- SELECTOR SUPERIOR DE UNIVERSOS -->
-        <div class="kpi-universe-switcher">
-          <button type="button" class="chip-universe on" id="btnUnivAltas" onclick="setKpiUniverse('altas')">
-            <span class="dot-univ altas"></span>
-            <span><strong>Universo 1: Altas Mensuales</strong> (Meta 1.200 / año · 100/mes)</span>
-          </button>
-          <button type="button" class="chip-universe" id="btnUnivResidual" onclick="setKpiUniverse('residual')">
-            <span class="dot-univ residual"></span>
-            <span><strong>Universo 2: Stock Residual 2026</strong> (925 en 2 Meses)</span>
-          </button>
-          <button type="button" class="chip-universe" id="btnUnivConsolidado" onclick="setKpiUniverse('consolidado')">
-            <span class="dot-univ consolidado"></span>
-            <span><strong>Vista Consolidada</strong> (Multiserie · Sin mezclar metas)</span>
+        <!-- SELECTOR SUPERIOR DE UNIVERSOS Y BOTÓN DE CRITERIOS -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:22px;">
+          <div class="kpi-universe-switcher" style="margin-bottom:0;">
+            <button type="button" class="chip-universe on" id="btnUnivAltas" onclick="setKpiUniverse('altas')">
+              <span class="dot-univ altas"></span>
+              <span><strong>Universo 1: Altas Mensuales</strong> (Meta 1.200 / año · 100/mes)</span>
+            </button>
+            <button type="button" class="chip-universe" id="btnUnivResidual" onclick="setKpiUniverse('residual')">
+              <span class="dot-univ residual"></span>
+              <span><strong>Universo 2: Stock Residual 2026</strong> (925 en 2 Meses)</span>
+            </button>
+            <button type="button" class="chip-universe" id="btnUnivConsolidado" onclick="setKpiUniverse('consolidado')">
+              <span class="dot-univ consolidado"></span>
+              <span><strong>Vista Consolidada</strong> (Multiserie · Sin mezclar metas)</span>
+            </button>
+          </div>
+
+          <button type="button" class="btn btn-secondary" onclick="abrirModalCriteriosUniversos()" style="min-height:38px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:8px; border-color:#0F4C5C; color:#0F4C5C; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>Criterios & Metas de Universos</span>
           </button>
         </div>
 
@@ -1693,6 +1700,139 @@
 </div>
 </div>
 
+<!-- MODAL: CRITERIOS Y METAS DE AMBOS UNIVERSOS (POPUP EXPLICATIVO) -->
+<div class="modal-backdrop" id="modalCriteriosUniversos" style="display:none;" onclick="if(event.target===this) cerrarModalCriteriosUniversos()">
+  <div class="modal-box" style="max-width:960px; max-height:90vh; overflow-y:auto;">
+    <div class="modal-header" style="position:sticky; top:0; background:#fff; z-index:10; border-bottom:1px solid #D5D8D3; padding:16px 20px;">
+      <div>
+        <div style="font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:#0F4C5C; font-weight:700;">
+          DOCUMENTACIÓN TÉCNICA Y OPERATIVA
+        </div>
+        <h2 style="font-size:20px; font-weight:700; color:#17202A; margin-top:2px;">
+          Criterios Contractuales, Metas y Separación de Universos HyS
+        </h2>
+        <div style="font-size:12px; color:#5B6670;">
+          Guía de auditoría y referencia para el seguimiento consistente de IAPSER Gerenciadas
+        </div>
+      </div>
+      <button type="button" class="chip" onclick="cerrarModalCriteriosUniversos()" style="min-height:32px; padding:2px 12px; font-size:12px; font-weight:600;">✕ Cerrar</button>
+    </div>
+
+    <div class="modal-body" style="padding:20px; display:flex; flex-direction:column; gap:20px;">
+      
+      <!-- CUADRO COMPARATIVO ESTRUCTURADO -->
+      <div style="border:1px solid #D5D8D3; border-radius:4px; overflow:hidden;">
+        <table class="t" style="margin:0; font-size:12px;">
+          <thead>
+            <tr style="background:#2E3A46; color:#fff;">
+              <th style="color:#fff; width:22%;">Dimensión / Criterio</th>
+              <th style="color:#A7F3D0; width:39%; background:#0F4C5C;">Universo 1: Altas Mensuales (Proveedor)</th>
+              <th style="color:#FDE68A; width:39%; background:#92400E;">Universo 2: Stock Residual 2026 (Base)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Objetivo / Meta Total</strong></td>
+              <td><strong>1.200 visitas anuales</strong></td>
+              <td><strong>925 tareas a liquidar</strong></td>
+            </tr>
+            <tr style="background:#F8F9F7;">
+              <td><strong>Plazo Contractual</strong></td>
+              <td><strong>12 Meses</strong> (Sep 2026 – Ago 2027)</td>
+              <td><strong>2 Meses</strong> (01/11/2026 al 31/12/2026)</td>
+            </tr>
+            <tr>
+              <td><strong>Días Operativos</strong></td>
+              <td>Ciclo anual continuo (365 días)</td>
+              <td><strong>61 días corridos</strong> (~44 días hábiles)</td>
+            </tr>
+            <tr style="background:#F8F9F7;">
+              <td><strong>Meta / Cadencia Exigida</strong></td>
+              <td><strong>100 visitas / mes</strong> (300 por trimestre)</td>
+              <td><strong>462.5 visitas / mes</strong> (~21.0 visitas / día hábil)</td>
+            </tr>
+            <tr>
+              <td><strong>Visitas Realizadas a la Fecha</strong></td>
+              <td><strong>123 visitas</strong> (Mes 0 / Sep 2026 cerrado)</td>
+              <td><strong>0 visitas ejecutadas</strong> (al inicio de ventana)</td>
+            </tr>
+            <tr style="background:#F8F9F7;">
+              <td><strong>Avance sobre Meta</strong></td>
+              <td><strong>10.3%</strong> (123 / 1.200 ejecutadas)</td>
+              <td><strong>0.0%</strong> (0 / 925 liquidadas)</td>
+            </tr>
+            <tr>
+              <td><strong>Composición del Universo</strong></td>
+              <td>100% Altas preventivas asignadas al prestador</td>
+              <td><strong>736 Técnicas (VT)</strong> + <strong>189 Especiales</strong> <em>(176 RGRL/Vero + 13 Siniestros)</em></td>
+            </tr>
+            <tr style="background:#F8F9F7;">
+              <td><strong>Desglose de Efectividad</strong></td>
+              <td><strong>71 Efectivas (57.7%)</strong> / <strong>52 Fallidas (42.3%)</strong></td>
+              <td><em>Pendiente de ejecución operativa</em></td>
+            </tr>
+            <tr>
+              <td><strong>Cumplimiento Trimestral</strong></td>
+              <td><strong>Q1 (Sep-Nov): 123 / 300 (41.0%)</strong></td>
+              <td><em>No aplica trimestres (extinción en ventana fija 2M)</em></td>
+            </tr>
+            <tr style="background:#F8F9F7;">
+              <td><strong>Remanente a Ejecutar</strong></td>
+              <td><strong>1.077 visitas</strong> restantes para completar el ciclo</td>
+              <td><strong>925 tareas</strong> pendientes de extinción</td>
+            </tr>
+            <tr>
+              <td><strong>Estado Legal de Vencimientos</strong></td>
+              <td><strong>0 vencidas</strong> (100% ejecutadas dentro de su mes)</td>
+              <td><strong>925 en término</strong> (plazo límite legal: 31/12/2026)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- PRINCIPIOS DE MEDICIÓN Y REGLA DE ORO CONSOLIDADA -->
+      <div style="background:#EBF3F5; border-left:4px solid #0F4C5C; padding:14px 18px; border-radius:2px; font-size:12px; color:#17202A; line-height:1.6;">
+        <h4 style="font-size:13px; font-weight:700; color:#0F4C5C; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Regla de Oro en Gráficos Consolidados (Sin Distorsión de Metas)
+        </h4>
+        <p style="margin:0 0 8px 0;">
+          Los dos universos responden a naturalezas operativas y contratos totalmente distintos:
+        </p>
+        <ul style="margin:0; padding-left:20px;">
+          <li><strong>Altas Mensuales (1.200/año):</strong> Es un flujo de generación mensual continua regulado a 100 visitas/mes con cortes trimestrales de compensación (300/Q).</li>
+          <li><strong>Stock Residual 2026 (925):</strong> Es un stock acumulado preexistente que debe extinguirse a razón de 462.5 visitas/mes en los 2 meses de su ventana temporal (Noviembre y Diciembre).</li>
+          <li><strong>Principio de Independencia:</strong> En el gráfico consolidado multiserie, las series se visualizan apiladas pero las líneas de meta se mantienen estrictamente independientes (100/mes para Altas y 462.5/mes para Residual en su ventana). <strong>Bajo ningún concepto deben sumarse en una meta única artificial de 562.5</strong>, evitando distorsionar los índices de cumplimiento contractual.</li>
+        </ul>
+      </div>
+
+      <!-- ALERTAS Y CONTROL OPERATIVO -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
+        <div style="border:1px solid #D5D8D3; border-radius:4px; padding:12px 16px; background:#fff;">
+          <div style="font-size:11px; text-transform:uppercase; color:#0F4C5C; font-weight:700;">Control de Fallidas en Altas</div>
+          <div style="font-size:12px; color:#5B6670; margin-top:4px; line-height:1.5;">
+            En M0 (Sep 2026) se generaron <strong>52 visitas fallidas</strong> (42.3%). Para asegurar la calidad de servicio y no consumir presupuesto sin resultado, cada visita fallida cuenta con campo de <em>Gestión Fallida</em> para registrar motivo, reprogramación o cierre.
+          </div>
+        </div>
+
+        <div style="border:1px solid #D5D8D3; border-radius:4px; padding:12px 16px; background:#fff;">
+          <div style="font-size:11px; text-transform:uppercase; color:#D97706; font-weight:700;">Burn-Down de Stock Residual</div>
+          <div style="font-size:12px; color:#5B6670; margin-top:4px; line-height:1.5;">
+            El objetivo del stock residual es llevar la curva de <strong>925 a 0 tareas remanentes</strong> en 8 semanas. El gráfico de extinción mide la pendiente real frente a la trayectoria teórica exigida para no generar atrasos hacia el 31/12/2026.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer" style="padding:14px 20px; border-top:1px solid #D5D8D3; background:#F8F9F7; display:flex; justify-content:flex-end;">
+      <button type="button" class="btn btn-primary" onclick="cerrarModalCriteriosUniversos()" style="min-height:38px; padding:0 24px; font-weight:600;">
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: ALTA MASIVA CON OCR (POR CUIT / EMPRESA) -->
 <div class="modal-backdrop" id="modalAltaMasiva" style="display:none;">
   <div class="modal-box" style="max-width:980px;">
@@ -1896,7 +2036,7 @@
 </div>
 
 <!-- CARGA DE DATOS PRECARGADOS (CON CACHE-BUSTER) -->
-<script src="datos_precargados.js?v=20261101_1915"></script>
+<script src="datos_precargados.js?v=20261102_0005"></script>
 
 <!-- LÓGICA DE LA APLICACIÓN -->
 <script>
@@ -1930,7 +2070,7 @@ let modoChartPresupuesto = 'mensual';
 let filtroMesFallidas = 'acumulado';
 
 // Claves LocalStorage (V14: Base completa 1.082 registros + 153 visitas únicas deduplicadas)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V19';
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V20';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -5108,6 +5248,17 @@ async function confirmarSubidaLote() {
 }
 
 // CONFIGURACIÓN Y SINCRONIZACIÓN CON BACKEND
+// MODAL DE CRITERIOS Y METAS DE AMBOS UNIVERSOS
+function abrirModalCriteriosUniversos() {
+  const m = document.getElementById('modalCriteriosUniversos');
+  if (m) m.style.display = 'flex';
+}
+
+function cerrarModalCriteriosUniversos() {
+  const m = document.getElementById('modalCriteriosUniversos');
+  if (m) m.style.display = 'none';
+}
+
 function abrirModalConfig() {
   document.getElementById('modalConfig').style.display = 'flex';
 }
