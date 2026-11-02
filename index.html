@@ -561,6 +561,82 @@
     }
 
     /* Universe Switcher & Multi-Universe Panels */
+        .dual-universe-hero {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+    .dual-hero-card {
+      background: #fff;
+      border: 1px solid #D5D8D3;
+      border-radius: 4px;
+      padding: 16px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .dual-hero-card.altas {
+      border-top: 4px solid #0F4C5C;
+    }
+    .dual-hero-card.residual {
+      border-top: 4px solid #D97706;
+    }
+    .dual-hero-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .hero-progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #E3E5E1;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .hero-progress-fill.altas {
+      height: 100%;
+      background: #0F4C5C;
+      transition: width 0.3s ease;
+    }
+    .hero-progress-fill.residual {
+      height: 100%;
+      background: #D97706;
+      transition: width 0.3s ease;
+    }
+    .dual-hero-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px 14px;
+      padding-top: 6px;
+      border-top: 1px solid #EEF0EC;
+    }
+    .hero-metric-label {
+      font-size: 11px;
+      color: #727D86;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      font-weight: 600;
+    }
+    .hero-metric-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: #17202A;
+      font-family: 'IBM Plex Sans', sans-serif;
+      margin-top: 1px;
+    }
+    .hero-metric-val .hero-sub {
+      font-size: 11px;
+      font-weight: 400;
+      color: #5B6670;
+    }
+    .hero-metric-val .hero-sub.ok {
+      color: #0F4C5C;
+      font-weight: 600;
+    }
+    
     .kpi-universe-switcher {
       display: flex;
       gap: 8px;
@@ -1052,6 +1128,103 @@
         <!-- VISTA 2: PLAN Y MÉTRICAS (PROYECTO INICIADO EN SEPTIEMBRE 2026 = MES 0) -->
     <div id="viewKpis" style="display:none; flex-direction:column; flex:1; overflow-y:auto;">
       <div class="kpi-view-container">
+
+        <!-- CABECERA RESUMEN EJECUTIVO: LOS 2 UNIVERSOS DEL PROYECTO -->
+        <div class="dual-universe-hero">
+          <!-- Tarjeta Maestra Universo 1: Altas Mensuales -->
+          <div class="dual-hero-card altas">
+            <div class="dual-hero-header">
+              <div>
+                <span class="badge" style="background:#E3EDEF; color:#0F4C5C; border:1px solid #C4DDE2; font-size:11px; font-weight:700;">UNIVERSO 1 · CONTROL CONTRACTUAL PRESTADOR</span>
+                <h3 style="font-size:17px; font-weight:700; margin-top:4px; color:#0F4C5C;">Altas Mensuales Nuevas (Ciclo Anual)</h3>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:24px; font-weight:700; color:#0F4C5C; font-family:'IBM Plex Mono', monospace;">
+                  <span id="heroAltasRealizadas">123</span> <span style="font-size:15px; font-weight:400; color:#5B6670;">/ 1.200</span>
+                </div>
+                <div style="font-size:12px; font-weight:600; color:#0F4C5C;">Avance Anual: <span id="heroAltasPct">10.3%</span></div>
+              </div>
+            </div>
+            
+            <div class="hero-progress-bar">
+              <div class="hero-progress-fill altas" id="heroAltasBar" style="width:10.3%;"></div>
+            </div>
+
+            <div class="dual-hero-grid">
+              <div>
+                <div class="hero-metric-label">Meta Contractual</div>
+                <div class="hero-metric-val">100 / mes <span class="hero-sub">(1.200 al año)</span></div>
+              </div>
+              <div>
+                <div class="hero-metric-label">M0 (Sep 2026)</div>
+                <div class="hero-metric-val" style="color:#0F4C5C;">123 <span class="hero-sub ok">(+23 sobre meta)</span></div>
+              </div>
+              <div>
+                <div class="hero-metric-label">Efectivas / Fallidas</div>
+                <div class="hero-metric-val">71 <span style="font-size:11px; color:#5B6670;">(57.7%)</span> / 52 <span style="font-size:11px; color:#5B6670;">(42.3%)</span></div>
+              </div>
+              <div>
+                <div class="hero-metric-label">Q1 (Sep - Nov 26)</div>
+                <div class="hero-metric-val"><span id="heroAltasQ1">123</span> / 300 <span class="hero-sub">(41.0%)</span></div>
+              </div>
+              <div>
+                <div class="hero-metric-label">Remanente Anual</div>
+                <div class="hero-metric-val"><span id="heroAltasRestan">1.077</span> restantes</div>
+              </div>
+              <div>
+                <div class="hero-metric-label">Vencidas Altas</div>
+                <div class="hero-metric-val" style="color:#0F4C5C;">0 vencidas</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tarjeta Maestra Universo 2: Stock Residual -->
+          <div class="dual-hero-card residual">
+            <div class="dual-hero-header">
+              <div>
+                <span class="badge" style="background:#FEF3C7; color:#92400E; border:1px solid #FCD34D; font-size:11px; font-weight:700;">UNIVERSO 2 · PLAN DE LIQUIDACIÓN DE STOCK</span>
+                <h3 style="font-size:17px; font-weight:700; margin-top:4px; color:#92400E;">Stock Residual 2026 (Ventana 2 Meses)</h3>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:24px; font-weight:700; color:#D97706; font-family:'IBM Plex Mono', monospace;">
+                  <span id="heroResidRealizadas">0</span> <span style="font-size:15px; font-weight:400; color:#5B6670;">/ 925</span>
+                </div>
+                <div style="font-size:12px; font-weight:600; color:#92400E;">Liquidado: <span id="heroResidPct">0.0%</span></div>
+              </div>
+            </div>
+
+            <div class="hero-progress-bar">
+              <div class="hero-progress-fill residual" id="heroResidBar" style="width:0%;"></div>
+            </div>
+
+            <div class="dual-hero-grid">
+              <div>
+                <div class="hero-metric-label">Stock Base Inicial</div>
+                <div class="hero-metric-val">925 tareas <span class="hero-sub">(a extinguir)</span></div>
+              </div>
+              <div>
+                <div class="hero-metric-label">Plazo de Extinción</div>
+                <div class="hero-metric-val">2 Meses <span class="hero-sub">(01/11 al 31/12/26)</span></div>
+              </div>
+              <div>
+                <div class="hero-metric-label">Cadencia Requerida</div>
+                <div class="hero-metric-val" style="color:#D97706;">462.5 / mes <span class="hero-sub">(~21.0 / día hábil)</span></div>
+              </div>
+              <div>
+                <div class="hero-metric-label">Composición</div>
+                <div class="hero-metric-val">736 VT <span style="font-size:11px; color:#5B6670;">+ 189 Esp.</span></div>
+              </div>
+              <div>
+                <div class="hero-metric-label">Remanente Stock</div>
+                <div class="hero-metric-val" style="color:#D97706;"><span id="heroResidRestan">925</span> pendientes</div>
+              </div>
+              <div>
+                <div class="hero-metric-label">Estado Legal</div>
+                <div class="hero-metric-val" style="color:#0F4C5C;">925 En término <span class="hero-sub">(0 vencidas)</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- SELECTOR SUPERIOR DE UNIVERSOS -->
         <div class="kpi-universe-switcher">
@@ -1723,7 +1896,7 @@
 </div>
 
 <!-- CARGA DE DATOS PRECARGADOS (CON CACHE-BUSTER) -->
-<script src="datos_precargados.js?v=20261101_1905"></script>
+<script src="datos_precargados.js?v=20261101_1915"></script>
 
 <!-- LÓGICA DE LA APLICACIÓN -->
 <script>
@@ -1757,7 +1930,7 @@ let modoChartPresupuesto = 'mensual';
 let filtroMesFallidas = 'acumulado';
 
 // Claves LocalStorage (V14: Base completa 1.082 registros + 153 visitas únicas deduplicadas)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V18';
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V19';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -1990,7 +2163,17 @@ function normalizarTarea(t, idx) {
   const localidad = (t.localidad || t["Localidad"] || "").toString().trim();
   const preventor = (t.preventor || t["Preventor Asignado"] || t["Preventor"] || "").toString().trim();
   const capitas = (t.capitas || t["Capitas"] || "").toString().trim();
-  const tarea = (t.tarea || t["Tarea"] || "Visita tecnica").toString().trim();
+  let tarea = (t.tarea || t["Tarea"] || "Visita técnica").toString().trim();
+  const tarLow = tarea.toLowerCase();
+  if (tarLow.includes('siniestro')) {
+    tarea = 'Siniestro';
+  } else if (tarLow.includes('rgrl') || tarLow.includes('verosimilitud')) {
+    tarea = 'RGRL/ Verosimilitud';
+  } else if (tarLow.includes('obra')) {
+    tarea = 'Visita obra';
+  } else {
+    tarea = 'Visita técnica';
+  }
   let origenPlan = (t.origenPlan || t["Origen Plan"] || "Residual 2026").toString().trim();
 
   let rawDesde = (t.fechaDesde || t["Fecha Desde"] || "").toString().trim();
@@ -2456,6 +2639,26 @@ function fijarVentanaResidualDosMeses() {
   fijarVentanaResidual(elDesde.value, hasta);
 }
 
+function esTareaTecnica(tareaStr) {
+  const tar = (tareaStr || '').toLowerCase();
+  if (tar.includes('siniestro') || tar.includes('rgrl') || tar.includes('verosimilitud') || tar.includes('investig')) {
+    return false;
+  }
+  return true;
+}
+
+function mesSolapaConVentana(claveYM, fechaDesdeStr, fechaHastaStr) {
+  if (!claveYM || !fechaDesdeStr || !fechaHastaStr) return false;
+  const parts = claveYM.split('-');
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  const primerDiaMes = new Date(y, m - 1, 1);
+  const ultimoDiaMes = new Date(y, m, 0, 23, 59, 59);
+  const dInicio = new Date(fechaDesdeStr + 'T00:00:00');
+  const dFin = new Date(fechaHastaStr + 'T23:59:59');
+  return (primerDiaMes <= dFin && ultimoDiaMes >= dInicio);
+}
+
 function calcularDiasVentana(fechaDesdeStr, fechaHastaStr) {
   const d1 = new Date(fechaDesdeStr + 'T00:00:00');
   const d2 = new Date(fechaHastaStr + 'T00:00:00');
@@ -2506,8 +2709,7 @@ function renderizarTableroKPIs() {
 
     if (esResidual) {
       totalResidual++;
-      const tar = (t.tarea || '').toLowerCase();
-      if (tar.includes('visita tecnica')) tecnicasResidual++;
+      if (esTareaTecnica(t.tarea)) tecnicasResidual++;
       else especialesResidual++;
     } else {
       totalAltas++;
@@ -2597,6 +2799,13 @@ function renderizarTableroKPIs() {
   if (document.getElementById('lblPromedioMensual')) document.getElementById('lblPromedioMensual').textContent = `${m1Tot} visitas registradas`;
   if (document.getElementById('lblDesvioMensual')) document.getElementById('lblDesvioMensual').textContent = `${desvioM0 >= 0 ? '+' : ''}${desvioM0} visitas sobre meta de 100`;
 
+  // Actualizar Hero Dashboard - Universo 1 (Altas)
+  if (document.getElementById('heroAltasRealizadas')) document.getElementById('heroAltasRealizadas').textContent = realizadasAltas;
+  if (document.getElementById('heroAltasPct')) document.getElementById('heroAltasPct').textContent = pctAltas + '%';
+  if (document.getElementById('heroAltasBar')) document.getElementById('heroAltasBar').style.width = Math.min(100, pctAltas) + '%';
+  if (document.getElementById('heroAltasQ1')) document.getElementById('heroAltasQ1').textContent = q1;
+  if (document.getElementById('heroAltasRestan')) document.getElementById('heroAltasRestan').textContent = `${Math.max(0, metaTotalAltas - realizadasAltas)}`;
+
   // -------------------------------------------------------------
   // UNIVERSO 2: STOCK RESIDUAL (925 en 2 Meses)
   // -------------------------------------------------------------
@@ -2636,6 +2845,12 @@ function renderizarTableroKPIs() {
   if (document.getElementById('lblResidFechaCierre')) {
     document.getElementById('lblResidFechaCierre').textContent = RESIDUAL_FECHA_HASTA;
   }
+
+  // Actualizar Hero Dashboard - Universo 2 (Residual)
+  if (document.getElementById('heroResidRealizadas')) document.getElementById('heroResidRealizadas').textContent = realizadasResidual;
+  if (document.getElementById('heroResidPct')) document.getElementById('heroResidPct').textContent = pctResid + '%';
+  if (document.getElementById('heroResidBar')) document.getElementById('heroResidBar').style.width = Math.min(100, pctResid) + '%';
+  if (document.getElementById('heroResidRestan')) document.getElementById('heroResidRestan').textContent = `${totalResidual - realizadasResidual}`;
 
   // Renderizar vistas según pestaña activa
   if (KPI_UNIVERSE === 'altas') {
@@ -3130,8 +3345,10 @@ function renderChartConsolidado(efectivasAltas, fallidasAltas, residualMes) {
   const labels = PROYECTO_TIMELINE.map(pt => pt.label);
   const metaAltasData = new Array(PROYECTO_TIMELINE.length).fill(100);
 
-  // Meta residual activa únicamente en los 2 meses de su ventana (Noviembre y Diciembre / M2 y M3)
-  const metaResidualData = PROYECTO_TIMELINE.map((pt, idx) => (idx === 2 || idx === 3) ? 462.5 : null);
+  // Meta residual activa únicamente en los meses que solapan con la ventana temporal elegida
+  const metaResidualData = PROYECTO_TIMELINE.map(pt => {
+    return mesSolapaConVentana(pt.clave, RESIDUAL_FECHA_DESDE, RESIDUAL_FECHA_HASTA) ? 462.5 : null;
+  });
 
   chartConsolidadoInstance = new Chart(ctx, {
     type: 'bar',
@@ -3233,7 +3450,8 @@ function renderizarTablaConsolidada(efectivasAltas, fallidasAltas, residualMes) 
     const totA = efA + faA;
     const metaA = 100;
     const resid = residualMes[m] || 0;
-    const metaResid = (m === 2 || m === 3) ? 462.5 : '--';
+    const enVentana = mesSolapaConVentana(pt.clave, RESIDUAL_FECHA_DESDE, RESIDUAL_FECHA_HASTA);
+    const metaResid = enVentana ? '462.5' : '--';
     const totalTerreno = totA + resid;
     const esFuturo = (m > 0);
 
@@ -3244,7 +3462,7 @@ function renderizarTablaConsolidada(efectivasAltas, fallidasAltas, residualMes) 
       estado = '<span class="badge badge-ok">M0 Cerrado (+23 Altas)</span>';
     } else if (m === 1) {
       estado = '<span class="badge badge-warn">M1 En curso</span>';
-    } else if (m === 2 || m === 3) {
+    } else if (enVentana) {
       estado = '<span class="badge" style="background:#FEF3C7; color:#92400E; border:1px solid #FCD34D;">Ventana Residual (462.5/m)</span>';
     }
 
