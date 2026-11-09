@@ -52,6 +52,8 @@ function parseCSV(text) {
 function normalizarFecha(str) {
   if (!str) return '';
   str = String(str).trim();
+  const mIso = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/);
+  if (mIso) return `${mIso[3]}/${mIso[2]}/${mIso[1]}`;
   const m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
   if (!m) return str;
   let d = m[1].padStart(2, '0');
@@ -130,7 +132,8 @@ async function run() {
     // Columna F: Solo Columna F es Fecha Realizada (la visita efectivamente realizada)
     const fechaReal = normalizarFecha(row[colIdx['Fecha Realizada']] || '');
 
-    const tarea = row[colIdx['Tarea']] || 'Visita tecnica';
+    const rawTarea = (row[colIdx['Tarea']] || 'Visita tecnica').trim();
+    const tarea = rawTarea.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() === 'visita tecnica' ? 'Visita tecnica' : rawTarea;
     const origenPlan = row[colIdx['Origen Plan']] || 'Residual 2026';
     
     let rawDesde = row[colIdx['Fecha Desde']] || '';
