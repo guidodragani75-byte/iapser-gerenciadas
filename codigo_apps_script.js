@@ -58,8 +58,32 @@ var LISTA_TAREAS_VALIDAS = [
 ];
 
 /**
+ * Normaliza un texto quitando tildes y pasándolo a minúsculas para comparaciones seguras
+ */
+function quitarTildes(str) {
+  return (str || "").toString().trim()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/**
+ * Compara dos nombres de tarea ignorando tildes y mayúsculas ("Visita técnica" === "Visita tecnica")
+ */
+function mismaTarea(a, b) {
+  return quitarTildes(a).toLowerCase() === quitarTildes(b).toLowerCase();
+}
+
+/**
+ * Genera el Origen del Plan dinámicamente según la fecha (ej: "Alta Oct 2026", "Alta Nov 2026")
+ */
+function generarOrigenPlanDesdeFecha(fechaStr) {
+  var d = parsearFecha(fechaStr) || new Date();
+  var meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  return "Alta " + meses[d.getMonth()] + " " + d.getFullYear();
+}
+
+/**
  * Agrega automáticamente las columnas nuevas a la planilla sin afectar datos previos
- * y precarga las fechas para las 736 visitas técnicas y la marca "Residual 2026"
+ * y precarga las fechas para las visitas técnicas y la marca "Residual 2026"
  */
 function inicializarColumnas() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -94,7 +118,7 @@ function inicializarColumnas() {
 
       // 2. Si la tarea es 'Visita tecnica', precargar 01/01/2026 y 31/12/2026
       var tareaVal = colMap["Tarea"] ? (sheet.getRange(r, colMap["Tarea"]).getValue() || "").toString().trim() : "";
-      var esVisitaTecnica = tareaVal.toLowerCase().indexOf("visita tecnica") !== -1;
+      var esVisitaTecnica = quitarTildes(tareaVal).toLowerCase().indexOf("visita tecnica") !== -1;
 
       if (esVisitaTecnica) {
         if (colMap["Fecha Desde"] && !sheet.getRange(r, colMap["Fecha Desde"]).getValue()) {
@@ -163,8 +187,9 @@ function doGet(e) {
   
   if (action === "ping") {
     return ContentService.createTextOutput(JSON.stringify({
-      status: "success",
+      status: "ok",
       message: "API IAPSER Visitas Activa",
+      time: new Date().toISOString(),
       timestamp: new Date().toISOString()
     })).setMimeType(ContentService.MimeType.JSON);
   }
@@ -228,12 +253,61 @@ function doPost(e) {
 }
 
 /**
+ * Busca una fila en la planilla que coincida por CUIT + NroEstab + Tarea.
+ * Si soloPendientes es true, exige que Fecha Realizada esté vacía.
+ */
+function buscarFilaPorClave(sheet, colMap, cuit, nroEstab, tarea, soloPendientes) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2 || !colMap["Cuit"]) return null;
+  var cuitBuscado = (cuit || "").toString().replace(/\D/g, "");
+  if (!cuitBuscado) return null;
+  var estabBuscado = (nroEstab || "1").toString().trim();
+  var tareaBuscada = (tarea || "Visita tecnica").toString().trim();
+
+  var numRows = lastRow - 1;
+  var dataCuit = sheet.getRange(2, colMap["Cuit"], numRows, 1).getValues();
+  var dataEstab = colMap["Nro Estab IAPART"] ? sheet.getRange(2, colMap["Nro Estab IAPART"], numRows, 1).getValues() : null;
+  var dataTarea = colMap["Tarea"] ? sheet.getRange(2, colMap["Tarea"], numRows, 1).getValues() : null;
+  var dataReal = colMap["Fecha Realizada"] ? sheet.getRange(2, colMap["Fecha Realizada"], numRows, 1).getValues() : null;
+
+  for (var r = 0; r < numRows; r++) {
+    var cVal = (dataCuit[r][0] || "").toString().replace(/\D/g, "");
+    var eVal = dataEstab ? (dataEstab[r][0] || "1").toString().trim() : "1";
+    var tVal = dataTarea ? (dataTarea[r][0] || "").toString().trim() : "";
+    var fRealVal = dataReal ? (dataReal[r][0] || "").toString().trim() : "";
+
+    if (cVal === cuitBuscado && eVal === estabBuscado && (!tVal || mismaTarea(tVal, tareaBuscada))) {
+      if (soloPendientes && fRealVal !== "") continue;
+      return r + 2;
+    }
+  }
+  return null;
+}
+
+/**
  * Registra o actualiza la ejecución de una visita técnica o especial
  */
 function procesarGuardarVisita(sheet, colMap, payload) {
   var rowId = parseInt(payload.rowId, 10);
+  var lastRow = sheet.getLastRow();
+
+  // Verificar que el rowId apunte al CUIT correcto; si no coincide o no viene, buscar por clave
+  if (rowId && rowId >= 2 && rowId <= lastRow && payload.cuit && colMap["Cuit"]) {
+    var cuitEnFila = (sheet.getRange(rowId, colMap["Cuit"]).getValue() || "").toString().replace(/\D/g, "");
+    var cuitPayload = (payload.cuit || "").toString().replace(/\D/g, "");
+    if (cuitPayload && cuitEnFila && cuitEnFila !== cuitPayload) {
+      rowId = buscarFilaPorClave(sheet, colMap, payload.cuit, payload.nroEstab, payload.tarea, true) ||
+              buscarFilaPorClave(sheet, colMap, payload.cuit, payload.nroEstab, payload.tarea, false);
+    }
+  } else if (!rowId || rowId < 2 || rowId > lastRow) {
+    if (payload.cuit) {
+      rowId = buscarFilaPorClave(sheet, colMap, payload.cuit, payload.nroEstab, payload.tarea, true) ||
+              buscarFilaPorClave(sheet, colMap, payload.cuit, payload.nroEstab, payload.tarea, false);
+    }
+  }
+
   if (!rowId || rowId < 2 || rowId > sheet.getLastRow()) {
-    throw new Error("Fila inválida: " + payload.rowId);
+    throw new Error("Fila inválida o no encontrada: " + payload.rowId);
   }
 
   var fechaRealizada = (payload.fechaRealizada !== undefined && payload.fechaRealizada !== null) ? payload.fechaRealizada : (colMap["Fecha Realizada"] ? sheet.getRange(rowId, colMap["Fecha Realizada"]).getValue() : "");
@@ -308,6 +382,9 @@ function procesarGuardarVisita(sheet, colMap, payload) {
 function procesarGestionFallida(sheet, colMap, payload) {
   var rowId = parseInt(payload.rowId, 10);
   if (!rowId || rowId < 2 || rowId > sheet.getLastRow()) {
+    rowId = buscarFilaPorClave(sheet, colMap, payload.cuit, payload.nroEstab, payload.tarea, false);
+  }
+  if (!rowId || rowId < 2 || rowId > sheet.getLastRow()) {
     throw new Error("Fila inválida: " + payload.rowId);
   }
 
@@ -324,23 +401,27 @@ function procesarGestionFallida(sheet, colMap, payload) {
   } 
   
   if (resolucion === "Reprogramar") {
-    if (colMap["Gestion Fallida"]) sheet.getRange(rowId, colMap["Gestion Fallida"]).setValue("Reprogramada - Nueva tarea generada");
+    if (colMap["Gestion Fallida"]) sheet.getRange(rowId, colMap["Gestion Fallida"]).setValue("Reprogramada en nueva visita");
 
     // Copiar datos de la fila original para generar la nueva tarea
     var lastCol = sheet.getLastColumn();
     var origValues = sheet.getRange(rowId, 1, 1, lastCol).getValues()[0];
     var newRow = origValues.slice();
 
+    var fDesdeNueva = payload.nuevaFechaDesde || Utilities.formatDate(new Date(), "GMT-3", "dd/MM/yyyy");
+    var fHastaNueva = payload.nuevaFechaHasta || "";
+    var origenDinamico = payload.origenPlan || generarOrigenPlanDesdeFecha(fDesdeNueva);
+
     // Resetear columnas de ejecución en la nueva fila
-    if (colMap["Origen Plan"]) newRow[colMap["Origen Plan"] - 1] = "Alta Sep 2026";
-    if (colMap["Fecha Desde"]) newRow[colMap["Fecha Desde"] - 1] = payload.nuevaFechaDesde || "";
-    if (colMap["Fecha Hasta"]) newRow[colMap["Fecha Hasta"] - 1] = payload.nuevaFechaHasta || "";
+    if (colMap["Origen Plan"]) newRow[colMap["Origen Plan"] - 1] = origenDinamico;
+    if (colMap["Fecha Desde"]) newRow[colMap["Fecha Desde"] - 1] = fDesdeNueva;
+    if (colMap["Fecha Hasta"]) newRow[colMap["Fecha Hasta"] - 1] = fHastaNueva;
     if (colMap["Fecha Realizada"]) newRow[colMap["Fecha Realizada"] - 1] = "";
     if (colMap["Resultado Visita"]) newRow[colMap["Resultado Visita"] - 1] = "";
     if (colMap["Documento Adjunto"]) newRow[colMap["Documento Adjunto"] - 1] = "";
     if (colMap["Estado Tarea"]) newRow[colMap["Estado Tarea"] - 1] = "En término";
     if (colMap["Gestion Fallida"]) newRow[colMap["Gestion Fallida"] - 1] = "";
-    if (colMap["Observaciones"]) newRow[colMap["Observaciones"] - 1] = "Reintento de visita fallida previa (Fila " + rowId + "). " + (payload.motivo || "");
+    if (colMap["Observaciones"]) newRow[colMap["Observaciones"] - 1] = "Reprogramación extemporánea de visita previa fallida (Fila " + rowId + "). " + (payload.motivo || "");
 
     sheet.appendRow(newRow);
     var newRowId = sheet.getLastRow();
@@ -348,7 +429,7 @@ function procesarGestionFallida(sheet, colMap, payload) {
     return {
       status: "success",
       rowId: rowId,
-      gestionFallida: "Reprogramada - Nueva tarea generada",
+      gestionFallida: "Reprogramada en nueva visita",
       nuevaFilaId: newRowId
     };
   }
@@ -358,39 +439,33 @@ function procesarGestionFallida(sheet, colMap, payload) {
 
 /**
  * Carga masiva de múltiples archivos para asociar a tareas
+ * Solo asocia a tareas PENDIENTES; si no hay pendiente, crea una nueva fila sin pisar realizadas.
  */
 function procesarCargaLote(sheet, colMap, payload) {
   var items = payload.items || [];
   var results = [];
-  var lastRow = sheet.getLastRow();
 
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
     try {
       var rowId = parseInt(item.rowId, 10);
-      
-      // Si no viene rowId específico, buscar fila por Cuit + NroEstab + Tarea
-      if (!rowId || rowId < 2) {
-        var cuitBuscado = (item.cuit || "").toString().replace(/\D/g, "");
-        var estabBuscado = (item.nroEstab || "1").toString().trim();
-        var tareaBuscada = (item.tarea || "Visita tecnica").toString().trim();
+      var lastRow = sheet.getLastRow();
 
-        if (cuitBuscado && colMap["Cuit"] && colMap["Nro Estab IAPART"]) {
-          var dataCuit = sheet.getRange(2, colMap["Cuit"], Math.max(1, lastRow - 1), 1).getValues();
-          var dataEstab = sheet.getRange(2, colMap["Nro Estab IAPART"], Math.max(1, lastRow - 1), 1).getValues();
-          var dataTarea = colMap["Tarea"] ? sheet.getRange(2, colMap["Tarea"], Math.max(1, lastRow - 1), 1).getValues() : null;
-
-          for (var r = 0; r < dataCuit.length; r++) {
-            var cVal = (dataCuit[r][0] || "").toString().replace(/\D/g, "");
-            var eVal = (dataEstab[r][0] || "").toString().trim();
-            var tVal = dataTarea ? (dataTarea[r][0] || "").toString().trim() : "";
-
-            if (cVal === cuitBuscado && eVal === estabBuscado && (!tVal || tVal.toLowerCase() === tareaBuscada.toLowerCase())) {
-              rowId = r + 2;
-              break;
-            }
-          }
+      // Verificar si el rowId indicado sigue pendiente y corresponde al mismo CUIT
+      if (rowId && rowId >= 2 && rowId <= lastRow) {
+        var cFila = colMap["Cuit"] ? (sheet.getRange(rowId, colMap["Cuit"]).getValue() || "").toString().replace(/\D/g, "") : "";
+        var cItem = (item.cuit || "").toString().replace(/\D/g, "");
+        var fRealFila = colMap["Fecha Realizada"] ? (sheet.getRange(rowId, colMap["Fecha Realizada"]).getValue() || "").toString().trim() : "";
+        if ((cItem && cFila && cFila !== cItem) || fRealFila !== "") {
+          rowId = null;
         }
+      } else {
+        rowId = null;
+      }
+
+      // Buscar únicamente entre tareas PENDIENTES (sin Fecha Realizada)
+      if (!rowId) {
+        rowId = buscarFilaPorClave(sheet, colMap, item.cuit, item.nroEstab, item.tarea, true);
       }
 
       if (rowId && rowId >= 2) {
@@ -398,7 +473,7 @@ function procesarCargaLote(sheet, colMap, payload) {
         var res = procesarGuardarVisita(sheet, colMap, item);
         results.push({ itemIndex: i, success: true, rowId: rowId, res: res });
       } else {
-        // Si no existe fila previa, crear la nueva tarea y registrar la visita
+        // Si no existe fila pendiente previa, crear la nueva tarea y registrar la visita
         var newTRes = procesarCrearTarea(sheet, colMap, item);
         item.rowId = newTRes.newRowId;
         var resSave = procesarGuardarVisita(sheet, colMap, item);
@@ -419,10 +494,17 @@ function procesarCrearTarea(sheet, colMap, payload) {
   var lastCol = sheet.getLastColumn();
   var newRow = new Array(lastCol).fill("");
 
-  var tareaSeleccionada = payload.tarea || "Visita tecnica";
-  if (LISTA_TAREAS_VALIDAS.indexOf(tareaSeleccionada) === -1) {
-    throw new Error("Tarea no válida: '" + tareaSeleccionada + "'. Solo se permiten las tareas autorizadas del módulo: " + LISTA_TAREAS_VALIDAS.join(", "));
+  var tareaRaw = quitarTildes(payload.tarea || "Visita tecnica");
+  var tareaSeleccionada = "Visita tecnica";
+  for (var i = 0; i < LISTA_TAREAS_VALIDAS.length; i++) {
+    if (mismaTarea(LISTA_TAREAS_VALIDAS[i], tareaRaw)) {
+      tareaSeleccionada = LISTA_TAREAS_VALIDAS[i];
+      break;
+    }
   }
+
+  var fRef = payload.fechaDesde || payload.fechaRealizada || "";
+  var origenDinamico = payload.origenPlan || generarOrigenPlanDesdeFecha(fRef);
 
   if (colMap["Cuit"]) newRow[colMap["Cuit"] - 1] = payload.cuit || "";
   if (colMap["Empleador"]) newRow[colMap["Empleador"] - 1] = payload.empleador || "";
@@ -431,7 +513,7 @@ function procesarCrearTarea(sheet, colMap, payload) {
   if (colMap["Tarea"]) newRow[colMap["Tarea"] - 1] = tareaSeleccionada;
   if (colMap["Nro Estab IAPART"]) newRow[colMap["Nro Estab IAPART"] - 1] = payload.nroEstab || "1";
   if (colMap["Nro Estab Intercambio"]) newRow[colMap["Nro Estab Intercambio"] - 1] = payload.nroEstabIntercambio || payload.nroEstab || "1";
-  if (colMap["Origen Plan"]) newRow[colMap["Origen Plan"] - 1] = payload.origenPlan || "Alta Sep 2026";
+  if (colMap["Origen Plan"]) newRow[colMap["Origen Plan"] - 1] = origenDinamico;
   if (colMap["Fecha Desde"]) newRow[colMap["Fecha Desde"] - 1] = payload.fechaDesde || "";
   if (colMap["Fecha Hasta"]) newRow[colMap["Fecha Hasta"] - 1] = payload.fechaHasta || "";
   if (colMap["Nro Siniestro"]) newRow[colMap["Nro Siniestro"] - 1] = payload.nroSiniestro || "";
@@ -444,6 +526,7 @@ function procesarCrearTarea(sheet, colMap, payload) {
   return {
     status: "success",
     newRowId: newRowId,
+    origenPlan: origenDinamico,
     message: "Tarea agregada exitosamente a la fila " + newRowId
   };
 }
@@ -471,8 +554,9 @@ function guardarArchivoEnDrive(base64Data, originalFileName, mimeType, cuit, nro
   var fechaYMD = yyyy + mm + dd;
   var anioMes = yyyy + "-" + mm;
 
-  // Normalizar nombres
-  var tareaNorm = (tarea || "Visita").replace(/[^a-zA-Z0-9]/g, "_").slice(0, 20);
+  // Normalizar nombres quitando tildes antes de reemplazar caracteres especiales (evita VISITA_T_CNICA)
+  var tareaSinTildes = quitarTildes(tarea || "VISITA").toUpperCase();
+  var tareaNorm = tareaSinTildes.replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 20);
   var cuitNorm = (cuit || "00000000000").toString().replace(/\D/g, "");
   var estabNorm = (nroEstab || "1").toString().replace(/\D/g, "") || "1";
   var empNorm = (empleador || "").toString().replace(/[/\\:*?"<>|]/g, " ").slice(0, 30).trim();

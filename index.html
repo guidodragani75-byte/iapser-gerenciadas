@@ -752,6 +752,83 @@
       .kpis { flex-wrap: wrap; }
       .kpi-card { border-bottom: 1px solid #D5D8D3; }
     }
+
+    /* Vista Previa de Documentos y Visor Ampliado */
+    .preview-thumb-box {
+      position: relative;
+      width: 56px;
+      height: 72px;
+      flex: none;
+      border: 1px solid #B9BEB8;
+      border-radius: 3px;
+      background: #F0F1EE;
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .preview-thumb-box:hover {
+      border-color: #0F4C5C;
+      box-shadow: 0 2px 6px rgba(15, 76, 92, 0.2);
+    }
+    .preview-thumb-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .preview-page-badge {
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      background: rgba(23, 32, 42, 0.85);
+      color: #fff;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9.5px;
+      font-weight: 600;
+      padding: 1px 4px;
+      border-radius: 2px;
+      line-height: 1.2;
+    }
+    .preview-zoom-hint {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 76, 92, 0.55);
+      color: #fff;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+    .preview-thumb-box:hover .preview-zoom-hint {
+      opacity: 1;
+    }
+    .visor-toolbar-btn {
+      background: #232F3E;
+      color: #fff;
+      border: 1px solid #3A4B5C;
+      border-radius: 3px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: inherit;
+    }
+    .visor-toolbar-btn:hover:not(:disabled) {
+      background: #0F4C5C;
+      border-color: #56D4E8;
+    }
+    .visor-toolbar-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -1052,7 +1129,8 @@
             <!-- DOCUMENTO YA SUBIDO (SI TIENE) -->
             <div id="boxDocExistente" style="display:none; background:#E3EDEF; border:1px solid #C4DDE2; padding:10px 12px; margin-bottom:14px; font-size:12px;">
               <div style="font-weight:600; color:#0F4C5C;">Documento registrado en Drive:</div>
-              <a href="#" target="_blank" id="linkDocExistente" style="color:#0F4C5C; word-break:break-all; text-decoration:underline;">Ver documento ↗</a>
+              <a href="#" target="_blank" id="linkDocExistente" style="color:#0F4C5C; word-break:break-all; text-decoration:underline; font-weight:600;">Abrir documento en Google Drive ↗</a>
+              <div style="font-size:11px; color:#5B6670; margin-top:3px;">Los documentos ya subidos a Drive se consultan mediante su enlace directo (sin miniatura local).</div>
             </div>
 
             <!-- FORMULARIO DE CARGA DE VISITA Y NUEVAS FECHAS -->
@@ -1126,15 +1204,32 @@
                 </div>
                 <input type="file" id="fileInputAside" style="display:none;" accept=".pdf,image/*" onchange="manejarArchivoAside(event)">
 
+                <!-- AVISO DE ERROR DE ARCHIVO EN ASIDE -->
+                <div id="boxErrorArchivoAside" style="display:none; margin-top:8px; padding:9px 12px; border:1px solid #A8470A; background:#FBEFE6; color:#A8470A; font-size:12px; border-radius:2px; font-weight:600;"></div>
+
                 <!-- PREVIEW DE ARCHIVO CARGADO -->
-                <div id="boxPreviewArchivo" style="display:none; margin-top:8px; padding:10px; border:1px solid #D5D8D3; background:#FAFAFA; font-size:12px;">
-                  <div style="font-weight:600; color:#17202A;" id="lblNombreOriginal">archivo.pdf</div>
-                  <div style="font-size:11px; color:#0F4C5C; font-family:'IBM Plex Mono', monospace; margin-top:4px;" id="lblNombreEstandarizado">
-                    CUIT_ESTAB_TAREA_FECHA.pdf
-                  </div>
-                  <div style="margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
-                    <span id="lblTamanoArchivo" style="color:#5B6670; font-size:11px;">0 KB</span>
-                    <a href="javascript:void(0)" onclick="quitarArchivoAside()" style="color:#A8470A; text-decoration:none;">Quitar</a>
+                <div id="boxPreviewArchivo" style="display:none; margin-top:8px; padding:10px; border:1px solid #D5D8D3; background:#FAFAFA; font-size:12px; border-radius:2px;">
+                  <div style="display:flex; gap:12px; align-items:flex-start;">
+                    <div class="preview-thumb-box" id="thumbBoxAside" onclick="abrirVisorDesdeAside()" title="Hacé clic para ampliar la vista previa">
+                      <img id="imgPreviewAside" src="" alt="Vista previa" style="display:none;">
+                      <span id="iconPreviewAside" style="font-size:22px;">📄</span>
+                      <span class="preview-page-badge" id="badgePaginasAside" style="display:none;">1 pág</span>
+                      <div class="preview-zoom-hint">🔍</div>
+                    </div>
+                    <div style="flex:1; min-width:0;">
+                      <div style="font-weight:600; color:#17202A; word-break:break-all;" id="lblNombreOriginal">archivo.pdf</div>
+                      <div style="font-size:11px; color:#0F4C5C; font-family:'IBM Plex Mono', monospace; margin-top:3px; word-break:break-all;" id="lblNombreEstandarizado">
+                        CUIT_ESTAB_TAREA_FECHA.pdf
+                      </div>
+                      <div style="margin-top:4px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <span id="lblTamanoArchivo" style="color:#5B6670; font-size:11px;">0 KB</span>
+                        <span id="lblInfoPaginasAside" style="color:#0F4C5C; font-size:11px; font-weight:600;"></span>
+                      </div>
+                      <div style="margin-top:6px; display:flex; justify-content:space-between; align-items:center;">
+                        <button type="button" onclick="abrirVisorDesdeAside()" style="background:none; border:none; color:#0F4C5C; font-size:11px; font-weight:600; cursor:pointer; text-decoration:underline; padding:0;">🔍 Ver en pantalla grande</button>
+                        <a href="javascript:void(0)" onclick="quitarArchivoAside()" style="color:#A8470A; text-decoration:none; font-weight:600; font-size:11px;">✕ Quitar</a>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1179,24 +1274,24 @@
                 <div class="hero-metric-val">100 / mes <span class="hero-sub">(1.200 al año)</span></div>
               </div>
               <div>
-                <div class="hero-metric-label">M0 (Sep 2026)</div>
-                <div class="hero-metric-val" style="color:#0F4C5C;">123 <span class="hero-sub ok">(+23 sobre meta)</span></div>
+                <div class="hero-metric-label" id="heroAltasUltimoMesLabel">Ejecución M0 / M1</div>
+                <div class="hero-metric-val" style="color:#0F4C5C;" id="heroAltasM0Val">278 <span class="hero-sub ok">(+78 vs meta acum.)</span></div>
               </div>
               <div>
                 <div class="hero-metric-label">Efectivas / Fallidas</div>
-                <div class="hero-metric-val">71 <span style="font-size:11px; color:#5B6670;">(57.7%)</span> / 52 <span style="font-size:11px; color:#5B6670;">(42.3%)</span></div>
+                <div class="hero-metric-val" id="heroAltasEfFaVal">159 <span style="font-size:11px; color:#5B6670;">(57.2%)</span> / 119 <span style="font-size:11px; color:#5B6670;">(42.8%)</span></div>
               </div>
               <div>
                 <div class="hero-metric-label">Q1 (Sep - Nov 26)</div>
-                <div class="hero-metric-val"><span id="heroAltasQ1">123</span> / 300 <span class="hero-sub">(41.0%)</span></div>
+                <div class="hero-metric-val"><span id="heroAltasQ1">278</span> / 300 <span class="hero-sub" id="heroAltasQ1Pct">(92.7%)</span></div>
               </div>
               <div>
                 <div class="hero-metric-label">Remanente Anual</div>
-                <div class="hero-metric-val"><span id="heroAltasRestan">1.077</span> restantes</div>
+                <div class="hero-metric-val"><span id="heroAltasRestan">922</span> restantes</div>
               </div>
               <div>
                 <div class="hero-metric-label">Vencidas Altas</div>
-                <div class="hero-metric-val" style="color:#0F4C5C;">0 vencidas</div>
+                <div class="hero-metric-val" style="color:#0F4C5C;" id="heroAltasVencVal">0 vencidas</div>
               </div>
             </div>
           </div>
@@ -1210,7 +1305,7 @@
               </div>
               <div style="text-align:right;">
                 <div style="font-size:24px; font-weight:700; color:#D97706; font-family:'IBM Plex Mono', monospace;">
-                  <span id="heroResidRealizadas">0</span> <span style="font-size:15px; font-weight:400; color:#5B6670;">/ 925</span>
+                  <span id="heroResidRealizadas">0</span> <span style="font-size:15px; font-weight:400; color:#5B6670;">/ <span id="heroResidTotalTop">925</span></span>
                 </div>
                 <div style="font-size:12px; font-weight:600; color:#92400E;">Liquidado: <span id="heroResidPct">0.0%</span></div>
               </div>
@@ -1223,19 +1318,19 @@
             <div class="dual-hero-grid">
               <div>
                 <div class="hero-metric-label">Stock Base Inicial</div>
-                <div class="hero-metric-val">925 tareas <span class="hero-sub">(a extinguir)</span></div>
+                <div class="hero-metric-val" id="heroResidBaseVal">925 tareas <span class="hero-sub">(a extinguir)</span></div>
               </div>
               <div>
                 <div class="hero-metric-label">Plazo de Extinción</div>
-                <div class="hero-metric-val">2 Meses <span class="hero-sub">(01/11 al 31/12/26)</span></div>
+                <div class="hero-metric-val" id="heroResidPlazoVal">2 Meses <span class="hero-sub">(01/11 al 31/12/26)</span></div>
               </div>
               <div>
                 <div class="hero-metric-label">Cadencia Requerida</div>
-                <div class="hero-metric-val" style="color:#D97706;">462.5 / mes <span class="hero-sub">(~21.0 / día hábil)</span></div>
+                <div class="hero-metric-val" style="color:#D97706;" id="heroResidCadenciaVal">462.5 / mes <span class="hero-sub">(~21.0 / día hábil)</span></div>
               </div>
               <div>
                 <div class="hero-metric-label">Composición</div>
-                <div class="hero-metric-val">736 VT <span style="font-size:11px; color:#5B6670;">+ 189 Esp.</span></div>
+                <div class="hero-metric-val" id="heroResidCompVal">736 VT <span style="font-size:11px; color:#5B6670;">+ 189 Esp.</span></div>
               </div>
               <div>
                 <div class="hero-metric-label">Remanente Stock</div>
@@ -1243,7 +1338,7 @@
               </div>
               <div>
                 <div class="hero-metric-label">Estado Legal</div>
-                <div class="hero-metric-val" style="color:#0F4C5C;">925 En término <span class="hero-sub">(0 vencidas)</span></div>
+                <div class="hero-metric-val" style="color:#0F4C5C;" id="heroResidLegalVal">925 En término <span class="hero-sub">(0 vencidas)</span></div>
               </div>
             </div>
           </div>
@@ -1344,19 +1439,19 @@
             <!-- Stat 3: Cadencia Mensual -->
             <div class="stat-card">
               <div class="stat-header">
-                <span class="stat-title">Cadencia & Desvío</span>
-                <span class="m" style="font-size:12px; color:#5B6670;">Meta: 100/mes</span>
+                <span class="stat-title">Cadencia & Desvío Acumulado</span>
+                <span class="m" style="font-size:12px; color:#5B6670;" id="kpiDashMetaAcumLabel">Meta: 100/mes</span>
               </div>
               <div class="stat-number">
-                <span id="kpiDashRitmoEfectivas">123</span>
-                <span style="font-size:18px; font-weight:400; color:#5B6670;">ejecutadas M0</span>
+                <span id="kpiDashRitmoEfectivas">278</span>
+                <span style="font-size:18px; font-weight:400; color:#5B6670;" id="kpiDashRitmoSub">ejecutadas acum.</span>
               </div>
               <div class="stat-callout ok" id="calloutRitmoAlerta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                <span id="kpiDashDesvioBadge">En meta (+23 vs meta mensual)</span>
+                <span id="kpiDashDesvioBadge">En meta (+78 vs meta acumulada)</span>
               </div>
               <div class="stat-meta">
-                Cadencia prevista: <strong>100 visitas / mes</strong> · Efectividad: <strong id="kpiDashTasaEfSmall">57.7%</strong>
+                Cadencia prevista: <strong>100 visitas / mes</strong> · Efectividad: <strong id="kpiDashTasaEfSmall">57.2%</strong>
               </div>
             </div>
 
@@ -1364,16 +1459,16 @@
             <div class="stat-card">
               <div class="stat-header">
                 <span class="stat-title">Efectivas vs Fallidas</span>
-                <span class="badge" style="background:#ECEEEA; color:#5B6670; border:1px solid #D5D8D3; font-size:11px; font-weight:600;">Altas M0</span>
+                <span class="badge" style="background:#ECEEEA; color:#5B6670; border:1px solid #D5D8D3; font-size:11px; font-weight:600;" id="kpiDashEfFaBadge">Acumulado Altas</span>
               </div>
               <div class="stat-number">
-                <span style="color:#0F4C5C;">71</span> <span style="font-size:18px; font-weight:400; color:#5B6670;">/ <span style="color:#A8470A;">52</span></span>
+                <span style="color:#0F4C5C;" id="kpiDashCard4Ef">159</span> <span style="font-size:18px; font-weight:400; color:#5B6670;">/ <span style="color:#A8470A;" id="kpiDashCard4Fa">119</span></span>
               </div>
               <div class="stat-callout ok">
-                <span>Efectividad: 57.7% (71 visitas)</span>
+                <span id="kpiDashCard4Callout">Efectividad: 57.2% (159 visitas)</span>
               </div>
               <div class="stat-meta">
-                Fallidas: <strong>52 visitas</strong> (requieren gestión / reprogramación)
+                Fallidas: <strong id="kpiDashCard4MetaFa">119 visitas</strong> (requieren gestión / reprogramación)
               </div>
             </div>
           </div>
@@ -1425,9 +1520,10 @@
                   <div class="chart-title">Participación: Fallidas vs Efectivas (Altas)</div>
                   <div class="chart-subtitle" id="lblSubtituloFallidas">Distribución de visitas efectivas y fallidas en Altas</div>
                 </div>
-                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;" id="boxChipsFiltroFallidas">
                   <button type="button" class="chip on" id="chipFiltroFallidasAcum" onclick="setFiltroMesFallidas('acumulado')" style="min-height:30px; font-size:11px; padding:2px 8px;">Acumulado</button>
                   <button type="button" class="chip" id="chipFiltroFallidasM0" onclick="setFiltroMesFallidas('0')" style="min-height:30px; font-size:11px; padding:2px 8px;">Sep 26</button>
+                  <button type="button" class="chip" id="chipFiltroFallidasM1" onclick="setFiltroMesFallidas('1')" style="min-height:30px; font-size:11px; padding:2px 8px;">Oct 26</button>
                 </div>
               </div>
               <div class="chart-canvas-box" id="boxChartFallidasDonut">
@@ -1515,11 +1611,11 @@
             <div class="stat-card">
               <div class="stat-header">
                 <span class="stat-title">Avance Stock Residual</span>
-                <span class="badge" style="background:#ECEEEA; color:#5B6670; border:1px solid #D5D8D3; font-size:11px; font-weight:600;">925 Base</span>
+                <span class="badge" style="background:#ECEEEA; color:#5B6670; border:1px solid #D5D8D3; font-size:11px; font-weight:600;" id="kpiResidBadgeBase">925 Base</span>
               </div>
               <div class="stat-number">
                 <span id="kpiResidRealizadas">0</span>
-                <span style="font-size:18px; font-weight:400; color:#5B6670;">/ 925</span>
+                <span style="font-size:18px; font-weight:400; color:#5B6670;">/ <span id="kpiResidTotalDenom">925</span></span>
               </div>
               <div class="stat-callout ok" id="calloutResidualStock">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -1534,16 +1630,16 @@
             <div class="stat-card">
               <div class="stat-header">
                 <span class="stat-title">Composición del Stock</span>
-                <span class="m" style="font-size:12px; color:#5B6670;">736 VT + 189 Esp.</span>
+                <span class="m" style="font-size:12px; color:#5B6670;" id="kpiResidCompHeader">736 VT + 189 Esp.</span>
               </div>
               <div class="stat-number" style="font-size:24px; padding-top:4px;">
-                <span style="color:#0F4C5C;">736</span> <span style="font-size:16px; color:#5B6670;">VT</span> · <span style="color:#A8470A;">189</span> <span style="font-size:16px; color:#5B6670;">Especiales</span>
+                <span style="color:#0F4C5C;" id="kpiResidCompVT">736</span> <span style="font-size:16px; color:#5B6670;">VT</span> · <span style="color:#A8470A;" id="kpiResidCompEsp">189</span> <span style="font-size:16px; color:#5B6670;">Especiales</span>
               </div>
               <div class="stat-callout ok">
-                <span>736 Técnicas (Plazo Anual) · 176 Vero · 13 Siniestros</span>
+                <span id="kpiResidCompCallout">736 Técnicas (Plazo Anual) · 176 Vero · 13 Siniestros</span>
               </div>
-              <div class="stat-meta">
-                189 Tareas Especiales pendientes de fijar fecha límite manual
+              <div class="stat-meta" id="kpiResidCompMeta">
+                189 Tareas Especiales en seguimiento operativo
               </div>
             </div>
 
@@ -1632,22 +1728,22 @@
                 <span class="badge" style="background:#E3EDEF; color:#0F4C5C; border:1px solid #C4DDE2; font-size:11px; font-weight:600;">Meta: 1.200/año</span>
               </div>
               <div class="stat-number">
-                <span style="color:#0F4C5C;">123</span> <span style="font-size:18px; font-weight:400; color:#5B6670;">/ 1.200</span>
+                <span style="color:#0F4C5C;" id="consAltasReal">278</span> <span style="font-size:18px; font-weight:400; color:#5B6670;">/ 1.200</span>
               </div>
-              <div class="stat-callout ok"><span>Avance: 10.3% del plan anual de altas</span></div>
-              <div class="stat-meta">Efectivas: <strong>71</strong> · Fallidas: <strong>52</strong> · Restan: <strong>1.077</strong></div>
+              <div class="stat-callout ok"><span id="consAltasPct">Avance: 23.2% del plan anual de altas</span></div>
+              <div class="stat-meta" id="consAltasMeta">Efectivas: <strong>159</strong> · Fallidas: <strong>119</strong> · Restan: <strong>922</strong></div>
             </div>
 
             <div class="stat-card">
               <div class="stat-header">
                 <span class="stat-title">Universo 2: Stock Residual</span>
-                <span class="badge" style="background:#FEF3C7; color:#92400E; font-size:11px; font-weight:600;">Meta: 925 en 2 Meses</span>
+                <span class="badge" style="background:#FEF3C7; color:#92400E; font-size:11px; font-weight:600;" id="consResidBadge">Meta: 925 en 2 Meses</span>
               </div>
               <div class="stat-number">
-                <span style="color:#D97706;">0</span> <span style="font-size:18px; font-weight:400; color:#5B6670;">/ 925</span>
+                <span style="color:#D97706;" id="consResidReal">0</span> <span style="font-size:18px; font-weight:400; color:#5B6670;">/ <span id="consResidTot">925</span></span>
               </div>
-              <div class="stat-callout ok"><span>Avance: 0.0% · 925 tareas pendientes</span></div>
-              <div class="stat-meta">736 Técnicas + 189 Especiales a ejecutar en 2 meses</div>
+              <div class="stat-callout ok"><span id="consResidPct">Avance: 0.0% · 925 tareas pendientes</span></div>
+              <div class="stat-meta" id="consResidMeta">736 Técnicas + 189 Especiales a ejecutar en 2 meses</div>
             </div>
 
             <div class="stat-card">
@@ -1656,9 +1752,9 @@
                 <span class="m" style="font-size:12px; color:#5B6670;">Global</span>
               </div>
               <div class="stat-number">
-                123 <span style="font-size:18px; font-weight:400; color:#5B6670;">visitas ejecutadas</span>
+                <span id="consGlobalSalidas">278</span> <span style="font-size:18px; font-weight:400; color:#5B6670;">visitas ejecutadas</span>
               </div>
-              <div class="stat-callout ok"><span>123 Altas + 0 Residuales</span></div>
+              <div class="stat-callout ok"><span id="consGlobalDesglose">278 Altas + 0 Residuales</span></div>
               <div class="stat-meta">Total de inspecciones y visitas efectuadas a la fecha</div>
             </div>
 
@@ -1667,10 +1763,10 @@
                 <span class="stat-title">Efectividad Global</span>
                 <span class="badge" style="background:#ECEEEA; color:#5B6670; border:1px solid #D5D8D3; font-size:11px; font-weight:600;">Consolidado</span>
               </div>
-              <div class="stat-number">
-                57.7%
+              <div class="stat-number" id="consGlobalEfPct">
+                57.2%
               </div>
-              <div class="stat-callout ok"><span>71 Efectivas / 52 Fallidas</span></div>
+              <div class="stat-callout ok"><span id="consGlobalEfFa">159 Efectivas / 119 Fallidas</span></div>
               <div class="stat-meta">Tasa calculada sobre el total de salidas a terreno</div>
             </div>
           </div>
@@ -1776,33 +1872,33 @@
             </tr>
             <tr>
               <td><strong>Visitas Realizadas a la Fecha</strong></td>
-              <td><strong>123 visitas</strong> (Mes 0 / Sep 2026 cerrado)</td>
-              <td><strong>0 visitas ejecutadas</strong> (al inicio de ventana)</td>
+              <td id="critAltasRealizadas"><strong>278 visitas</strong> (Sep + Oct 2026)</td>
+              <td id="critResidRealizadas"><strong>0 visitas ejecutadas</strong></td>
             </tr>
             <tr style="background:#F8F9F7;">
               <td><strong>Avance sobre Meta</strong></td>
-              <td><strong>10.3%</strong> (123 / 1.200 ejecutadas)</td>
-              <td><strong>0.0%</strong> (0 / 925 liquidadas)</td>
+              <td id="critAltasAvance"><strong>23.2%</strong> (278 / 1.200 ejecutadas)</td>
+              <td id="critResidAvance"><strong>0.0%</strong> (0 / 925 liquidadas)</td>
             </tr>
             <tr>
               <td><strong>Composición del Universo</strong></td>
               <td>100% Altas preventivas asignadas al prestador</td>
-              <td><strong>736 Técnicas (VT)</strong> + <strong>189 Especiales</strong> <em>(176 RGRL/Vero + 13 Siniestros)</em></td>
+              <td id="critResidComposicion"><strong>736 Técnicas (VT)</strong> + <strong>189 Especiales</strong></td>
             </tr>
             <tr style="background:#F8F9F7;">
               <td><strong>Desglose de Efectividad</strong></td>
-              <td><strong>71 Efectivas (57.7%)</strong> / <strong>52 Fallidas (42.3%)</strong></td>
-              <td><em>Pendiente de ejecución operativa</em></td>
+              <td id="critAltasEfectividad"><strong>159 Efectivas (57.2%)</strong> / <strong>119 Fallidas (42.8%)</strong></td>
+              <td id="critResidEfectividad"><em>Pendiente de ejecución operativa</em></td>
             </tr>
             <tr>
               <td><strong>Cumplimiento Trimestral</strong></td>
-              <td><strong>Q1 (Sep-Nov): 123 / 300 (41.0%)</strong></td>
+              <td id="critAltasQ1"><strong>Q1 (Sep-Nov): 278 / 300 (92.7%)</strong></td>
               <td><em>No aplica trimestres (extinción en ventana fija 2M)</em></td>
             </tr>
             <tr style="background:#F8F9F7;">
               <td><strong>Remanente a Ejecutar</strong></td>
-              <td><strong>1.077 visitas</strong> restantes para completar el ciclo</td>
-              <td><strong>925 tareas</strong> pendientes de extinción</td>
+              <td id="critAltasRemanente"><strong>922 visitas</strong> restantes para completar el ciclo</td>
+              <td id="critResidRemanente"><strong>925 tareas</strong> pendientes de extinción</td>
             </tr>
             <tr>
               <td><strong>Estado Legal de Vencimientos</strong></td>
@@ -2058,6 +2154,48 @@
   </div>
 </div>
 
+<!-- MODAL: VISOR AMPLIADO DE DOCUMENTOS (IMÁGENES Y PDF CON PAGINACIÓN Y ZOOM) -->
+<div class="modal-backdrop" id="modalVisorDocumento" style="display:none; z-index:10050;" onclick="if(event.target===this) cerrarVisorDocumento()">
+  <div class="modal-box" style="max-width:1060px; height:92vh; max-height:92vh; background:#17202A; color:#fff; border:1px solid #2E3A46;">
+    <div class="modal-header" style="background:#17202A; border-bottom:1px solid #2E3A46; padding:12px 20px; flex-wrap:wrap; gap:10px;">
+      <div style="min-width:200px; flex:1;">
+        <div id="visorTituloArchivo" style="font-size:14px; font-weight:600; color:#fff; word-break:break-all;">documento.pdf</div>
+        <div id="visorSubtituloArchivo" style="font-size:11px; color:#9FB0BC; font-family:'IBM Plex Mono', monospace;"></div>
+      </div>
+
+      <!-- Controles de Paginación PDF -->
+      <div id="visorControlesPaginacion" style="display:none; align-items:center; gap:6px;">
+        <button type="button" class="visor-toolbar-btn" id="btnVisorPagAnt" onclick="cambiarPaginaVisor(-1)">← Anterior</button>
+        <span id="lblVisorPagina" style="font-family:'IBM Plex Mono', monospace; font-size:12px; padding:0 8px; color:#D9DEE2;">Página 1 de 1</span>
+        <button type="button" class="visor-toolbar-btn" id="btnVisorPagSig" onclick="cambiarPaginaVisor(1)">Siguiente →</button>
+      </div>
+
+      <!-- Controles de Zoom -->
+      <div style="display:flex; align-items:center; gap:6px;">
+        <button type="button" class="visor-toolbar-btn" onclick="cambiarZoomVisor(-0.25)" title="Alejar">−</button>
+        <button type="button" class="visor-toolbar-btn" id="lblVisorZoom" onclick="resetZoomVisor()" title="Restablecer zoom">100%</button>
+        <button type="button" class="visor-toolbar-btn" onclick="cambiarZoomVisor(0.25)" title="Acercar">+</button>
+      </div>
+
+      <!-- Abrir en Nueva Pestaña y Cerrar -->
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button type="button" class="visor-toolbar-btn" onclick="abrirVisorEnNuevaPestana()" style="background:#0F4C5C; border-color:#56D4E8;" title="Abrir el archivo original en una pestaña nueva del navegador">
+          Nueva pestaña ↗
+        </button>
+        <button type="button" class="visor-toolbar-btn" onclick="cerrarVisorDocumento()" title="Cerrar visor (Esc)">
+          ✕ Cerrar
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-body" id="visorBodyContainer" style="flex:1; display:flex; align-items:flex-start; justify-content:center; overflow:auto; background:#0E141B; padding:24px;">
+      <img id="visorImgElement" src="" alt="Vista ampliada" style="display:none; max-width:100%; height:auto; box-shadow:0 6px 24px rgba(0,0,0,0.5); transition:width 0.15s ease;">
+      <canvas id="visorPdfCanvas" style="display:none; box-shadow:0 6px 24px rgba(0,0,0,0.5); background:#fff;"></canvas>
+      <div id="visorMensajeError" style="display:none; color:#F5C6BC; background:#3B1D16; border:1px solid #A8470A; padding:20px; border-radius:4px; text-align:center; max-width:480px; margin:auto;"></div>
+    </div>
+  </div>
+</div>
+
 <!-- CARGA DE DATOS PRECARGADOS (CON CACHE-BUSTER) -->
 <script src="datos_precargados.js?v=20261109_1730"></script>
 
@@ -2074,10 +2212,35 @@ let PAGINA_ACTUAL = 1;
 const ITEMS_POR_PAGINA = 30;
 
 let ARCHIVO_ASIDE_BASE64 = null;
+let ARCHIVO_ASIDE_PREVIEW_URL = null;
 let ARCHIVO_ASIDE_NOMBRE = null;
 let ARCHIVO_ASIDE_MIME = null;
+let ARCHIVO_ASIDE_FILE = null;
+let ARCHIVO_ASIDE_NUM_PAGES = 0;
 
 let LOTE_MASIVO = [];
+
+// LISTA OFICIAL DE TAREAS AUTORIZADAS (Declarada globalmente en el frontend)
+const LISTA_TAREAS_VALIDAS = [
+  'Visita tecnica',
+  'Investigacion AT',
+  'Investigacion EP',
+  'Seguimiento AT',
+  'Seguimiento EP',
+  'Visita obra',
+  'Visita Agro',
+  'Verosimilitud',
+  'Visita inicial',
+  'Seguimiento Verosimilitud',
+  'Pese',
+  'RGRL/ Verosimilitud',
+  'Siniestro'
+];
+
+// Configurar Worker de PDF.js para renderizado de vistas previas y visor ampliado
+if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
 // Instancias de Chart.js
 let chartPresupuestoInstance = null;
@@ -2094,7 +2257,8 @@ let filtroMesFallidas = 'acumulado';
 
 // Claves LocalStorage (V14: Base completa 1.082 registros + 153 visitas únicas deduplicadas)
 // Claves LocalStorage (V25: Sincronización en vivo con Google Sheets + 1.203 registros)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V25';
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V26';
+const LS_PENDING_EDITS_KEY = 'IAPSER_PENDING_LOCAL_EDITS_V1';
 const SPREADSHEET_ID = '1xXEmPqATmcMR0JpO2IuTmf1YZ6fMRxyeAc9avbfDRqI';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
@@ -2123,6 +2287,7 @@ document.addEventListener('DOMContentLoaded', () => {
   configurarDragAndDrop();
   filtrarYRenderizar();
   actualizarKpis();
+  renderizarTableroKPIs();
   // Sincronización automática con Google Sheets cada vez que se abre la plataforma
   sincronizarConBackend(false);
 });
@@ -2135,11 +2300,54 @@ function cargarConfig() {
   }
 }
 
+function quitarTildes(str) {
+  return (str || '').toString().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function mismaTarea(a, b) {
+  return quitarTildes(a).toLowerCase() === quitarTildes(b).toLowerCase();
+}
+
+function generarOrigenPlanDesdeFecha(fechaStr) {
+  const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const norm = normalizarFecha(fechaStr);
+  if (norm) {
+    const p = norm.split('/');
+    if (p.length === 3) {
+      const mIdx = parseInt(p[1], 10) - 1;
+      const anio = p[2].length === 2 ? '20' + p[2] : p[2];
+      if (mIdx >= 0 && mIdx < 12) return `Alta ${meses[mIdx]} ${anio}`;
+    }
+  }
+  const hoy = new Date();
+  return `Alta ${meses[hoy.getMonth()]} ${hoy.getFullYear()}`;
+}
+
 function normalizarFecha(str) {
   if (!str) return '';
   str = String(str).trim();
-  // Quitar hora si viene en formato timestamp (ej: 05/08/2026 00:00)
+  // 1. Detectar formato ISO 8601 completo (ej: 2026-10-05T03:00:00.000Z)
+  if (/^\d{4}-\d{2}-\d{2}T/.test(str)) {
+    const dt = new Date(str);
+    if (!isNaN(dt.getTime())) {
+      const d = String(dt.getDate()).padStart(2, '0');
+      const mes = String(dt.getMonth() + 1).padStart(2, '0');
+      const y = dt.getFullYear();
+      return `${d}/${mes}/${y}`;
+    }
+  }
+  // Quitar hora si viene separada por espacio (ej: 05/08/2026 00:00)
   str = str.split(' ')[0].trim();
+  // 2. Detectar formato YYYY-MM-DD
+  const mIso = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (mIso) {
+    const y = mIso[1];
+    const mes = mIso[2].padStart(2, '0');
+    const d = mIso[3].padStart(2, '0');
+    return `${d}/${mes}/${y}`;
+  }
+  // 3. Detectar formato DD/MM/YYYY o DD-MM-YYYY
   const m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
   if (!m) return str;
   let d = m[1].padStart(2, '0');
@@ -2152,25 +2360,17 @@ function normalizarFecha(str) {
 // Helper para parsear cualquier fecha límite (hasta) a Date nativo
 function parsearFechaHasta(fechaStr) {
   if (!fechaStr) return null;
-  const s = String(fechaStr).trim().split(' ')[0];
-  if (s.includes('/')) {
-    const p = s.split('/');
-    if (p.length === 3) {
-      let y = p[2].trim();
-      if (y.length === 2) y = '20' + y;
-      const m = parseInt(p[1], 10) - 1;
-      const d = parseInt(p[0], 10);
-      const dt = new Date(parseInt(y, 10), m, d);
-      dt.setHours(0, 0, 0, 0);
-      return dt;
-    }
-  } else if (s.includes('-')) {
-    const p = s.split('-');
-    if (p.length === 3) {
-      const dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
-      dt.setHours(0, 0, 0, 0);
-      return dt;
-    }
+  const norm = normalizarFecha(fechaStr);
+  if (!norm) return null;
+  const p = norm.split('/');
+  if (p.length === 3) {
+    let y = p[2].trim();
+    if (y.length === 2) y = '20' + y;
+    const m = parseInt(p[1], 10) - 1;
+    const d = parseInt(p[0], 10);
+    const dt = new Date(parseInt(y, 10), m, d);
+    dt.setHours(0, 0, 0, 0);
+    return dt;
   }
   return null;
 }
@@ -2225,7 +2425,7 @@ function calcularEstadosAutomaticos(t) {
 
   // 3. Fechas para tareas residuales y altas
   const esResid = (t.origenPlan || '').toLowerCase().includes('residual');
-  const esVT = (t.tarea || '').toLowerCase().includes('visita tecnica');
+  const esVT = quitarTildes(t.tarea || '').toLowerCase().includes('visita tecnica');
   if (esResid) {
     t.fechaDesde = '01/11/2026';
     t.fechaHasta = '31/12/2026';
@@ -2330,19 +2530,23 @@ function normalizarTarea(t, idx) {
   const localidad = (t.localidad || t["Localidad"] || "").toString().trim();
   const preventor = (t.preventor || t["Preventor Asignado"] || t["Preventor"] || "").toString().trim();
   const capitas = (t.capitas || t["Capitas"] || "").toString().trim();
-  let tarea = (t.tarea || t["Tarea"] || "Visita técnica").toString().trim();
-  const tarLow = tarea.toLowerCase();
+  let tarea = (t.tarea || t["Tarea"] || "Visita tecnica").toString().trim();
+  const tarLow = quitarTildes(tarea).toLowerCase();
   if (tarLow.includes('siniestro')) {
     tarea = 'Siniestro';
-  } else if (tarLow.includes('rgrl') || tarLow.includes('verosimilitud')) {
+  } else if (tarLow.includes('seguimiento') && tarLow.includes('vero')) {
+    tarea = 'Seguimiento Verosimilitud';
+  } else if (tarLow.includes('rgrl') && tarLow.includes('vero')) {
+    tarea = 'RGRL/ Verosimilitud';
+  } else if (tarLow.includes('verosimilitud') || tarLow.includes('rgrl')) {
     tarea = 'RGRL/ Verosimilitud';
   } else if (tarLow.includes('obra')) {
     tarea = 'Visita obra';
   } else if (tarLow.includes('agro')) {
     tarea = 'Visita Agro';
-  } else if (tarLow.includes('investigacion at') || tarLow.includes('investigación at')) {
+  } else if (tarLow.includes('investigacion at')) {
     tarea = 'Investigacion AT';
-  } else if (tarLow.includes('investigacion ep') || tarLow.includes('investigación ep')) {
+  } else if (tarLow.includes('investigacion ep')) {
     tarea = 'Investigacion EP';
   } else if (tarLow.includes('seguimiento at')) {
     tarea = 'Seguimiento AT';
@@ -2355,7 +2559,7 @@ function normalizarTarea(t, idx) {
   } else if (tarLow.includes('comercial')) {
     tarea = 'Comercial';
   } else {
-    tarea = 'Visita técnica';
+    tarea = 'Visita tecnica';
   }
   let origenPlan = (t.origenPlan || t["Origen Plan"] || "Residual 2026").toString().trim();
 
@@ -2413,9 +2617,115 @@ function normalizarTarea(t, idx) {
   return calcularEstadosAutomaticos(obj);
 }
 
+function obtenerEdicionesLocalesPendientes() {
+  try {
+    const raw = localStorage.getItem(LS_PENDING_EDITS_KEY);
+    if (!raw) return { updates: {}, added: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      updates: parsed.updates || {},
+      added: Array.isArray(parsed.added) ? parsed.added : []
+    };
+  } catch (e) {
+    return { updates: {}, added: [] };
+  }
+}
+
+function registrarEdicionLocalPendiente(tarea, esNueva = false) {
+  if (!tarea) return;
+  try {
+    const pending = obtenerEdicionesLocalesPendientes();
+    const key = `${normalizarCuit(tarea.cuit)}_${(tarea.nroEstab || '1').toString().trim()}_${quitarTildes(tarea.tarea).toLowerCase()}_${tarea.rowId || ''}`;
+    if (esNueva) {
+      pending.added.push({ ...tarea });
+    } else {
+      pending.updates[key] = {
+        rowId: tarea.rowId,
+        cuit: tarea.cuit,
+        nroEstab: tarea.nroEstab,
+        tarea: tarea.tarea,
+        fechaDesde: tarea.fechaDesde,
+        fechaHasta: tarea.fechaHasta,
+        fechaRealizada: tarea.fechaRealizada,
+        resultadoVisita: tarea.resultadoVisita,
+        nroSiniestro: tarea.nroSiniestro,
+        observaciones: tarea.observaciones,
+        documentoAdjunto: tarea.documentoAdjunto,
+        estadoTarea: tarea.estadoTarea,
+        gestionFallida: tarea.gestionFallida
+      };
+    }
+    localStorage.setItem(LS_PENDING_EDITS_KEY, JSON.stringify(pending));
+  } catch (e) {
+    console.warn("No se pudo guardar edición local pendiente:", e);
+  }
+}
+
+function limpiarEdicionLocalPendiente(tarea) {
+  if (!tarea) return;
+  try {
+    const pending = obtenerEdicionesLocalesPendientes();
+    const key = `${normalizarCuit(tarea.cuit)}_${(tarea.nroEstab || '1').toString().trim()}_${quitarTildes(tarea.tarea).toLowerCase()}_${tarea.rowId || ''}`;
+    delete pending.updates[key];
+    localStorage.setItem(LS_PENDING_EDITS_KEY, JSON.stringify(pending));
+  } catch (e) {}
+}
+
+function fusionarEdicionesLocalesEnTareas(listaRemota) {
+  const pending = obtenerEdicionesLocalesPendientes();
+  const updatesKeys = Object.keys(pending.updates || {});
+  if (updatesKeys.length === 0 && (!pending.added || pending.added.length === 0)) {
+    return listaRemota;
+  }
+
+  updatesKeys.forEach(k => {
+    const u = pending.updates[k];
+    if (!u) return;
+    let target = listaRemota.find(t =>
+      t.rowId === u.rowId &&
+      normalizarCuit(t.cuit) === normalizarCuit(u.cuit)
+    );
+    if (!target) {
+      target = listaRemota.find(t =>
+        normalizarCuit(t.cuit) === normalizarCuit(u.cuit) &&
+        (t.nroEstab || '1').toString().trim() === (u.nroEstab || '1').toString().trim() &&
+        mismaTarea(t.tarea, u.tarea)
+      );
+    }
+    if (target) {
+      if (u.fechaRealizada && !target.fechaRealizada) target.fechaRealizada = u.fechaRealizada;
+      if (u.resultadoVisita && !target.resultadoVisita) target.resultadoVisita = u.resultadoVisita;
+      if (u.fechaDesde) target.fechaDesde = u.fechaDesde;
+      if (u.fechaHasta) target.fechaHasta = u.fechaHasta;
+      if (u.nroSiniestro && !target.nroSiniestro) target.nroSiniestro = u.nroSiniestro;
+      if (u.observaciones && !target.observaciones) target.observaciones = u.observaciones;
+      if (u.documentoAdjunto && !target.documentoAdjunto) target.documentoAdjunto = u.documentoAdjunto;
+      if (u.gestionFallida && !target.gestionFallida) target.gestionFallida = u.gestionFallida;
+      calcularEstadosAutomaticos(target);
+    }
+  });
+
+  if (Array.isArray(pending.added) && pending.added.length > 0) {
+    pending.added.forEach(nueva => {
+      const yaExiste = listaRemota.some(t =>
+        normalizarCuit(t.cuit) === normalizarCuit(nueva.cuit) &&
+        (t.nroEstab || '1').toString().trim() === (nueva.nroEstab || '1').toString().trim() &&
+        mismaTarea(t.tarea, nueva.tarea) &&
+        t.fechaRealizada === nueva.fechaRealizada &&
+        t.fechaHasta === nueva.fechaHasta
+      );
+      if (!yaExiste) {
+        listaRemota.unshift(normalizarTarea(nueva, listaRemota.length));
+      }
+    });
+  }
+
+  return listaRemota;
+}
+
 function inicializarDatos() {
-  // Limpiar versiones obsoletas de localStorage para evitar datos desactualizados
-  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13', 'IAPSER_GERENCIADAS_TASKS_V14', 'IAPSER_GERENCIADAS_TASKS_V15', 'IAPSER_GERENCIADAS_TASKS_V16', 'IAPSER_GERENCIADAS_TASKS_V20'].forEach(k => {
+  // Limpiar versiones antiguas de localStorage
+  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13', 'IAPSER_GERENCIADAS_TASKS_V14', 'IAPSER_GERENCIADAS_TASKS_V15', 'IAPSER_GERENCIADAS_TASKS_V16', 'IAPSER_GERENCIADAS_TASKS_V20', 'IAPSER_GERENCIADAS_TASKS_V25'].forEach(k => {
     try { localStorage.removeItem(k); } catch(e) {}
   });
 
@@ -2431,26 +2741,20 @@ function inicializarDatos() {
     }
   }
 
-  // Si no hay caché o si la base precargada tiene más o iguales registros actualizados, priorizar la base precargada
+  // Solo cargar la base precargada si no había caché válido en absoluto (sin umbral numérico fijo)
   const preLen = (window.DATOS_INICIALES_IAPSER && Array.isArray(window.DATOS_INICIALES_IAPSER)) ? window.DATOS_INICIALES_IAPSER.length : 0;
-  if (!TASKS || TASKS.length < preLen) {
+  if (!TASKS || TASKS.length === 0) {
     if (preLen > 0) {
       TASKS = window.DATOS_INICIALES_IAPSER.map((item, idx) => normalizarTarea(item, idx));
-      guardarEnCacheLocal();
     }
   }
 
-  // Asegurar cálculo de estados automáticos en cualquier versión de datos cargada
   if (TASKS && TASKS.length > 0) {
-    let huboCambios = false;
-    TASKS.forEach(t => {
-      const antEst = t.estadoTarea;
-      const antGest = t.gestionFallida;
-      calcularEstadosAutomaticos(t);
-      if (t.estadoTarea !== antEst || t.gestionFallida !== antGest) huboCambios = true;
-    });
-    if (huboCambios) guardarEnCacheLocal();
+    TASKS = fusionarEdicionesLocalesEnTareas(TASKS);
+    TASKS.forEach(t => calcularEstadosAutomaticos(t));
+    guardarEnCacheLocal();
   }
+  actualizarOpcionesDesplegableCohortes();
 }
 
 function guardarEnCacheLocal() {
@@ -2494,7 +2798,9 @@ function actualizarOpcionesDesplegableCohortes() {
   origenesExtra.forEach(orig => {
     let yaEsta = false;
     for (let opt of sel.options) {
-      if (opt.text.toLowerCase().includes(orig.toLowerCase()) || opt.value.toLowerCase() === orig.toLowerCase()) {
+      const optTxt = (opt.text || opt.textContent || '').toLowerCase();
+      const optVal = (opt.value || '').toLowerCase();
+      if (optTxt.includes(orig.toLowerCase()) || optVal === orig.toLowerCase()) {
         yaEsta = true;
         break;
       }
@@ -2950,18 +3256,29 @@ function renderizarTableroKPIs() {
     }
   });
 
+  // Determinar dinámicamente el último mes con actividad registrada (mínimo M0)
+  let ultimoMesActivoIdx = 0;
+  for (let i = 0; i < PROYECTO_TIMELINE.length; i++) {
+    if ((efectivasAltasPorMes[i] || 0) + (fallidasAltasPorMes[i] || 0) + (residualPorMes[i] || 0) > 0) {
+      ultimoMesActivoIdx = i;
+    }
+  }
+  const mesesActivosCount = ultimoMesActivoIdx + 1;
+
   // -------------------------------------------------------------
   // UNIVERSO 1: ALTAS MENSUALES (Meta 1.200 al año, 100/mes)
   // -------------------------------------------------------------
   const metaTotalAltas = 1200;
+  const metaAcumuladaAltas = mesesActivosCount * 100;
   const pctAltas = ((realizadasAltas / metaTotalAltas) * 100).toFixed(1);
   const q1 = (efectivasAltasPorMes[0] || 0) + (efectivasAltasPorMes[1] || 0) + (efectivasAltasPorMes[2] || 0) + (fallidasAltasPorMes[0] || 0) + (fallidasAltasPorMes[1] || 0) + (fallidasAltasPorMes[2] || 0);
   const q2 = (efectivasAltasPorMes[3] || 0) + (efectivasAltasPorMes[4] || 0) + (efectivasAltasPorMes[5] || 0) + (fallidasAltasPorMes[3] || 0) + (fallidasAltasPorMes[4] || 0) + (fallidasAltasPorMes[5] || 0);
   const q3 = (efectivasAltasPorMes[6] || 0) + (efectivasAltasPorMes[7] || 0) + (efectivasAltasPorMes[8] || 0) + (fallidasAltasPorMes[6] || 0) + (fallidasAltasPorMes[7] || 0) + (fallidasAltasPorMes[8] || 0);
   const q4 = (efectivasAltasPorMes[9] || 0) + (efectivasAltasPorMes[10] || 0) + (efectivasAltasPorMes[11] || 0) + (fallidasAltasPorMes[9] || 0) + (fallidasAltasPorMes[10] || 0) + (fallidasAltasPorMes[11] || 0);
 
-  const desvioM0 = (efectivasAltasPorMes[0] + fallidasAltasPorMes[0]) - 100;
-  const tasaEfAltas = realizadasAltas > 0 ? ((efectivasAltas / realizadasAltas) * 100).toFixed(1) : '100.0';
+  const desvioAcumAltas = realizadasAltas - metaAcumuladaAltas;
+  const tasaEfAltas = realizadasAltas > 0 ? ((efectivasAltas / realizadasAltas) * 100).toFixed(1) : '0.0';
+  const tasaFaAltas = realizadasAltas > 0 ? ((fallidasAltas / realizadasAltas) * 100).toFixed(1) : '0.0';
 
   if (document.getElementById('kpiDashEfectivasTotal')) document.getElementById('kpiDashEfectivasTotal').textContent = realizadasAltas;
   if (document.getElementById('kpiDashMetaTotal')) document.getElementById('kpiDashMetaTotal').textContent = metaTotalAltas;
@@ -2979,25 +3296,57 @@ function renderizarTableroKPIs() {
   if (document.getElementById('dashQ4Val')) document.getElementById('dashQ4Val').textContent = `${q4}/300`;
   if (document.getElementById('dashQ4Bar')) document.getElementById('dashQ4Bar').style.width = Math.min(100, (q4 / 300) * 100) + '%';
 
+  const restanQ1 = Math.max(0, 300 - q1);
+  if (document.getElementById('lblCompensacionTrimestral')) {
+    document.getElementById('lblCompensacionTrimestral').textContent = restanQ1 > 0
+      ? `Q1: Ejecutadas ${q1}/300 (${((q1 / 300) * 100).toFixed(1)}%). Restan ${restanQ1} visitas para cerrar el trimestre.`
+      : `Q1 superado: ${q1}/300 visitas ejecutadas (${((q1 / 300) * 100).toFixed(1)}%).`;
+  }
+
   if (document.getElementById('kpiDashRitmoEfectivas')) document.getElementById('kpiDashRitmoEfectivas').textContent = realizadasAltas;
+  if (document.getElementById('kpiDashRitmoSub')) document.getElementById('kpiDashRitmoSub').textContent = `en ${mesesActivosCount} ${mesesActivosCount === 1 ? 'mes' : 'meses'} (M0–M${ultimoMesActivoIdx})`;
+  if (document.getElementById('kpiDashMetaAcumLabel')) document.getElementById('kpiDashMetaAcumLabel').textContent = `Meta acum.: ${metaAcumuladaAltas} (100/m)`;
   if (document.getElementById('kpiDashTasaEfSmall')) document.getElementById('kpiDashTasaEfSmall').textContent = tasaEfAltas + '%';
   if (document.getElementById('kpiDashDesvioBadge')) {
-    document.getElementById('kpiDashDesvioBadge').textContent = (desvioM0 >= 0) ? `En meta (+${desvioM0} vs meta mensual)` : `Con retraso (${desvioM0} vs meta)`;
+    document.getElementById('kpiDashDesvioBadge').textContent = (desvioAcumAltas >= 0)
+      ? `En meta (+${desvioAcumAltas} vs meta acum. de ${metaAcumuladaAltas})`
+      : `Con retraso (${desvioAcumAltas} vs meta acum. de ${metaAcumuladaAltas})`;
   }
   if (document.getElementById('lblTotalEfectivasBox')) document.getElementById('lblTotalEfectivasBox').textContent = realizadasAltas;
+
+  // Stat 4 (Efectivas vs Fallidas Acumuladas)
+  if (document.getElementById('kpiDashEfFaBadge')) document.getElementById('kpiDashEfFaBadge').textContent = `Altas M0–M${ultimoMesActivoIdx}`;
+  if (document.getElementById('kpiDashCard4Ef')) document.getElementById('kpiDashCard4Ef').textContent = efectivasAltas;
+  if (document.getElementById('kpiDashCard4Fa')) document.getElementById('kpiDashCard4Fa').textContent = fallidasAltas;
+  if (document.getElementById('kpiDashCard4Callout')) document.getElementById('kpiDashCard4Callout').textContent = `Efectividad: ${tasaEfAltas}% (${efectivasAltas} visitas)`;
+  if (document.getElementById('kpiDashCard4MetaFa')) document.getElementById('kpiDashCard4MetaFa').textContent = `${fallidasAltas} visitas (${tasaFaAltas}%)`;
 
   const m0Tot = efectivasAltasPorMes[0] + fallidasAltasPorMes[0];
   const m1Tot = efectivasAltasPorMes[1] + fallidasAltasPorMes[1];
   if (document.getElementById('lblMejorMes')) document.getElementById('lblMejorMes').textContent = `${m0Tot} visitas (${efectivasAltasPorMes[0]} efec. + ${fallidasAltasPorMes[0]} fall.)`;
-  if (document.getElementById('lblPromedioMensual')) document.getElementById('lblPromedioMensual').textContent = `${m1Tot} visitas registradas`;
-  if (document.getElementById('lblDesvioMensual')) document.getElementById('lblDesvioMensual').textContent = `${desvioM0 >= 0 ? '+' : ''}${desvioM0} visitas sobre meta de 100`;
+  if (document.getElementById('lblPromedioMensual')) document.getElementById('lblPromedioMensual').textContent = `${m1Tot} visitas (${efectivasAltasPorMes[1]} efec. + ${fallidasAltasPorMes[1]} fall.)`;
+  if (document.getElementById('lblDesvioMensual')) document.getElementById('lblDesvioMensual').textContent = `${desvioAcumAltas >= 0 ? '+' : ''}${desvioAcumAltas} visitas vs meta acum. (${metaAcumuladaAltas})`;
+
+  if (document.getElementById('lblVencM0')) document.getElementById('lblVencM0').textContent = `${vencidasAltasPorMes[0] || 0} visitas`;
+  if (document.getElementById('lblVencM1')) document.getElementById('lblVencM1').textContent = `${vencidasAltasPorMes[1] || 0} visitas`;
+  if (document.getElementById('lblVencTotal')) document.getElementById('lblVencTotal').textContent = `${vencidasAltas} vencidas`;
+  if (document.getElementById('badgeStockVencidas')) document.getElementById('badgeStockVencidas').textContent = `${vencidasAltas} vencidas`;
 
   // Actualizar Hero Dashboard - Universo 1 (Altas)
   if (document.getElementById('heroAltasRealizadas')) document.getElementById('heroAltasRealizadas').textContent = realizadasAltas;
   if (document.getElementById('heroAltasPct')) document.getElementById('heroAltasPct').textContent = pctAltas + '%';
   if (document.getElementById('heroAltasBar')) document.getElementById('heroAltasBar').style.width = Math.min(100, pctAltas) + '%';
+  if (document.getElementById('heroAltasUltimoMesLabel')) document.getElementById('heroAltasUltimoMesLabel').textContent = `Acum. M0–M${ultimoMesActivoIdx} (Sep–Oct)`;
+  if (document.getElementById('heroAltasM0Val')) {
+    document.getElementById('heroAltasM0Val').innerHTML = `M0: ${m0Tot} · M1: ${m1Tot} <span class="hero-sub ok">(${desvioAcumAltas >= 0 ? '+' : ''}${desvioAcumAltas} vs meta)</span>`;
+  }
+  if (document.getElementById('heroAltasEfFaVal')) {
+    document.getElementById('heroAltasEfFaVal').innerHTML = `${efectivasAltas} <span style="font-size:11px; color:#5B6670;">(${tasaEfAltas}%)</span> / ${fallidasAltas} <span style="font-size:11px; color:#5B6670;">(${tasaFaAltas}%)</span>`;
+  }
   if (document.getElementById('heroAltasQ1')) document.getElementById('heroAltasQ1').textContent = q1;
+  if (document.getElementById('heroAltasQ1Pct')) document.getElementById('heroAltasQ1Pct').textContent = `(${((q1 / 300) * 100).toFixed(1)}%)`;
   if (document.getElementById('heroAltasRestan')) document.getElementById('heroAltasRestan').textContent = `${Math.max(0, metaTotalAltas - realizadasAltas)}`;
+  if (document.getElementById('heroAltasVencVal')) document.getElementById('heroAltasVencVal').textContent = `${vencidasAltas} vencidas`;
 
   // -------------------------------------------------------------
   // UNIVERSO 2: STOCK RESIDUAL (925 en 2 Meses)
@@ -3039,31 +3388,77 @@ function renderizarTableroKPIs() {
     document.getElementById('lblResidFechaCierre').textContent = RESIDUAL_FECHA_HASTA;
   }
 
-  // Actualizar Hero Dashboard - Universo 2 (Residual)
+  // Actualizar Hero y Tarjetas de Universo 2 (Residual) sin números fijos
+  const pendResidual = Math.max(0, totalResidual - realizadasResidual);
+  const enTerminoResidual = Math.max(0, pendResidual - vencidasResidual);
   if (document.getElementById('heroResidRealizadas')) document.getElementById('heroResidRealizadas').textContent = realizadasResidual;
+  if (document.getElementById('heroResidTotalTop')) document.getElementById('heroResidTotalTop').textContent = totalResidual;
   if (document.getElementById('heroResidPct')) document.getElementById('heroResidPct').textContent = pctResid + '%';
   if (document.getElementById('heroResidBar')) document.getElementById('heroResidBar').style.width = Math.min(100, pctResid) + '%';
-  if (document.getElementById('heroResidRestan')) document.getElementById('heroResidRestan').textContent = `${totalResidual - realizadasResidual}`;
+  if (document.getElementById('heroResidRestan')) document.getElementById('heroResidRestan').textContent = `${pendResidual}`;
+  if (document.getElementById('heroResidBaseVal')) document.getElementById('heroResidBaseVal').innerHTML = `${totalResidual} tareas <span class="hero-sub">(a extinguir)</span>`;
+  if (document.getElementById('heroResidCadenciaVal')) document.getElementById('heroResidCadenciaVal').innerHTML = `${cadenciaMensual} / mes <span class="hero-sub">(~${cadenciaDiaria} / día hábil)</span>`;
+  if (document.getElementById('heroResidCompVal')) document.getElementById('heroResidCompVal').innerHTML = `${tecnicasResidual} VT <span style="font-size:11px; color:#5B6670;">+ ${especialesResidual} Esp.</span>`;
+  if (document.getElementById('heroResidLegalVal')) document.getElementById('heroResidLegalVal').innerHTML = `${enTerminoResidual} En término <span class="hero-sub">(${vencidasResidual} vencidas)</span>`;
+
+  if (document.getElementById('kpiResidBadgeBase')) document.getElementById('kpiResidBadgeBase').textContent = `${totalResidual} Base`;
+  if (document.getElementById('kpiResidTotalDenom')) document.getElementById('kpiResidTotalDenom').textContent = totalResidual;
+  if (document.getElementById('kpiResidCompHeader')) document.getElementById('kpiResidCompHeader').textContent = `${tecnicasResidual} VT + ${especialesResidual} Esp.`;
+  if (document.getElementById('kpiResidCompVT')) document.getElementById('kpiResidCompVT').textContent = tecnicasResidual;
+  if (document.getElementById('kpiResidCompEsp')) document.getElementById('kpiResidCompEsp').textContent = especialesResidual;
+  if (document.getElementById('kpiResidCompCallout')) document.getElementById('kpiResidCompCallout').textContent = `${tecnicasResidual} Técnicas · ${especialesResidual} Especiales`;
+
+  // Actualizar Tarjetas de Vista Consolidada (Universo 3)
+  const totalSalidasGlobal = realizadasAltas + realizadasResidual;
+  const totalEfectivasGlobal = efectivasAltas + efectivasResidual;
+  const totalFallidasGlobal = fallidasAltas + fallidasResidual;
+  const pctEfGlobal = totalSalidasGlobal > 0 ? ((totalEfectivasGlobal / totalSalidasGlobal) * 100).toFixed(1) : '0.0';
+
+  if (document.getElementById('consAltasReal')) document.getElementById('consAltasReal').textContent = realizadasAltas;
+  if (document.getElementById('consAltasPct')) document.getElementById('consAltasPct').textContent = `Avance: ${pctAltas}% del plan anual de altas`;
+  if (document.getElementById('consAltasMeta')) document.getElementById('consAltasMeta').innerHTML = `Efectivas: <strong>${efectivasAltas}</strong> · Fallidas: <strong>${fallidasAltas}</strong> · Restan: <strong>${Math.max(0, metaTotalAltas - realizadasAltas)}</strong>`;
+
+  if (document.getElementById('consResidBadge')) document.getElementById('consResidBadge').textContent = `Meta: ${totalResidual} en 2 Meses`;
+  if (document.getElementById('consResidReal')) document.getElementById('consResidReal').textContent = realizadasResidual;
+  if (document.getElementById('consResidTot')) document.getElementById('consResidTot').textContent = totalResidual;
+  if (document.getElementById('consResidPct')) document.getElementById('consResidPct').textContent = `Avance: ${pctResid}% · ${pendResidual} tareas pendientes`;
+  if (document.getElementById('consResidMeta')) document.getElementById('consResidMeta').textContent = `${tecnicasResidual} Técnicas + ${especialesResidual} Especiales a ejecutar en 2 meses`;
+
+  if (document.getElementById('consGlobalSalidas')) document.getElementById('consGlobalSalidas').textContent = totalSalidasGlobal;
+  if (document.getElementById('consGlobalDesglose')) document.getElementById('consGlobalDesglose').textContent = `${realizadasAltas} Altas + ${realizadasResidual} Residuales`;
+  if (document.getElementById('consGlobalEfPct')) document.getElementById('consGlobalEfPct').textContent = `${pctEfGlobal}%`;
+  if (document.getElementById('consGlobalEfFa')) document.getElementById('consGlobalEfFa').textContent = `${totalEfectivasGlobal} Efectivas / ${totalFallidasGlobal} Fallidas`;
+
+  // Actualizar Modal de Criterios con datos reales
+  if (document.getElementById('critAltasRealizadas')) document.getElementById('critAltasRealizadas').innerHTML = `<strong>${realizadasAltas} visitas</strong> (M0: ${m0Tot} + M1: ${m1Tot})`;
+  if (document.getElementById('critResidRealizadas')) document.getElementById('critResidRealizadas').innerHTML = `<strong>${realizadasResidual} visitas ejecutadas</strong>`;
+  if (document.getElementById('critAltasAvance')) document.getElementById('critAltasAvance').innerHTML = `<strong>${pctAltas}%</strong> (${realizadasAltas} / ${metaTotalAltas} ejecutadas)`;
+  if (document.getElementById('critResidAvance')) document.getElementById('critResidAvance').innerHTML = `<strong>${pctResid}%</strong> (${realizadasResidual} / ${totalResidual} liquidadas)`;
+  if (document.getElementById('critResidComposicion')) document.getElementById('critResidComposicion').innerHTML = `<strong>${tecnicasResidual} Técnicas (VT)</strong> + <strong>${especialesResidual} Especiales</strong>`;
+  if (document.getElementById('critAltasEfectividad')) document.getElementById('critAltasEfectividad').innerHTML = `<strong>${efectivasAltas} Efectivas (${tasaEfAltas}%)</strong> / <strong>${fallidasAltas} Fallidas (${tasaFaAltas}%)</strong>`;
+  if (document.getElementById('critAltasQ1')) document.getElementById('critAltasQ1').innerHTML = `<strong>Q1 (Sep-Nov): ${q1} / 300 (${((q1 / 300) * 100).toFixed(1)}%)</strong>`;
+  if (document.getElementById('critAltasRemanente')) document.getElementById('critAltasRemanente').innerHTML = `<strong>${Math.max(0, metaTotalAltas - realizadasAltas)} visitas</strong> restantes para completar el ciclo`;
+  if (document.getElementById('critResidRemanente')) document.getElementById('critResidRemanente').innerHTML = `<strong>${pendResidual} tareas</strong> pendientes de extinción`;
 
   // Renderizar vistas según pestaña activa
   if (KPI_UNIVERSE === 'altas') {
-    renderChartPresupuesto(efectivasAltasPorMes, fallidasAltasPorMes, 100);
-    renderChartVencidas(vencidasAltasPorMes);
+    renderChartPresupuesto(efectivasAltasPorMes, fallidasAltasPorMes, 100, ultimoMesActivoIdx);
+    renderChartVencidas(vencidasAltasPorMes, ultimoMesActivoIdx);
     renderChartFallidas();
-    renderizarTablaResumenMensual(efectivasAltasPorMes, fallidasAltasPorMes, vencidasAltasPorMes, 100);
+    renderizarTablaResumenMensual(efectivasAltasPorMes, fallidasAltasPorMes, vencidasAltasPorMes, 100, ultimoMesActivoIdx);
   } else if (KPI_UNIVERSE === 'residual') {
     renderChartResidualBurnDown(totalResidual, realizadasResidual, diasCorridos);
     renderChartResidualTipologia(tecnicasResidual, especialesResidual);
   } else if (KPI_UNIVERSE === 'consolidado') {
-    renderChartConsolidado(efectivasAltasPorMes, fallidasAltasPorMes, residualPorMes);
-    renderizarTablaConsolidada(efectivasAltasPorMes, fallidasAltasPorMes, residualPorMes);
+    renderChartConsolidado(efectivasAltasPorMes, fallidasAltasPorMes, residualPorMes, ultimoMesActivoIdx, totalResidual);
+    renderizarTablaConsolidada(efectivasAltasPorMes, fallidasAltasPorMes, residualPorMes, ultimoMesActivoIdx, totalResidual);
   }
 }
 
 // =========================================================================
 // GRÁFICOS UNIVERSO 1: ALTAS MENSUALES
 // =========================================================================
-function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual) {
+function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual, ultimoMesActivoIdx = 1) {
   const canvas = document.getElementById('chartPresupuesto');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -3083,7 +3478,7 @@ function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual) {
     sumPres += metaMensual;
     presupuestoAcum.push(sumPres);
 
-    if (i <= 0) { // Sep 26 (M0) cerrado
+    if (i <= ultimoMesActivoIdx) {
       sumEf += (efectivasPorMes[i] || 0);
       sumFa += (fallidasPorMes[i] || 0);
       efectivasAcum.push(sumEf);
@@ -3100,7 +3495,7 @@ function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual) {
     datasets = [
       {
         label: 'Altas Efectivas',
-        data: efectivasPorMes.map((val, idx) => idx <= 0 ? val : null),
+        data: efectivasPorMes.map((val, idx) => idx <= ultimoMesActivoIdx ? val : null),
         backgroundColor: '#0F4C5C',
         stack: 'visitas',
         borderRadius: 0,
@@ -3108,7 +3503,7 @@ function renderChartPresupuesto(efectivasPorMes, fallidasPorMes, metaMensual) {
       },
       {
         label: 'Altas Fallidas',
-        data: fallidasPorMes.map((val, idx) => idx <= 0 ? val : null),
+        data: fallidasPorMes.map((val, idx) => idx <= ultimoMesActivoIdx ? val : null),
         backgroundColor: '#A8470A',
         stack: 'visitas',
         borderRadius: 2,
@@ -3220,14 +3615,14 @@ function toggleModoPresupuesto(modo) {
   renderizarTableroKPIs();
 }
 
-function renderChartVencidas(vencidasPorMes) {
+function renderChartVencidas(vencidasPorMes, ultimoMesActivoIdx = 1) {
   const canvas = document.getElementById('chartVencidas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (chartVencidasInstance) chartVencidasInstance.destroy();
 
   const labels = PROYECTO_TIMELINE.map(pt => pt.label);
-  const dataCantidades = vencidasPorMes.map((v, i) => i <= 1 ? v : null);
+  const dataCantidades = vencidasPorMes.map((v, i) => i <= Math.max(1, ultimoMesActivoIdx) ? v : null);
 
   chartVencidasInstance = new Chart(ctx, {
     type: 'bar',
@@ -3271,8 +3666,10 @@ function setFiltroMesFallidas(mesKey) {
   filtroMesFallidas = mesKey.toString();
   const btnAcum = document.getElementById('chipFiltroFallidasAcum');
   const btnM0 = document.getElementById('chipFiltroFallidasM0');
+  const btnM1 = document.getElementById('chipFiltroFallidasM1');
   if (btnAcum) btnAcum.classList.toggle('on', filtroMesFallidas === 'acumulado');
   if (btnM0) btnM0.classList.toggle('on', filtroMesFallidas === '0');
+  if (btnM1) btnM1.classList.toggle('on', filtroMesFallidas === '1');
   renderChartFallidas();
 }
 
@@ -3344,7 +3741,7 @@ function renderChartFallidas() {
   });
 }
 
-function renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidasPorMes, metaMensual) {
+function renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidasPorMes, metaMensual, ultimoMesActivoIdx = 1) {
   const tbody = document.getElementById('tablaResumenMensualBody');
   if (!tbody) return;
   tbody.innerHTML = '';
@@ -3362,14 +3759,18 @@ function renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidas
     const tot = ef + fa;
     sumVencAcum += vencidasPorMes[m];
 
-    const esFuturo = (m > 0);
-    const cumplimientoPct = esFuturo ? '--' : `${((tot / meta) * 100).toFixed(1)}%`;
+    const esFuturo = (m > ultimoMesActivoIdx);
+    const pctMes = ((tot / meta) * 100).toFixed(1);
+    const cumplimientoPct = esFuturo ? '--' : `${pctMes}%`;
     const efectividadPct = (tot > 0) ? `${((ef / tot) * 100).toFixed(1)}%` : '--';
 
     let semaforoBadge = '<span class="badge badge-neutral">Planificado</span>';
     if (!esFuturo) {
-      if (m === 0) {
-        semaforoBadge = '<span class="badge badge-ok">Mes 0 Cerrado (123%)</span>';
+      const diffMes = tot - meta;
+      if (tot >= meta) {
+        semaforoBadge = `<span class="badge badge-ok">En meta (${pctMes}% · +${diffMes})</span>`;
+      } else {
+        semaforoBadge = `<span class="badge badge-warn">En ejecución (${pctMes}%)</span>`;
       }
     }
 
@@ -3397,19 +3798,21 @@ function renderizarTablaResumenMensual(efectivasPorMes, fallidasPorMes, vencidas
   const trTotal = document.createElement('tr');
   trTotal.style.background = '#F8F9F7';
   trTotal.style.fontWeight = '700';
-  const pctTotalYTD = sumMeta > 0 ? (((sumEf + sumFa) / sumMeta) * 100).toFixed(1) : '0';
-  const pctEfTotal = (sumEf + sumFa) > 0 ? ((sumEf / (sumEf + sumFa)) * 100).toFixed(1) : '0';
+  const totSalidas = sumEf + sumFa;
+  const desvioYTD = totSalidas - sumMeta;
+  const pctTotalYTD = sumMeta > 0 ? ((totSalidas / sumMeta) * 100).toFixed(1) : '0';
+  const pctEfTotal = totSalidas > 0 ? ((sumEf / totSalidas) * 100).toFixed(1) : '0';
 
   trTotal.innerHTML = `
-    <td>TOTAL ACUMULADO ALTAS (M0)</td>
+    <td>TOTAL ACUMULADO ALTAS (M0–M${ultimoMesActivoIdx})</td>
     <td class="m" style="text-align:right;">${sumMeta}</td>
     <td class="m ok" style="text-align:right;">${sumEf}</td>
     <td class="m no" style="text-align:right;">${sumFa}</td>
-    <td class="m" style="text-align:right;">${sumEf + sumFa}</td>
+    <td class="m" style="text-align:right;">${totSalidas}</td>
     <td class="m" style="text-align:right;">${pctTotalYTD}%</td>
     <td class="m" style="text-align:right;">${pctEfTotal}%</td>
     <td class="m" style="text-align:right; color:#A8470A;">${sumVencAcum}</td>
-    <td><span class="badge badge-ok">Ejecución en meta (+23)</span></td>
+    <td><span class="badge ${desvioYTD >= 0 ? 'badge-ok' : 'badge-warn'}">${desvioYTD >= 0 ? 'Ejecución en meta (+' + desvioYTD + ')' : 'Con retraso (' + desvioYTD + ')'}</span></td>
   `;
   tbody.appendChild(trTotal);
 }
@@ -3504,7 +3907,7 @@ function renderChartResidualTipologia(tecnicas, especiales) {
   chartResidualTipologiaInstance = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Visitas Técnicas (736)', 'Tareas Especiales (189)'],
+      labels: [`Visitas Técnicas (${tecnicas})`, `Tareas Especiales (${especiales})`],
       datasets: [{
         data: [tecnicas, especiales],
         backgroundColor: ['#0F4C5C', '#D97706'],
@@ -3529,7 +3932,7 @@ function renderChartResidualTipologia(tecnicas, especiales) {
 // =========================================================================
 // GRÁFICOS UNIVERSO 3: VISTA CONSOLIDADA (METAS INDEPENDIENTES)
 // =========================================================================
-function renderChartConsolidado(efectivasAltas, fallidasAltas, residualMes) {
+function renderChartConsolidado(efectivasAltas, fallidasAltas, residualMes, ultimoMesActivoIdx = 1, totalResidual = 925) {
   const canvas = document.getElementById('chartConsolidado');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -3537,10 +3940,11 @@ function renderChartConsolidado(efectivasAltas, fallidasAltas, residualMes) {
 
   const labels = PROYECTO_TIMELINE.map(pt => pt.label);
   const metaAltasData = new Array(PROYECTO_TIMELINE.length).fill(100);
+  const metaResidMensual = Number((totalResidual / 2).toFixed(1));
 
   // Meta residual activa únicamente en los meses que solapan con la ventana temporal elegida
   const metaResidualData = PROYECTO_TIMELINE.map(pt => {
-    return mesSolapaConVentana(pt.clave, RESIDUAL_FECHA_DESDE, RESIDUAL_FECHA_HASTA) ? 462.5 : null;
+    return mesSolapaConVentana(pt.clave, RESIDUAL_FECHA_DESDE, RESIDUAL_FECHA_HASTA) ? metaResidMensual : null;
   });
 
   chartConsolidadoInstance = new Chart(ctx, {
@@ -3550,7 +3954,7 @@ function renderChartConsolidado(efectivasAltas, fallidasAltas, residualMes) {
       datasets: [
         {
           label: 'Altas Efectivas',
-          data: efectivasAltas.map((v, i) => i <= 0 ? v : null),
+          data: efectivasAltas.map((v, i) => i <= ultimoMesActivoIdx ? v : null),
           backgroundColor: '#0F4C5C',
           stack: 'altas',
           borderRadius: 0,
@@ -3558,7 +3962,7 @@ function renderChartConsolidado(efectivasAltas, fallidasAltas, residualMes) {
         },
         {
           label: 'Altas Fallidas',
-          data: fallidasAltas.map((v, i) => i <= 0 ? v : null),
+          data: fallidasAltas.map((v, i) => i <= ultimoMesActivoIdx ? v : null),
           backgroundColor: '#A8470A',
           stack: 'altas',
           borderRadius: 2,
@@ -3566,7 +3970,7 @@ function renderChartConsolidado(efectivasAltas, fallidasAltas, residualMes) {
         },
         {
           label: 'Residual Realizadas',
-          data: residualMes.map((v, i) => i <= 0 ? v : null),
+          data: residualMes.map((v, i) => i <= ultimoMesActivoIdx ? v : null),
           backgroundColor: '#4A6B82',
           stack: 'residual',
           borderRadius: 2,
@@ -3631,10 +4035,11 @@ function renderChartConsolidado(efectivasAltas, fallidasAltas, residualMes) {
   });
 }
 
-function renderizarTablaConsolidada(efectivasAltas, fallidasAltas, residualMes) {
+function renderizarTablaConsolidada(efectivasAltas, fallidasAltas, residualMes, ultimoMesActivoIdx = 1, totalResidual = 925) {
   const tbody = document.getElementById('tablaConsolidadaBody');
   if (!tbody) return;
   tbody.innerHTML = '';
+  const metaResidStr = (totalResidual / 2).toFixed(1);
 
   for (let m = 0; m < PROYECTO_TIMELINE.length; m++) {
     const pt = PROYECTO_TIMELINE[m];
@@ -3644,19 +4049,18 @@ function renderizarTablaConsolidada(efectivasAltas, fallidasAltas, residualMes) 
     const metaA = 100;
     const resid = residualMes[m] || 0;
     const enVentana = mesSolapaConVentana(pt.clave, RESIDUAL_FECHA_DESDE, RESIDUAL_FECHA_HASTA);
-    const metaResid = enVentana ? '462.5' : '--';
+    const metaResid = enVentana ? metaResidStr : '--';
     const totalTerreno = totA + resid;
-    const esFuturo = (m > 0);
+    const esFuturo = (m > ultimoMesActivoIdx);
 
-    const eficacia = (totalTerreno > 0) ? `${(((efA + resid) / totalTerreno) * 100).toFixed(1)}%` : '--';
+    const eficacia = (!esFuturo && totalTerreno > 0) ? `${(((efA + resid) / totalTerreno) * 100).toFixed(1)}%` : '--';
 
     let estado = '<span class="badge badge-neutral">Planificado</span>';
-    if (m === 0) {
-      estado = '<span class="badge badge-ok">M0 Cerrado (+23 Altas)</span>';
-    } else if (m === 1) {
-      estado = '<span class="badge badge-warn">M1 En curso</span>';
+    if (!esFuturo) {
+      const diffA = totA - metaA;
+      estado = `<span class="badge ${diffA >= 0 ? 'badge-ok' : 'badge-warn'}">Ejecutado (${diffA >= 0 ? '+' + diffA : diffA} Altas)</span>`;
     } else if (enVentana) {
-      estado = '<span class="badge" style="background:#FEF3C7; color:#92400E; border:1px solid #FCD34D;">Ventana Residual (462.5/m)</span>';
+      estado = `<span class="badge" style="background:#FEF3C7; color:#92400E; border:1px solid #FCD34D;">Ventana Residual (${metaResidStr}/m)</span>`;
     }
 
     const tr = document.createElement('tr');
@@ -3785,8 +4189,8 @@ function filtrarYRenderizar() {
       if (FILTRO_ESTADO === 'termino' && !esVisitaEnTermino(t)) return false;
     }
 
-    // Filtro Tarea
-    if (filtroTarea !== 'todas' && t.tarea !== filtroTarea) return false;
+    // Filtro Tarea (comparación tolerante a tildes)
+    if (filtroTarea !== 'todas' && !mismaTarea(t.tarea, filtroTarea)) return false;
 
     // Filtro Localidad
     if (filtroLoc !== 'todas' && (t.localidad || '').trim() !== filtroLoc) return false;
@@ -3890,10 +4294,11 @@ function filtrarYRenderizar() {
     const siniestroDisplay = t.nroSiniestro ? `<span class="m" style="color:#A8470A; font-weight:600; font-size:12px;">${escapeHtml(t.nroSiniestro)}</span>` : '<span class="na">--</span>';
     const obsDisplay = t.observaciones ? `<span style="font-size:12px; color:#5B6670;" title="${escapeHtml(t.observaciones)}">${escapeHtml(t.observaciones.length > 25 ? t.observaciones.slice(0, 25) + '…' : t.observaciones)}</span>` : '<span class="na">--</span>';
 
-    const esAltaSep = (t.origenPlan || '').toLowerCase().includes('alta');
-    const badgeCohorte = esAltaSep 
-      ? `<span class="badge-cohort altas" title="Alta nueva creada desde Septiembre">Alta Sep 2026</span>`
-      : `<span class="badge-cohort residual" title="Plan base residual asignado a principio de año">Residual 2026</span>`;
+    const esAlta = !(t.origenPlan || 'Residual 2026').toLowerCase().includes('residual');
+    const textoOrigen = escapeHtml(t.origenPlan || (esAlta ? generarOrigenPlanDesdeFecha(t.fechaRealizada || t.fechaDesde) : 'Residual 2026'));
+    const badgeCohorte = esAlta 
+      ? `<span class="badge-cohort altas" title="Alta mensual del plan">${textoOrigen}</span>`
+      : `<span class="badge-cohort residual" title="Plan base residual asignado">${textoOrigen}</span>`;
 
     tr.innerHTML = `
       <td class="m">${t.rowId}</td>
@@ -4016,9 +4421,9 @@ function seleccionarTarea(tarea) {
 
   const elDetOrigen = document.getElementById('detOrigenBadge');
   if (elDetOrigen) {
-    const esAlta = (tarea.origenPlan || '').toLowerCase().includes('alta');
-    elDetOrigen.textContent = esAlta ? 'Alta Sep 2026' : 'Plan Residual 2026';
-    elDetOrigen.className = 'badge-cohort ' + (esAlta ? 'altas' : 'residual');
+    const esResidual = (tarea.origenPlan || 'Residual 2026').toLowerCase().includes('residual');
+    elDetOrigen.textContent = esResidual ? (tarea.origenPlan || 'Plan Residual 2026') : (tarea.origenPlan || generarOrigenPlanDesdeFecha(tarea.fechaRealizada || tarea.fechaDesde));
+    elDetOrigen.className = 'badge-cohort ' + (esResidual ? 'residual' : 'altas');
   }
 
   // Aviso de tarea sin plazo asignado
@@ -4226,19 +4631,169 @@ function manejarArchivoAside(e) {
   }
 }
 
-function procesarArchivoSeleccionadoAside(file) {
-  ARCHIVO_ASIDE_NOMBRE = file.name;
-  ARCHIVO_ASIDE_MIME = file.type || 'application/pdf';
+const FORMATOS_SOPORTADOS_MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'];
+const EXTENSIONES_SOPORTADAS = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'];
 
-  const reader = new FileReader();
-  reader.onload = function(evt) {
-    ARCHIVO_ASIDE_BASE64 = evt.target.result;
-    document.getElementById('boxPreviewArchivo').style.display = 'block';
-    document.getElementById('lblNombreOriginal').textContent = file.name;
-    document.getElementById('lblTamanoArchivo').textContent = `${(file.size / 1024).toFixed(1)} KB`;
-    actualizarPreviewNombreArchivo();
-  };
-  reader.readAsDataURL(file);
+function esFormatoArchivoSoportado(file) {
+  if (!file) return false;
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  const mime = (file.type || '').toLowerCase();
+  return FORMATOS_SOPORTADOS_MIME.includes(mime) || mime.startsWith('image/') || EXTENSIONES_SOPORTADAS.includes(ext);
+}
+
+function esArchivoPdf(file) {
+  if (!file) return false;
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  return file.type === 'application/pdf' || ext === 'pdf';
+}
+
+async function validarYGenerarPreviewArchivo(file) {
+  if (!esFormatoArchivoSoportado(file)) {
+    return {
+      ok: false,
+      error: 'Formato no soportado (' + (file.name.split('.').pop() || 'desconocido').toUpperCase() + '). Solo se admiten archivos PDF o Imágenes (JPG, PNG, WEBP).'
+    };
+  }
+
+  let dataUrl = '';
+  let base64Clean = '';
+  try {
+    dataUrl = await leerArchivoComoDataURL(file);
+    base64Clean = dataUrl.includes('base64,') ? dataUrl.split('base64,')[1] : dataUrl;
+  } catch (err) {
+    return { ok: false, error: 'No se pudo leer el archivo seleccionado.' };
+  }
+
+  const isPdf = esArchivoPdf(file);
+  if (!isPdf) {
+    return {
+      ok: true,
+      isPdf: false,
+      isImage: true,
+      mimeType: file.type || 'image/jpeg',
+      base64Clean: base64Clean,
+      dataUrl: dataUrl,
+      previewUrl: dataUrl,
+      numPages: 1,
+      textoPdf: ''
+    };
+  }
+
+  // Si es PDF: validar integridad, renderizar página 1 en canvas para miniatura y extraer texto
+  if (!window.pdfjsLib) {
+    return {
+      ok: true,
+      isPdf: true,
+      isImage: false,
+      mimeType: 'application/pdf',
+      base64Clean: base64Clean,
+      dataUrl: dataUrl,
+      previewUrl: null,
+      numPages: 1,
+      textoPdf: ''
+    };
+  }
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const numPages = pdf.numPages || 1;
+
+    // Renderizar primera página como miniatura
+    const page1 = await pdf.getPage(1);
+    const viewport = page1.getViewport({ scale: 0.6 });
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page1.render({ canvasContext: ctx, viewport: viewport }).promise;
+    const thumbDataUrl = canvas.toDataURL('image/png');
+
+    // Extraer texto de hasta las primeras 3 páginas para OCR
+    let textoPdf = '';
+    const maxPages = Math.min(numPages, 3);
+    for (let p = 1; p <= maxPages; p++) {
+      const pg = p === 1 ? page1 : await pdf.getPage(p);
+      const tc = await pg.getTextContent();
+      textoPdf += tc.items.map(s => s.str).join(' ') + ' ';
+    }
+
+    return {
+      ok: true,
+      isPdf: true,
+      isImage: false,
+      mimeType: 'application/pdf',
+      base64Clean: base64Clean,
+      dataUrl: dataUrl,
+      previewUrl: thumbDataUrl,
+      numPages: numPages,
+      textoPdf: textoPdf
+    };
+  } catch (err) {
+    console.warn('Error al procesar PDF con PDF.js:', err);
+    return {
+      ok: false,
+      pdfCorrupto: true,
+      error: 'El archivo PDF ("' + file.name + '") está dañado, protegido con contraseña o no tiene un formato PDF válido.'
+    };
+  }
+}
+
+async function procesarArchivoSeleccionadoAside(file) {
+  const boxError = document.getElementById('boxErrorArchivoAside');
+  if (boxError) { boxError.style.display = 'none'; boxError.textContent = ''; }
+
+  const res = await validarYGenerarPreviewArchivo(file);
+  if (!res.ok) {
+    quitarArchivoAside();
+    if (boxError) {
+      boxError.textContent = '⚠️ ' + res.error;
+      boxError.style.display = 'block';
+    } else {
+      alert(res.error);
+    }
+    return;
+  }
+
+  ARCHIVO_ASIDE_FILE = file;
+  ARCHIVO_ASIDE_NOMBRE = file.name;
+  ARCHIVO_ASIDE_MIME = res.mimeType;
+  ARCHIVO_ASIDE_BASE64 = res.base64Clean;
+  ARCHIVO_ASIDE_PREVIEW_URL = res.previewUrl;
+  ARCHIVO_ASIDE_NUM_PAGES = res.numPages || 1;
+
+  const boxPrev = document.getElementById('boxPreviewArchivo');
+  if (boxPrev) boxPrev.style.display = 'block';
+  document.getElementById('lblNombreOriginal').textContent = file.name;
+  document.getElementById('lblTamanoArchivo').textContent = (file.size / 1024).toFixed(1) + ' KB';
+
+  const imgPrev = document.getElementById('imgPreviewAside');
+  const fallbackPrev = document.getElementById('iconPreviewAsideFallback');
+  const badgePag = document.getElementById('badgePaginasAside');
+  const lblPagInfo = document.getElementById('lblInfoPaginasAside');
+
+  if (res.previewUrl && imgPrev) {
+    imgPrev.src = res.previewUrl;
+    imgPrev.style.display = 'block';
+    if (fallbackPrev) fallbackPrev.style.display = 'none';
+  } else {
+    if (imgPrev) imgPrev.style.display = 'none';
+    if (fallbackPrev) {
+      fallbackPrev.style.display = 'flex';
+      fallbackPrev.textContent = res.isPdf ? '📄' : '🖼️';
+    }
+  }
+
+  if (res.isPdf) {
+    const txtPags = res.numPages === 1 ? '1 pág' : (res.numPages + ' págs');
+    if (badgePag) { badgePag.textContent = txtPags; badgePag.style.display = 'block'; }
+    if (lblPagInfo) lblPagInfo.textContent = 'PDF (' + (res.numPages === 1 ? '1 página' : res.numPages + ' páginas') + ')';
+  } else {
+    if (badgePag) { badgePag.textContent = 'IMG'; badgePag.style.display = 'block'; }
+    if (lblPagInfo) lblPagInfo.textContent = 'Imagen (' + (res.mimeType.split('/')[1] || 'JPG').toUpperCase() + ')';
+  }
+
+  actualizarPreviewNombreArchivo();
 }
 
 function actualizarPreviewNombreArchivo() {
@@ -4246,13 +4801,14 @@ function actualizarPreviewNombreArchivo() {
 
   const cuit = (TAREA_SELECCIONADA.cuit || '00000000000').replace(/\D/g, '');
   const estab = (TAREA_SELECCIONADA.nroEstab || '1').replace(/[^a-zA-Z0-9]/g, '');
-  const tareaStr = (TAREA_SELECCIONADA.tarea || 'VISITA').toUpperCase().replace(/[^A-Z0-9]/g, '_').slice(0, 18);
-  
+  const tareaStr = quitarTildes(TAREA_SELECCIONADA.tarea || 'VISITA').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 18);
+
   const fechaVal = document.getElementById('txtFechaRealizada').value;
-  const fechaYMD = fechaVal ? fechaVal.replace(/-/g, '') : '20261022';
-  
+  const hoyYMD = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const fechaYMD = fechaVal ? fechaVal.replace(/-/g, '') : hoyYMD;
+
   const ext = ARCHIVO_ASIDE_NOMBRE.split('.').pop().toLowerCase() || 'pdf';
-  const nombreEstandar = `${cuit}_${estab}_${tareaStr}_${fechaYMD}.${ext}`;
+  const nombreEstandar = cuit + '_' + estab + '_' + tareaStr + '_' + fechaYMD + '.' + ext;
 
   document.getElementById('lblNombreEstandarizado').textContent = nombreEstandar;
 }
@@ -4261,9 +4817,197 @@ function quitarArchivoAside() {
   ARCHIVO_ASIDE_BASE64 = null;
   ARCHIVO_ASIDE_NOMBRE = null;
   ARCHIVO_ASIDE_MIME = null;
-  document.getElementById('fileInputAside').value = '';
-  document.getElementById('boxPreviewArchivo').style.display = 'none';
+  ARCHIVO_ASIDE_PREVIEW_URL = null;
+  ARCHIVO_ASIDE_NUM_PAGES = 0;
+  ARCHIVO_ASIDE_FILE = null;
+  const inputEl = document.getElementById('fileInputAside');
+  if (inputEl) inputEl.value = '';
+  const boxPrev = document.getElementById('boxPreviewArchivo');
+  if (boxPrev) boxPrev.style.display = 'none';
+  const boxErr = document.getElementById('boxErrorArchivoAside');
+  if (boxErr) { boxErr.style.display = 'none'; boxErr.textContent = ''; }
 }
+
+// =========================================================================
+// VISOR AMPLIADO DE DOCUMENTOS (PANTALLA GRANDE, PAGINACIÓN, ZOOM, ESC)
+// =========================================================================
+let VISOR_ESTADO = {
+  abierto: false,
+  file: null,
+  fileName: '',
+  mimeType: '',
+  isPdf: false,
+  pdfDoc: null,
+  pageNum: 1,
+  numPages: 1,
+  zoom: 1.0,
+  imageUrl: null,
+  blobUrl: null
+};
+
+function abrirVisorDesdeAside() {
+  if (!ARCHIVO_ASIDE_FILE) return;
+  abrirVisorDocumento({
+    file: ARCHIVO_ASIDE_FILE,
+    fileName: ARCHIVO_ASIDE_NOMBRE,
+    mimeType: ARCHIVO_ASIDE_MIME,
+    previewUrl: ARCHIVO_ASIDE_PREVIEW_URL
+  });
+}
+
+function abrirVisorDesdeLote(idx) {
+  const item = LOTE_MASIVO[idx];
+  if (!item || !item.file) return;
+  if (item.pdfCorrupto) {
+    alert(item.errorMsg || 'Este archivo PDF está dañado y no se puede previsualizar.');
+    return;
+  }
+  abrirVisorDocumento({
+    file: item.file,
+    fileName: item.fileName,
+    mimeType: item.mimeType,
+    previewUrl: item.previewUrl
+  });
+}
+
+async function abrirVisorDocumento(opts) {
+  if (!opts || !opts.file) return;
+  if (VISOR_ESTADO.blobUrl) {
+    try { URL.revokeObjectURL(VISOR_ESTADO.blobUrl); } catch (e) {}
+  }
+
+  const file = opts.file;
+  const isPdf = esArchivoPdf(file);
+  const blobUrl = URL.createObjectURL(file);
+
+  VISOR_ESTADO = {
+    abierto: true,
+    file: file,
+    fileName: opts.fileName || file.name,
+    mimeType: opts.mimeType || file.type || (isPdf ? 'application/pdf' : 'image/jpeg'),
+    isPdf: isPdf,
+    pdfDoc: null,
+    pageNum: 1,
+    numPages: 1,
+    zoom: 1.0,
+    imageUrl: !isPdf ? (opts.previewUrl || blobUrl) : null,
+    blobUrl: blobUrl
+  };
+
+  const modal = document.getElementById('modalVisorDocumento');
+  if (!modal) return;
+  modal.style.display = 'flex';
+
+  document.getElementById('visorTituloArchivo').textContent = VISOR_ESTADO.fileName;
+  document.getElementById('visorIconoTipo').textContent = isPdf ? '📄' : '🖼️';
+  document.getElementById('visorLblZoom').textContent = '100%';
+
+  const canvasPdf = document.getElementById('visorCanvasPdf');
+  const imgEl = document.getElementById('visorImgElemento');
+  const pagControls = document.getElementById('visorPaginacionControls');
+
+  if (isPdf && window.pdfjsLib) {
+    if (imgEl) imgEl.style.display = 'none';
+    if (canvasPdf) canvasPdf.style.display = 'block';
+    if (pagControls) pagControls.style.display = 'flex';
+    try {
+      const ab = await file.arrayBuffer();
+      VISOR_ESTADO.pdfDoc = await pdfjsLib.getDocument({ data: ab }).promise;
+      VISOR_ESTADO.numPages = VISOR_ESTADO.pdfDoc.numPages || 1;
+      document.getElementById('visorSubtituloArchivo').textContent = (file.size / 1024).toFixed(1) + ' KB · Documento PDF (' + VISOR_ESTADO.numPages + (VISOR_ESTADO.numPages === 1 ? ' página' : ' páginas') + ')';
+      await renderizarPaginaPdfVisor(1);
+    } catch (err) {
+      console.error('Error abriendo PDF en visor:', err);
+      alert('No se pudo renderizar el PDF en el visor ampliado.');
+      cerrarVisorDocumento();
+    }
+  } else {
+    if (canvasPdf) canvasPdf.style.display = 'none';
+    if (pagControls) pagControls.style.display = 'none';
+    if (imgEl) {
+      imgEl.src = VISOR_ESTADO.imageUrl;
+      imgEl.style.display = 'block';
+      imgEl.style.transform = 'scale(1)';
+    }
+    document.getElementById('visorSubtituloArchivo').textContent = (file.size / 1024).toFixed(1) + ' KB · Imagen';
+  }
+}
+
+async function renderizarPaginaPdfVisor(numPag) {
+  if (!VISOR_ESTADO.pdfDoc) return;
+  const pageNumber = Math.max(1, Math.min(numPag, VISOR_ESTADO.numPages));
+  VISOR_ESTADO.pageNum = pageNumber;
+
+  const page = await VISOR_ESTADO.pdfDoc.getPage(pageNumber);
+  const baseScale = 1.35 * VISOR_ESTADO.zoom;
+  const viewport = page.getViewport({ scale: baseScale });
+  const canvas = document.getElementById('visorCanvasPdf');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+  const lblPag = document.getElementById('visorLblPagina');
+  if (lblPag) lblPag.textContent = 'Página ' + pageNumber + ' de ' + VISOR_ESTADO.numPages;
+  const btnPrev = document.getElementById('visorBtnPrev');
+  const btnNext = document.getElementById('visorBtnNext');
+  if (btnPrev) btnPrev.disabled = (pageNumber <= 1);
+  if (btnNext) btnNext.disabled = (pageNumber >= VISOR_ESTADO.numPages);
+}
+
+function cambiarPaginaVisor(delta) {
+  if (!VISOR_ESTADO.abierto || !VISOR_ESTADO.isPdf) return;
+  const target = VISOR_ESTADO.pageNum + delta;
+  if (target >= 1 && target <= VISOR_ESTADO.numPages) {
+    renderizarPaginaPdfVisor(target);
+  }
+}
+
+function cambiarZoomVisor(delta) {
+  if (!VISOR_ESTADO.abierto) return;
+  const nuevoZoom = Math.max(0.5, Math.min(3.0, Math.round((VISOR_ESTADO.zoom + delta) * 100) / 100));
+  VISOR_ESTADO.zoom = nuevoZoom;
+  document.getElementById('visorLblZoom').textContent = Math.round(nuevoZoom * 100) + '%';
+
+  if (VISOR_ESTADO.isPdf) {
+    renderizarPaginaPdfVisor(VISOR_ESTADO.pageNum);
+  } else {
+    const imgEl = document.getElementById('visorImgElemento');
+    if (imgEl) {
+      imgEl.style.transform = 'scale(' + nuevoZoom + ')';
+    }
+  }
+}
+
+function resetZoomVisor() {
+  if (!VISOR_ESTADO.abierto) return;
+  VISOR_ESTADO.zoom = 1.0;
+  document.getElementById('visorLblZoom').textContent = '100%';
+  if (VISOR_ESTADO.isPdf) {
+    renderizarPaginaPdfVisor(VISOR_ESTADO.pageNum);
+  } else {
+    const imgEl = document.getElementById('visorImgElemento');
+    if (imgEl) imgEl.style.transform = 'scale(1)';
+  }
+}
+
+function abrirVisorEnNuevaPestana() {
+  if (!VISOR_ESTADO.blobUrl) return;
+  window.open(VISOR_ESTADO.blobUrl, '_blank', 'noopener');
+}
+
+function cerrarVisorDocumento() {
+  const modal = document.getElementById('modalVisorDocumento');
+  if (modal) modal.style.display = 'none';
+  VISOR_ESTADO.abierto = false;
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && VISOR_ESTADO.abierto) {
+    cerrarVisorDocumento();
+  }
+});
 
 // GUARDAR VISITA (INDIVIDUAL)
 // ASIGNACIÓN Y GUARDADO DE PLAZOS (DESDE / HASTA)
@@ -4301,15 +5045,19 @@ async function guardarSoloPlazos() {
     btn.textContent = 'Guardando plazos en Sheets...';
   }
 
+  let syncOk = false;
   const webAppUrl = localStorage.getItem(LS_CONFIG_URL);
   if (webAppUrl && webAppUrl.startsWith('http') && TAREA_SELECCIONADA.rowId) {
     try {
-      await fetch(webAppUrl, {
+      const res = await fetch(webAppUrl, {
         method: 'POST',
         mode: 'cors',
         body: JSON.stringify({
           action: 'saveVisit',
           rowId: TAREA_SELECCIONADA.rowId,
+          cuit: TAREA_SELECCIONADA.cuit,
+          nroEstab: TAREA_SELECCIONADA.nroEstab,
+          tarea: TAREA_SELECCIONADA.tarea,
           fechaDesde: fechaDesdeStr,
           fechaHasta: fechaHastaStr,
           fechaRealizada: TAREA_SELECCIONADA.fechaRealizada || '',
@@ -4318,9 +5066,16 @@ async function guardarSoloPlazos() {
           gestionFallida: TAREA_SELECCIONADA.gestionFallida || ''
         })
       });
+      const json = await res.json();
+      if (json && json.status === 'success') syncOk = true;
     } catch(err) {
-      console.warn("Fallo sincronizando plazos online:", err);
+      console.warn('Fallo sincronizando plazos online:', err);
     }
+  }
+  if (syncOk) {
+    limpiarEdicionLocalPendiente(TAREA_SELECCIONADA);
+  } else {
+    registrarEdicionLocalPendiente(TAREA_SELECCIONADA);
   }
 
   guardarEnCacheLocal();
@@ -4410,7 +5165,10 @@ async function guardarVisitaActual(e) {
   btn.disabled = true;
   btn.textContent = 'Guardando en Drive y Planilla...';
 
-  let fileUrl = TAREA_SELECCIONADA.documentoAdjunto;
+  let fileUrl = TAREA_SELECCIONADA.documentoAdjunto || '';
+  let subidoADriveReal = false;
+  let guardadoEnBackend = false;
+  const TeniaArchivoAdjunto = Boolean(ARCHIVO_ASIDE_NOMBRE && ARCHIVO_ASIDE_BASE64);
   const webAppUrl = localStorage.getItem(LS_CONFIG_URL);
 
   if (webAppUrl && webAppUrl.startsWith('http') && TAREA_SELECCIONADA.rowId) {
@@ -4418,6 +5176,9 @@ async function guardarVisitaActual(e) {
       const payload = {
         action: 'saveVisit',
         rowId: TAREA_SELECCIONADA.rowId,
+        cuit: TAREA_SELECCIONADA.cuit,
+        nroEstab: TAREA_SELECCIONADA.nroEstab,
+        tarea: TAREA_SELECCIONADA.tarea,
         fechaDesde: TAREA_SELECCIONADA.fechaDesde,
         fechaHasta: TAREA_SELECCIONADA.fechaHasta,
         fechaRealizada: fechaRealizadaStr,
@@ -4437,19 +5198,17 @@ async function guardarVisitaActual(e) {
         body: JSON.stringify(payload)
       });
       const json = await res.json();
-      if (json.status === 'success' && json.documentoAdjunto) {
-        fileUrl = json.documentoAdjunto;
+      if (json.status === 'success') {
+        guardadoEnBackend = true;
+        if (json.rowId) TAREA_SELECCIONADA.rowId = json.rowId;
+        if (json.documentoAdjunto) {
+          fileUrl = json.documentoAdjunto;
+          subidoADriveReal = true;
+        }
       }
     } catch(err) {
-      console.warn("Fallo en sincronización online con Web App, guardando local:", err);
-      if (ARCHIVO_ASIDE_NOMBRE) {
-        const nombreStd = document.getElementById('lblNombreEstandarizado').textContent;
-        fileUrl = `https://drive.google.com/drive/folders/iapser_visitas_2026-10/${nombreStd}`;
-      }
+      console.warn('Fallo en sincronización online con Web App, guardando local:', err);
     }
-  } else if (ARCHIVO_ASIDE_NOMBRE) {
-    const nombreStd = document.getElementById('lblNombreEstandarizado').textContent;
-    fileUrl = `https://drive.google.com/drive/folders/iapser_visitas_2026-10/${nombreStd}`;
   }
 
   if (fileUrl) {
@@ -4459,7 +5218,14 @@ async function guardarVisitaActual(e) {
   // Recalcular todos los estados automáticos
   calcularEstadosAutomaticos(TAREA_SELECCIONADA);
 
+  if (guardadoEnBackend) {
+    limpiarEdicionLocalPendiente(TAREA_SELECCIONADA);
+  } else {
+    registrarEdicionLocalPendiente(TAREA_SELECCIONADA);
+  }
+
   guardarEnCacheLocal();
+  actualizarOpcionesDesplegableCohortes();
   actualizarKpis();
   renderizarTableroKPIs();
   filtrarYRenderizar();
@@ -4468,31 +5234,69 @@ async function guardarVisitaActual(e) {
   btn.disabled = false;
   btn.textContent = '✓ Guardar Visita Realizada y Documento';
 
-  alert(`✓ Tarea registrada con éxito.\nNuevas Fechas: Desde ${TAREA_SELECCIONADA.fechaDesde || '--'} | Hasta ${TAREA_SELECCIONADA.fechaHasta || '--'}\nRealizada: ${fechaRealizadaStr}\nResultado: ${TAREA_SELECCIONADA.resultadoVisita}\nEstado automático: ${TAREA_SELECCIONADA.estadoTarea}${TAREA_SELECCIONADA.gestionFallida ? ' (' + TAREA_SELECCIONADA.gestionFallida + ')' : ''}\nDocumento: ${fileUrl ? 'Vinculado a Google Drive' : 'Pendiente'}`);
+  let estadoDocMsg = 'Sin documento adjunto';
+  if (subidoADriveReal) {
+    estadoDocMsg = '✓ Subido y organizado en Google Drive';
+  } else if (TeniaArchivoAdjunto && !guardadoEnBackend) {
+    estadoDocMsg = '⚠️ Modo sin conexión con Apps Script: los datos se guardaron localmente, pero el archivo NO pudo subirse a Google Drive';
+  } else if (fileUrl) {
+    estadoDocMsg = 'Vinculado a Google Drive';
+  }
+
+  alert('✓ Tarea registrada.\nNuevas Fechas: Desde ' + (TAREA_SELECCIONADA.fechaDesde || '--') + ' | Hasta ' + (TAREA_SELECCIONADA.fechaHasta || '--') + '\nRealizada: ' + fechaRealizadaStr + '\nResultado: ' + TAREA_SELECCIONADA.resultadoVisita + '\nEstado automático: ' + TAREA_SELECCIONADA.estadoTarea + (TAREA_SELECCIONADA.gestionFallida ? ' (' + TAREA_SELECCIONADA.gestionFallida + ')' : '') + '\nDocumento: ' + estadoDocMsg);
 }
 
 // GESTIÓN DE FALLIDA: CERRAR O REPROGRAMAR
 async function gestionarFallidaActual(decision) {
   if (!TAREA_SELECCIONADA) return;
+  const webAppUrl = localStorage.getItem(LS_CONFIG_URL);
 
   if (decision === 'cerrar') {
-    if (!confirm("¿Confirmás que la visita fallida no requiere nueva visita y queda cerrada definitivamente?")) return;
+    if (!confirm('¿Confirmás que la visita fallida no requiere nueva visita y queda cerrada definitivamente?')) return;
     TAREA_SELECCIONADA.gestionFallida = 'Cerrada sin nueva visita';
     TAREA_SELECCIONADA.estadoTarea = 'Realizada';
+
+    let syncOk = false;
+    if (webAppUrl && webAppUrl.startsWith('http') && TAREA_SELECCIONADA.rowId) {
+      try {
+        const res = await fetch(webAppUrl, {
+          method: 'POST',
+          mode: 'cors',
+          body: JSON.stringify({
+            action: 'gestionarFallida',
+            rowId: TAREA_SELECCIONADA.rowId,
+            cuit: TAREA_SELECCIONADA.cuit,
+            nroEstab: TAREA_SELECCIONADA.nroEstab,
+            tarea: TAREA_SELECCIONADA.tarea,
+            resolucion: 'Cerrada'
+          })
+        });
+        const json = await res.json();
+        if (json && json.status === 'success') syncOk = true;
+      } catch (err) {
+        console.warn('Error sincronizando cierre de fallida:', err);
+      }
+    }
+    if (syncOk) limpiarEdicionLocalPendiente(TAREA_SELECCIONADA);
+    else registrarEdicionLocalPendiente(TAREA_SELECCIONADA);
+
     guardarEnCacheLocal();
     actualizarKpis();
     renderizarTableroKPIs();
     filtrarYRenderizar();
     seleccionarTarea(TAREA_SELECCIONADA);
-    alert("✓ Visita fallida cerrada definitivamente.");
+    alert('✓ Visita fallida cerrada definitivamente.');
   } else if (decision === 'reprogramar') {
-    const nuevaHasta = prompt("Ingresá la nueva Fecha Límite (Hasta) para la visita extemporánea (DD/MM/YYYY):", "10/11/2026");
+    const sugerenciaDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
+    const nuevaHasta = prompt('Ingresá la nueva Fecha Límite (Hasta) para la visita extemporánea (DD/MM/YYYY):', Utilities_formatDate(sugerenciaDate));
     if (!nuevaHasta) return;
 
     TAREA_SELECCIONADA.gestionFallida = 'Reprogramada en nueva visita';
+    const hoyStr = Utilities_formatDate(new Date());
+    const maxRowId = TASKS.reduce((max, t) => Math.max(max, Number(t.rowId) || 0), 1);
 
     const nuevaFila = {
-      rowId: TASKS.length + 2,
+      rowId: maxRowId + 1,
       cuit: TAREA_SELECCIONADA.cuit,
       empleador: TAREA_SELECCIONADA.empleador,
       contrato: TAREA_SELECCIONADA.contrato,
@@ -4502,13 +5306,13 @@ async function gestionarFallidaActual(decision) {
       preventor: TAREA_SELECCIONADA.preventor,
       capitas: TAREA_SELECCIONADA.capitas,
       tarea: TAREA_SELECCIONADA.tarea,
-      origenPlan: 'Alta Sep 2026',
-      fechaDesde: Utilities_formatDate(new Date()),
+      origenPlan: generarOrigenPlanDesdeFecha(hoyStr),
+      fechaDesde: hoyStr,
       fechaHasta: nuevaHasta,
       fechaRealizada: '',
       resultadoVisita: '',
       nroSiniestro: TAREA_SELECCIONADA.nroSiniestro || '',
-      observaciones: `Reprogramación extemporánea de visita previa fallida (Fila ${TAREA_SELECCIONADA.rowId})`,
+      observaciones: 'Reprogramación extemporánea de visita previa fallida (Fila ' + TAREA_SELECCIONADA.rowId + ')',
       documentoAdjunto: '',
       estadoTarea: '',
       gestionFallida: ''
@@ -4516,14 +5320,49 @@ async function gestionarFallidaActual(decision) {
 
     calcularEstadosAutomaticos(nuevaFila);
 
+    let syncOk = false;
+    if (webAppUrl && webAppUrl.startsWith('http') && TAREA_SELECCIONADA.rowId) {
+      try {
+        const res = await fetch(webAppUrl, {
+          method: 'POST',
+          mode: 'cors',
+          body: JSON.stringify({
+            action: 'gestionarFallida',
+            rowId: TAREA_SELECCIONADA.rowId,
+            cuit: TAREA_SELECCIONADA.cuit,
+            nroEstab: TAREA_SELECCIONADA.nroEstab,
+            tarea: TAREA_SELECCIONADA.tarea,
+            resolucion: 'Reprogramar',
+            nuevaFechaDesde: hoyStr,
+            nuevaFechaHasta: nuevaHasta
+          })
+        });
+        const json = await res.json();
+        if (json && json.status === 'success') {
+          syncOk = true;
+          if (json.nuevaFilaId) nuevaFila.rowId = json.nuevaFilaId;
+        }
+      } catch (err) {
+        console.warn('Error sincronizando reprogramación de fallida:', err);
+      }
+    }
+
+    if (syncOk) {
+      limpiarEdicionLocalPendiente(TAREA_SELECCIONADA);
+    } else {
+      registrarEdicionLocalPendiente(TAREA_SELECCIONADA);
+      registrarEdicionLocalPendiente(nuevaFila, true);
+    }
+
     TASKS.unshift(nuevaFila);
     guardarEnCacheLocal();
+    actualizarOpcionesDesplegableCohortes();
     actualizarKpis();
     renderizarTableroKPIs();
     filtrarYRenderizar();
     seleccionarTarea(nuevaFila);
 
-    alert(`✓ Nueva visita extemporánea generada (Fila ${nuevaFila.rowId}) con estado automático: ${nuevaFila.estadoTarea} y vencimiento el ${nuevaHasta}.`);
+    alert('✓ Nueva visita extemporánea generada (Fila ' + nuevaFila.rowId + ') con estado automático: ' + nuevaFila.estadoTarea + ' y vencimiento el ' + nuevaHasta + '.');
   }
 }
 
@@ -4591,8 +5430,10 @@ async function guardarNuevaTarea(e) {
   btn.disabled = true;
   btn.textContent = 'Guardando tarea en Sheets...';
 
+  const origenDinamico = generarOrigenPlanDesdeFecha(fDesdeStr);
+  const maxRowId = TASKS.reduce((max, t) => Math.max(max, Number(t.rowId) || 0), 1);
   const nuevaFila = {
-    rowId: TASKS.length + 2,
+    rowId: maxRowId + 1,
     cuit: cuit,
     empleador: empleador,
     contrato: '',
@@ -4602,7 +5443,7 @@ async function guardarNuevaTarea(e) {
     preventor: '',
     capitas: '',
     tarea: tarea,
-    origenPlan: 'Alta Sep 2026',
+    origenPlan: origenDinamico,
     fechaDesde: fDesdeStr,
     fechaHasta: fHastaStr,
     fechaRealizada: '',
@@ -4617,6 +5458,7 @@ async function guardarNuevaTarea(e) {
   calcularEstadosAutomaticos(nuevaFila);
 
   // Enviar a Apps Script si está configurado
+  let syncOk = false;
   const webAppUrl = localStorage.getItem(LS_CONFIG_URL);
   if (webAppUrl && webAppUrl.startsWith('http')) {
     try {
@@ -4631,7 +5473,7 @@ async function guardarNuevaTarea(e) {
           nroEstab: nroEstab,
           localidad: localidad,
           tarea: tarea,
-          origenPlan: 'Alta Sep 2026',
+          origenPlan: origenDinamico,
           fechaDesde: fDesdeStr,
           fechaHasta: fHastaStr,
           nroSiniestro: nroSiniestro,
@@ -4640,16 +5482,21 @@ async function guardarNuevaTarea(e) {
         })
       });
       const json = await res.json();
-      if (json.status === 'success' && json.newRowId) {
-        nuevaFila.rowId = json.newRowId;
+      if (json.status === 'success') {
+        syncOk = true;
+        if (json.newRowId) nuevaFila.rowId = json.newRowId;
       }
     } catch (err) {
-      console.warn("Fallo en sincronización online de nueva tarea, agregando local:", err);
+      console.warn('Fallo en sincronización online de nueva tarea, agregando local:', err);
     }
+  }
+  if (!syncOk) {
+    registrarEdicionLocalPendiente(nuevaFila, true);
   }
 
   TASKS.unshift(nuevaFila);
   guardarEnCacheLocal();
+  actualizarOpcionesDesplegableCohortes();
   actualizarKpis();
   renderizarTableroKPIs();
   filtrarYRenderizar();
@@ -4802,13 +5649,38 @@ function procesarArchivosMasivos(e) {
 }
 
 async function cargarArchivosLote(archivos) {
+  const archivosRechazados = [];
+  const archivosValidos = [];
+
+  archivos.forEach(file => {
+    if (!esFormatoArchivoSoportado(file)) {
+      archivosRechazados.push(file.name + ' (formato no admitido)');
+    } else {
+      archivosValidos.push(file);
+    }
+  });
+
+  if (archivosRechazados.length > 0) {
+    alert('⚠️ Se rechazaron archivos con formato no soportado:\n• ' + archivosRechazados.join('\n• ') + '\n\nSolo se admiten archivos PDF o Imágenes (JPG, PNG, WEBP).');
+  }
+
+  if (archivosValidos.length === 0) {
+    const inputEl = document.getElementById('fileInputMasivo');
+    if (inputEl) inputEl.value = '';
+    return;
+  }
+
   document.getElementById('listaDetecciones').style.display = 'block';
   const contenedor = document.getElementById('contenedorItemsMasivos');
-  contenedor.innerHTML = '<div style="color:#5B6670; font-size:13px; padding:16px; text-align:center;">⌛ Analizando documentos con OCR y extrayendo datos...</div>';
+  contenedor.innerHTML = '<div style="color:#5B6670; font-size:13px; padding:16px; text-align:center;">⌛ Analizando documentos con OCR y generando vistas previas...</div>';
 
-  for (let i = 0; i < archivos.length; i++) {
-    const file = archivos[i];
+  const pdfsDaniados = [];
+  for (let i = 0; i < archivosValidos.length; i++) {
+    const file = archivosValidos[i];
     const detection = await analizarDocumentoOCR(file);
+    if (detection.pdfCorrupto) {
+      pdfsDaniados.push(file.name);
+    }
     LOTE_MASIVO.push(detection);
 
     // Si el OCR detectó CUIT y aún no tenemos empresa activa, asignarla de inmediato
@@ -4817,56 +5689,39 @@ async function cargarArchivosLote(archivos) {
     }
   }
 
+  if (pdfsDaniados.length > 0) {
+    alert('⚠️ Atención: No se pudo renderizar la vista previa de:\n• ' + pdfsDaniados.join('\n• ') + '\n\nEl archivo PDF parece estar dañado o protegido. Podés quitarlo del lote antes de confirmar.');
+  }
+
   // Asegurar que cada item tenga asignado un establecimiento válido del CUIT activo
   LOTE_MASIVO.forEach(item => {
     asignarEstablecimientoAItem(item);
   });
 
   renderizarItemsLote();
-  document.getElementById('btnConfirmarLote').disabled = (LOTE_MASIVO.length === 0);
+  const itemsSubibles = LOTE_MASIVO.filter(it => !it.pdfCorrupto);
+  document.getElementById('btnConfirmarLote').disabled = (itemsSubibles.length === 0);
 }
 
 async function analizarDocumentoOCR(file) {
-  let textoExtraido = '';
-  let previewUrl = null;
-  let base64Clean = null;
-
-  // Leer archivo a Base64
-  try {
-    const base64Full = await leerArchivoComoDataURL(file);
-    previewUrl = file.type.startsWith('image/') ? base64Full : null;
-    base64Clean = base64Full.includes('base64,') ? base64Full.split('base64,')[1] : base64Full;
-  } catch(e) {
-    console.warn("Error leyendo base64:", e);
-  }
-
-  // 1. OCR en PDF mediante pdf.js
-  if (file.type === 'application/pdf' && window.pdfjsLib) {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      const maxPages = Math.min(pdf.numPages, 3);
-      for (let p = 1; p <= maxPages; p++) {
-        const page = await pdf.getPage(p);
-        const textContent = await page.getTextContent();
-        textoExtraido += textContent.items.map(s => s.str).join(' ') + ' ';
-      }
-    } catch(err) {
-      console.warn("PDF.js text extraction error:", err);
-    }
-  }
+  const valRes = await validarYGenerarPreviewArchivo(file);
+  let textoExtraido = valRes.textoPdf || '';
+  const previewUrl = valRes.previewUrl || null;
+  const base64Clean = valRes.base64Clean || null;
+  const numPages = valRes.numPages || 1;
+  const isPdf = esArchivoPdf(file);
 
   // 2. OCR en Imágenes (WhatsApp JPG/PNG) mediante Tesseract.js si está cargado
-  if (file.type.startsWith('image/') && window.Tesseract) {
+  if (!isPdf && file.type.startsWith('image/') && window.Tesseract) {
     try {
       const { data: { text } } = await Tesseract.recognize(file, 'spa');
       textoExtraido += ' ' + text;
     } catch(err) {
-      console.warn("Tesseract OCR fallback error:", err);
+      console.warn('Tesseract OCR fallback error:', err);
     }
   }
 
-  const corpus = (textoExtraido + ' ' + file.name).toUpperCase();
+  const corpus = quitarTildes(textoExtraido + ' ' + file.name).toUpperCase();
 
   // Detección de CUIT
   let cuitDetectado = null;
@@ -4883,29 +5738,41 @@ async function analizarDocumentoOCR(file) {
     const d = matchFecha[1].padStart(2, '0');
     const m = matchFecha[2].padStart(2, '0');
     const y = matchFecha[3];
-    fechaDetectadaStr = `${d}/${m}/${y}`;
-    fechaISO = `${y}-${m}-${d}`;
+    fechaDetectadaStr = d + '/' + m + '/' + y;
+    fechaISO = y + '-' + m + '-' + d;
   }
 
-  // Detección de Tarea (de entre las 13 autorizadas)
+  // Detección de Tarea (de entre las 13 autorizadas, usando límites de palabra \b para evitar falsos positivos)
   let tareaDetectada = 'Visita tecnica';
-  if (corpus.includes('INVESTIGACION') || corpus.includes('INV AT') || corpus.includes('ACCIDENTE')) {
-    tareaDetectada = 'Investigacion AT';
-  } else if (corpus.includes('ENFERMEDAD') || corpus.includes('INV EP')) {
+  if (/\bSEGUIMIENTO\b/.test(corpus)) {
+    if (/\b(?:EP|ENFERMEDAD(?:\s+PROFESIONAL)?)\b/.test(corpus)) {
+      tareaDetectada = 'Seguimiento EP';
+    } else if (/\bVEROSIMILITUD\b/.test(corpus)) {
+      tareaDetectada = 'Seguimiento Verosimilitud';
+    } else if (/\b(?:AT|ACCIDENTE)\b/.test(corpus)) {
+      tareaDetectada = 'Seguimiento AT';
+    } else {
+      tareaDetectada = 'Visita tecnica';
+    }
+  } else if (/\b(?:INVESTIGACION|INV)\b/.test(corpus) && /\b(?:EP|ENFERMEDAD)\b/.test(corpus)) {
     tareaDetectada = 'Investigacion EP';
-  } else if (corpus.includes('SEGUIMIENTO')) {
-    tareaDetectada = (corpus.includes('EP') || corpus.includes('ENFERMEDAD')) ? 'Seguimiento EP' : (corpus.includes('VERO') ? 'Seguimiento Verosimilitud' : 'Seguimiento AT');
-  } else if (corpus.includes('OBRA') || corpus.includes('CONSTRUCCION')) {
+  } else if (/\b(?:INVESTIGACION|INV\s+AT|ACCIDENTE\s+DE\s+TRABAJO|INVESTIGACION\s+DE\s+ACCIDENTE)\b/.test(corpus)) {
+    tareaDetectada = 'Investigacion AT';
+  } else if (/\bENFERMEDAD\s+PROFESIONAL\b/.test(corpus)) {
+    tareaDetectada = 'Investigacion EP';
+  } else if (/\b(?:OBRA|CONSTRUCCION)\b/.test(corpus)) {
     tareaDetectada = 'Visita obra';
-  } else if (corpus.includes('AGRO') || corpus.includes('RURAL') || corpus.includes('CAMPO')) {
+  } else if (/\b(?:AGRO|RURAL|CAMPO)\b/.test(corpus)) {
     tareaDetectada = 'Visita Agro';
-  } else if (corpus.includes('RGRL') || corpus.includes('VEROSIMILITUD')) {
-    tareaDetectada = corpus.includes('RGRL') ? 'RGRL/ Verosimilitud' : 'Verosimilitud';
-  } else if (corpus.includes('PESE')) {
+  } else if (/\bRGRL\b/.test(corpus)) {
+    tareaDetectada = 'RGRL/ Verosimilitud';
+  } else if (/\bVEROSIMILITUD\b/.test(corpus)) {
+    tareaDetectada = 'Verosimilitud';
+  } else if (/\bPESE\b/.test(corpus)) {
     tareaDetectada = 'Pese';
-  } else if (corpus.includes('INICIAL')) {
+  } else if (/\bVISITA\s+INICIAL\b/.test(corpus)) {
     tareaDetectada = 'Visita inicial';
-  } else if (corpus.includes('SINIESTRO')) {
+  } else if (/\bSINIESTRO\b/.test(corpus)) {
     tareaDetectada = 'Siniestro';
   }
 
@@ -4913,10 +5780,14 @@ async function analizarDocumentoOCR(file) {
     file: file,
     fileName: file.name,
     fileSize: file.size,
-    isImage: file.type.startsWith('image/'),
+    isPdf: isPdf,
+    isImage: !isPdf,
+    numPages: numPages,
+    pdfCorrupto: Boolean(valRes.pdfCorrupto),
+    errorMsg: valRes.error || null,
     previewUrl: previewUrl,
     fileBase64: base64Clean,
-    mimeType: file.type || 'application/pdf',
+    mimeType: valRes.mimeType || file.type || 'application/pdf',
     cuitDetectado: cuitDetectado,
     corpusTexto: corpus,
     fechaVisitaStr: fechaDetectadaStr,
@@ -4936,27 +5807,27 @@ function asignarEstablecimientoAItem(item) {
     return;
   }
 
-  // 1. Intentar matching con el texto extraído (OCR) buscando el número o nombre del establecimiento
+  // 1. Intentar matching con el texto extraído (OCR) exigiendo prefijo explícito (ESTAB, ESTABLECIMIENTO, PLANTA, SEDE, SUCURSAL, OBRA)
   let estabElegido = null;
-  const corpus = item.corpusTexto || '';
+  const corpus = quitarTildes(item.corpusTexto || '').toUpperCase();
 
-  // Buscar por número de establecimiento del CUIT (ej: "ESTAB 4", "ESTAB. 4", "N° 4", etc.)
   for (let i = 0; i < ESTABLECIMIENTOS_LOTE.length; i++) {
     const e = ESTABLECIMIENTOS_LOTE[i];
-    const nro = e.nroEstab;
-    const regexNro = new RegExp(`\\b(ESTAB|ESTABLECIMIENTO|PLANTA|SEDE|NRO|N°)?\\s*${nro}\\b`, 'i');
+    const nro = String(e.nroEstab || '').replace(/\D/g, '');
+    if (!nro) continue;
+    const regexNro = new RegExp('\\b(?:ESTAB(?:LECIMIENTO)?|PLANTA|SEDE|SUCURSAL|OBRA)(?:\\s*(?:N(?:RO|º|°)?|#)?)?[\\s.:#-]*0*' + nro + '\\b', 'i');
     if (regexNro.test(corpus)) {
       estabElegido = e;
       break;
     }
   }
 
-  // Si no encontró por número, buscar palabras clave del nombre/domicilio de ese establecimiento
+  // 2. Si no encontró por prefijo + número, buscar palabras clave del nombre/domicilio de ese establecimiento
   if (!estabElegido) {
     for (let i = 0; i < ESTABLECIMIENTOS_LOTE.length; i++) {
       const e = ESTABLECIMIENTOS_LOTE[i];
-      const nomLimpio = (e.nombre || '').toUpperCase().replace(/[^A-Z0-9]/g, ' ').trim();
-      const palabras = nomLimpio.split(/\s+/).filter(p => p.length >= 4);
+      const nomLimpio = quitarTildes(e.nombre || '').toUpperCase().replace(/[^A-Z0-9]/g, ' ').trim();
+      const palabras = nomLimpio.split(/\s+/).filter(p => p.length >= 4 && !['ESTAB', 'ESTABLECIMIENTO', 'PLANTA', 'SEDE', 'SUCURSAL', 'CALLE', 'RUTA'].includes(p));
       const coincide = palabras.some(p => corpus.includes(p));
       if (coincide) {
         estabElegido = e;
@@ -4965,7 +5836,7 @@ function asignarEstablecimientoAItem(item) {
     }
   }
 
-  // Si no hay coincidencia, tomar el primer establecimiento de la lista
+  // 3. Si no hay coincidencia, tomar el primer establecimiento de la lista
   if (!estabElegido) {
     estabElegido = ESTABLECIMIENTOS_LOTE[0];
   }
@@ -4978,20 +5849,20 @@ function asignarEstablecimientoAItem(item) {
 function actualizarNombreEstandarizadoItem(item) {
   const cuit = (EMPRESA_LOTE_ACTIVA || item.cuitDetectado || '00000000000').toString().replace(/\D/g, '');
   const estab = (item.nroEstab || '1').toString().replace(/\D/g, '') || '1';
-  const tarea = (item.tarea || 'VISITA').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 18).toUpperCase();
+  const tarea = quitarTildes(item.tarea || 'VISITA').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 18);
   const fParts = (item.fechaVisitaStr || '').split('/');
-  const fechaYMD = fParts.length === 3 ? `${fParts[2]}${fParts[1]}${fParts[0]}` : new Date().toISOString().slice(0,10).replace(/-/g,'');
-  const anioMes = fParts.length === 3 ? `${fParts[2]}-${fParts[1]}` : new Date().toISOString().slice(0,7);
+  const fechaYMD = fParts.length === 3 ? (fParts[2] + fParts[1] + fParts[0]) : new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const anioMes = fParts.length === 3 ? (fParts[2] + '-' + fParts[1]) : new Date().toISOString().slice(0,7);
   const ext = (item.fileName.split('.').pop() || 'pdf').toLowerCase();
 
   item.anioMes = anioMes;
-  item.nombreEstandarizado = `${cuit}_${estab}_${tarea}_${fechaYMD}.${ext}`;
+  item.nombreEstandarizado = cuit + '_' + estab + '_' + tarea + '_' + fechaYMD + '.' + ext;
 }
 
 function renderizarItemsLote() {
   const contenedor = document.getElementById('contenedorItemsMasivos');
   contenedor.innerHTML = '';
-  document.getElementById('lblConteoMasivo').textContent = `Documentos procesados (${LOTE_MASIVO.length}):`;
+  document.getElementById('lblConteoMasivo').textContent = 'Documentos procesados (' + LOTE_MASIVO.length + '):';
 
   if (LOTE_MASIVO.length === 0) {
     document.getElementById('listaDetecciones').style.display = 'none';
@@ -5004,7 +5875,7 @@ function renderizarItemsLote() {
   let opcionesEstabHtml = '';
   if (ESTABLECIMIENTOS_LOTE && ESTABLECIMIENTOS_LOTE.length > 0) {
     opcionesEstabHtml = ESTABLECIMIENTOS_LOTE.map(e => 
-      `<option value="${e.nroEstab}">Estab ${e.nroEstab} - ${escapeHtml(e.nombre)} ${e.localidad ? '(' + escapeHtml(e.localidad) + ')' : ''}</option>`
+      '<option value="' + e.nroEstab + '">Estab ' + e.nroEstab + ' - ' + escapeHtml(e.nombre) + (e.localidad ? ' (' + escapeHtml(e.localidad) + ')' : '') + '</option>'
     ).join('');
   } else {
     opcionesEstabHtml = '<option value="1">Estab 1 (Principal)</option>';
@@ -5012,28 +5883,44 @@ function renderizarItemsLote() {
 
   // Opciones de tareas autorizadas
   const opcionesTareasHtml = LISTA_TAREAS_VALIDAS.map(t => 
-    `<option value="${t}">${t}</option>`
+    '<option value="' + t + '">' + t + '</option>'
   ).join('');
 
   LOTE_MASIVO.forEach((item, idx) => {
     actualizarNombreEstandarizadoItem(item);
 
     const card = document.createElement('div');
-    card.style.cssText = 'border:1px solid #D5D8D3; padding:12px 14px; background:#fff; border-radius:2px; display:flex; flex-direction:column; gap:8px;';
+    card.style.cssText = 'border:1px solid ' + (item.pdfCorrupto ? '#D98880' : '#D5D8D3') + '; padding:12px 14px; background:' + (item.pdfCorrupto ? '#FDEDEC' : '#fff') + '; border-radius:2px; display:flex; flex-direction:column; gap:8px;';
 
-    const icono = item.isImage ? '🖼️' : '📄';
-    const thumbnailHtml = item.previewUrl 
-      ? `<img src="${item.previewUrl}" style="width:40px; height:40px; object-fit:cover; border-radius:2px; border:1px solid #D5D8D3;" alt="miniatura">`
-      : `<div style="width:40px; height:40px; background:#E3EDEF; color:#0F4C5C; display:flex; align-items:center; justify-content:center; font-size:20px; border-radius:2px;">${icono}</div>`;
+    const icono = item.pdfCorrupto ? '⚠️' : (item.isImage ? '🖼️' : '📄');
+    const badgePagTexto = item.pdfCorrupto ? 'ERR' : (item.isPdf ? (item.numPages === 1 ? '1 pág' : item.numPages + ' págs') : 'IMG');
+    const thumbnailHtml = item.previewUrl
+      ? `<div class="preview-thumb-box" onclick="abrirVisorDesdeLote(${idx})" title="Click para abrir en el visor ampliado">
+           <img src="${item.previewUrl}" alt="Vista previa">
+           <span class="preview-page-badge">${badgePagTexto}</span>
+           <span class="preview-zoom-hint">🔍</span>
+         </div>`
+      : `<div class="preview-thumb-box" onclick="abrirVisorDesdeLote(${idx})" style="background:${item.pdfCorrupto ? '#FADBD8' : '#E3EDEF'}; color:${item.pdfCorrupto ? '#922B21' : '#0F4C5C'}; font-size:22px;" title="${item.pdfCorrupto ? escapeHtml(item.errorMsg || 'PDF dañado') : 'Click para ampliar'}">
+           <span>${icono}</span>
+           <span class="preview-page-badge">${badgePagTexto}</span>
+         </div>`;
+
+    const avisoCorruptoHtml = item.pdfCorrupto
+      ? `<div style="font-size:11px; color:#922B21; font-weight:600; margin-top:2px;">⚠️ ${escapeHtml(item.errorMsg || 'Archivo PDF dañado o ilegible.')}</div>`
+      : '';
 
     card.innerHTML = `
       <!-- Fila Superior: Archivo y Quitar -->
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div style="display:flex; align-items:center; gap:10px;">
+        <div style="display:flex; align-items:center; gap:12px;">
           ${thumbnailHtml}
           <div>
-            <strong style="font-size:13px; color:#17202A;">${escapeHtml(item.fileName)}</strong>
-            <div style="font-size:11px; color:#5B6670;">${(item.fileSize / 1024).toFixed(1)} KB · CUIT archivo: <strong>${item.cuitDetectado || 'No detectado'}</strong></div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <strong style="font-size:13px; color:#17202A;">${escapeHtml(item.fileName)}</strong>
+              ${!item.pdfCorrupto ? `<button type="button" class="chip" onclick="abrirVisorDesdeLote(${idx})" style="min-height:22px; padding:0 8px; font-size:10px; color:#0F4C5C; border-color:#B8D4DC; background:#EBF3F5;">🔍 Ampliar</button>` : ''}
+            </div>
+            <div style="font-size:11px; color:#5B6670;">${(item.fileSize / 1024).toFixed(1)} KB · ${item.isPdf ? ('PDF · ' + (item.numPages || 1) + (item.numPages === 1 ? ' página' : ' páginas')) : 'Imagen'} · CUIT archivo: <strong>${item.cuitDetectado || 'No detectado'}</strong></div>
+            ${avisoCorruptoHtml}
           </div>
         </div>
         <button type="button" class="chip" onclick="quitarItemLote(${idx})" style="min-height:28px; padding:0 8px; color:#A8470A; border-color:#F2D2BE; font-size:11px;" title="Quitar este documento del lote">✕ Quitar</button>
@@ -5145,7 +6032,8 @@ function cambiarTareaItemLote(idx, tarea) {
 function quitarItemLote(idx) {
   LOTE_MASIVO.splice(idx, 1);
   renderizarItemsLote();
-  document.getElementById('btnConfirmarLote').disabled = (LOTE_MASIVO.length === 0);
+  const itemsSubibles = LOTE_MASIVO.filter(it => !it.pdfCorrupto);
+  document.getElementById('btnConfirmarLote').disabled = (itemsSubibles.length === 0);
 }
 
 function leerArchivoComoDataURL(file) {
@@ -5158,10 +6046,14 @@ function leerArchivoComoDataURL(file) {
 }
 
 async function confirmarSubidaLote() {
-  if (LOTE_MASIVO.length === 0) return;
+  const itemsValidos = LOTE_MASIVO.filter(it => !it.pdfCorrupto);
+  if (itemsValidos.length === 0) {
+    alert('No hay documentos válidos en el lote para procesar.');
+    return;
+  }
 
   if (!EMPRESA_LOTE_ACTIVA) {
-    alert("Por favor seleccioná o verificá la Empresa / CUIT en el buscador superior antes de confirmar la subida.");
+    alert('Por favor seleccioná o verificá la Empresa / CUIT en el buscador superior antes de confirmar la subida.');
     document.getElementById('masivaTxtBuscarEmpresa').focus();
     return;
   }
@@ -5171,40 +6063,38 @@ async function confirmarSubidaLote() {
   btn.textContent = 'Subiendo lote a Google Drive (Empresa y Mes)...';
 
   let cargados = 0;
+  let pendientesCerradas = 0;
+  let altasNuevasCreadas = 0;
   const webAppUrl = localStorage.getItem(LS_CONFIG_URL);
   const itemsParaBackend = [];
+  const referenciasTareasLocal = [];
 
   // Obtener Razón Social de la empresa activa
-  const tareaRef = TASKS.find(t => (t.cuit || '').replace(/\D/g, '') === EMPRESA_LOTE_ACTIVA.replace(/\D/g, ''));
+  const cuitActivoDigits = EMPRESA_LOTE_ACTIVA.replace(/\D/g, '');
+  const tareaRef = TASKS.find(t => (t.cuit || '').replace(/\D/g, '') === cuitActivoDigits);
   const razonSocialEmpresa = tareaRef ? (tareaRef.empleador || 'Empresa') : 'Empresa';
 
-  for (let i = 0; i < LOTE_MASIVO.length; i++) {
-    const item = LOTE_MASIVO[i];
-    
-    // Buscar si existe una tarea previa para ese CUIT + NroEstab + Tarea
-    let tareaMatch = TASKS.find(t => 
-      (t.cuit || '').replace(/\D/g, '') === EMPRESA_LOTE_ACTIVA.replace(/\D/g, '') &&
-      (t.nroEstab || '1').toString().trim() === item.nroEstab.toString().trim() &&
-      (t.tarea || '').toLowerCase() === item.tarea.toLowerCase() &&
-      (!t.fechaRealizada || t.fechaRealizada === '')
+  for (let i = 0; i < itemsValidos.length; i++) {
+    const item = itemsValidos[i];
+    const estabBuscado = (item.nroEstab || '1').toString().trim();
+
+    // Buscar EXCLUSIVAMENTE una tarea PENDIENTE para ese CUIT + NroEstab + Tarea (sin pisar visitas ya realizadas)
+    const tareaMatch = TASKS.find(t =>
+      (t.cuit || '').replace(/\D/g, '') === cuitActivoDigits &&
+      (t.nroEstab || '1').toString().trim() === estabBuscado &&
+      mismaTarea(t.tarea, item.tarea) &&
+      !tieneVisitaRealizada(t)
     );
 
-    if (!tareaMatch) {
-      tareaMatch = TASKS.find(t => 
-        (t.cuit || '').replace(/\D/g, '') === EMPRESA_LOTE_ACTIVA.replace(/\D/g, '') &&
-        (t.nroEstab || '1').toString().trim() === item.nroEstab.toString().trim() &&
-        (t.tarea || '').toLowerCase() === item.tarea.toLowerCase()
-      );
-    }
-
-    const driveUrlSimulada = `https://drive.google.com/drive/folders/iapser_visitas_${item.anioMes}/${item.nombreEstandarizado}`;
+    const origenDinamico = generarOrigenPlanDesdeFecha(item.fechaVisitaStr);
 
     if (tareaMatch) {
       tareaMatch.fechaRealizada = item.fechaVisitaStr;
       tareaMatch.resultadoVisita = 'Efectiva';
-      tareaMatch.documentoAdjunto = driveUrlSimulada;
       calcularEstadosAutomaticos(tareaMatch);
       cargados++;
+      pendientesCerradas++;
+      referenciasTareasLocal.push({ target: tareaMatch, isNew: false });
 
       itemsParaBackend.push({
         rowId: tareaMatch.rowId,
@@ -5213,6 +6103,7 @@ async function confirmarSubidaLote() {
         nroEstab: item.nroEstab,
         establecimiento: item.domicilio,
         tarea: item.tarea,
+        origenPlan: tareaMatch.origenPlan,
         fechaRealizada: item.fechaVisitaStr,
         resultadoVisita: 'Efectiva',
         estadoTarea: tareaMatch.estadoTarea,
@@ -5221,29 +6112,32 @@ async function confirmarSubidaLote() {
         mimeType: item.mimeType
       });
     } else {
-      // Crear nueva tarea con origen 'Alta Sep 2026'
+      // Si no hay tarea pendiente para ese establecimiento y tipología, crear una nueva fila sin sobrescribir las realizadas
+      const maxRowId = TASKS.reduce((max, t) => Math.max(max, Number(t.rowId) || 0), 1);
       const nuevaFila = {
-        rowId: TASKS.length + 2,
+        rowId: maxRowId + 1,
         cuit: EMPRESA_LOTE_ACTIVA,
         empleador: razonSocialEmpresa,
         establecimiento: item.domicilio,
         nroEstab: item.nroEstab,
         localidad: tareaRef ? (tareaRef.localidad || '') : '',
         tarea: item.tarea,
-        origenPlan: 'Alta Sep 2026',
+        origenPlan: origenDinamico,
         fechaDesde: item.fechaVisitaStr,
         fechaHasta: item.fechaVisitaStr,
         fechaRealizada: item.fechaVisitaStr,
         resultadoVisita: 'Efectiva',
         nroSiniestro: '',
         observaciones: 'Visita cargada mediante Alta Masiva OCR',
-        documentoAdjunto: driveUrlSimulada,
+        documentoAdjunto: '',
         estadoTarea: '',
         gestionFallida: ''
       };
       calcularEstadosAutomaticos(nuevaFila);
       TASKS.unshift(nuevaFila);
       cargados++;
+      altasNuevasCreadas++;
+      referenciasTareasLocal.push({ target: nuevaFila, isNew: true });
 
       itemsParaBackend.push({
         rowId: null,
@@ -5253,6 +6147,7 @@ async function confirmarSubidaLote() {
         establecimiento: item.domicilio,
         localidad: nuevaFila.localidad,
         tarea: item.tarea,
+        origenPlan: origenDinamico,
         fechaRealizada: item.fechaVisitaStr,
         resultadoVisita: 'Efectiva',
         estadoTarea: nuevaFila.estadoTarea,
@@ -5264,6 +6159,8 @@ async function confirmarSubidaLote() {
   }
 
   // Si está conectado a Apps Script, enviar batchUpload real
+  let subidosADriveCount = 0;
+  let backendOk = false;
   if (webAppUrl && webAppUrl.startsWith('http') && itemsParaBackend.length > 0) {
     try {
       const res = await fetch(webAppUrl, {
@@ -5275,21 +6172,36 @@ async function confirmarSubidaLote() {
         })
       });
       const json = await res.json();
-      if (json.status === 'success' && json.results) {
+      if (json.status === 'success' && Array.isArray(json.results)) {
+        backendOk = true;
         json.results.forEach((r, idx) => {
-          if (r.success && r.res && r.res.documentoAdjunto) {
-            const itemOriginal = itemsParaBackend[idx];
-            const target = TASKS.find(t => (t.rowId === r.rowId) || (t.cuit === itemOriginal.cuit && t.nroEstab === itemOriginal.nroEstab && t.tarea === itemOriginal.tarea));
-            if (target) target.documentoAdjunto = r.res.documentoAdjunto;
+          const refObj = referenciasTareasLocal[idx];
+          if (!refObj || !refObj.target) return;
+          if (r.success && r.res) {
+            if (r.res.rowId) refObj.target.rowId = r.res.rowId;
+            if (r.res.documentoAdjunto) {
+              refObj.target.documentoAdjunto = r.res.documentoAdjunto;
+              subidosADriveCount++;
+            }
+            limpiarEdicionLocalPendiente(refObj.target);
+          } else {
+            registrarEdicionLocalPendiente(refObj.target, refObj.isNew);
           }
         });
       }
     } catch(err) {
-      console.warn("Fallo sincronizando lote online con Apps Script:", err);
+      console.warn('Fallo sincronizando lote online con Apps Script:', err);
     }
   }
 
+  if (!backendOk) {
+    referenciasTareasLocal.forEach(refObj => {
+      registrarEdicionLocalPendiente(refObj.target, refObj.isNew);
+    });
+  }
+
   guardarEnCacheLocal();
+  actualizarOpcionesDesplegableCohortes();
   actualizarKpis();
   renderizarTableroKPIs();
   filtrarYRenderizar();
@@ -5298,7 +6210,11 @@ async function confirmarSubidaLote() {
   btn.textContent = 'Confirmar y Subir Todo';
   cerrarModalAltaMasiva();
 
-  alert(`✓ Lote procesado exitosamente: ${cargados} documentos organizados en Google Drive (Por Empresa y Por Mes) y registrados en la plataforma.`);
+  if (backendOk && subidosADriveCount > 0) {
+    alert('✓ Lote procesado exitosamente (' + cargados + ' visitas: ' + pendientesCerradas + ' pendientes cerradas y ' + altasNuevasCreadas + ' nuevas altas).\n✓ ' + subidosADriveCount + ' documentos subidos y organizados en Google Drive (Por Empresa y Por Mes).');
+  } else {
+    alert('⚠️ Lote registrado localmente (' + cargados + ' visitas: ' + pendientesCerradas + ' pendientes cerradas y ' + altasNuevasCreadas + ' nuevas altas).\nNota: No hubo conexión activa con Google Apps Script, por lo que los archivos físicos NO se subieron a Google Drive.');
+  }
 }
 
 // CONFIGURACIÓN Y SINCRONIZACIÓN CON BACKEND
@@ -5476,7 +6392,7 @@ function mapearTablaGvizATareas(table) {
       localidad: getVal(r, 'Localidad'),
       preventor: getVal(r, 'Preventor Asignado') || getVal(r, 'Preventor'),
       capitas: getVal(r, 'Capitas'),
-      tarea: getVal(r, 'Tarea') || 'Visita técnica',
+      tarea: getVal(r, 'Tarea') || 'Visita tecnica',
       origenPlan: getVal(r, 'Origen Plan') || 'Residual 2026',
       fechaDesde: getVal(r, 'Fecha Desde'),
       fechaHasta: getVal(r, 'Fecha Hasta') || getVal(r, 'Fecha Visita'),
@@ -5533,14 +6449,15 @@ async function sincronizarConBackend(manual = true) {
     }
   }
 
-  // 3. Si se obtuvieron datos actualizados
+  // 3. Si se obtuvieron datos actualizados, preservar ediciones locales no sincronizadas y actualizar todo el sistema
   if (datosSincronizados && datosSincronizados.length > 0) {
-    TASKS = datosSincronizados;
+    TASKS = fusionarEdicionesLocalesEnTareas(datosSincronizados);
     guardarEnCacheLocal();
     llenarFiltroLocalidades();
+    actualizarOpcionesDesplegableCohortes();
     actualizarKpis();
+    renderizarTableroKPIs();
     filtrarYRenderizar();
-    if (VISTA_ACTIVA === 'kpis') renderizarTableroKPIs();
 
     if (dot) dot.className = 'sync-indicator ok';
     const hora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -5572,9 +6489,11 @@ function restablecerDatosLocales() {
     }
     keysToRemove.forEach(k => localStorage.removeItem(k));
   } catch(e) {}
+  try { localStorage.removeItem(LS_PENDING_EDITS_KEY); } catch(e) {}
   TASKS = [];
   inicializarDatos();
   llenarFiltroLocalidades();
+  actualizarOpcionesDesplegableCohortes();
   actualizarKpis();
   renderizarTableroKPIs();
   filtrarYRenderizar();
