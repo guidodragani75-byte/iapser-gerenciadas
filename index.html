@@ -142,7 +142,43 @@
       border-radius: 50%;
       background: #0F4C5C;
     }
-    .sync-indicator.warn { background: #A8470A; }
+    .sync-indicator.warn {
+      background: #A8470A;
+      animation: pulseSync 1.2s infinite ease-in-out;
+    }
+    .sync-indicator.ok {
+      background: #198754;
+    }
+    @keyframes pulseSync {
+      0% { transform: scale(0.9); opacity: 0.6; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.6; }
+    }
+    .iapser-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0F4C5C;
+      color: #FFFFFF;
+      padding: 12px 20px;
+      border-radius: 4px;
+      border-left: 4px solid #56D4E8;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      font-size: 13px;
+      font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+    }
+    .iapser-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
 
     /* Buttons & Inputs */
     .btn {
@@ -791,7 +827,7 @@
         <span id="syncText">Datos locales sincronizados</span>
       </div>
 
-      <button type="button" class="btn btn-secondary" onclick="sincronizarConBackend()" style="min-height:38px;">
+      <button type="button" class="btn btn-secondary" onclick="sincronizarConBackend(true)" style="min-height:38px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
         Sincronizar
       </button>
@@ -865,42 +901,29 @@
                 <option value="pendientes">Pendientes (Sin realizar)</option>
               </select>
             </label>
-            <label style="font-size:12px; color:#0F4C5C; font-weight:600; min-width:180px;">
-              📋 Mes Alta / Vigencia
+            <label style="font-size:12px; color:#0F4C5C; font-weight:600; min-width:220px;">
+              📋 Cohorte / Origen del Plan
               <select id="selMesAltaFiltro" onchange="onMesAltaChange();" style="border-color:#0F4C5C;">
-                <option value="todas">Todas las altas y períodos</option>
-                <option value="2026-09">Altas Septiembre 2026 (01/09 - 30/09)</option>
-                <option value="2026-10">Altas Octubre 2026 (01/10 - 31/10)</option>
-                <option value="2026-11">Altas Noviembre 2026</option>
-                <option value="2026-12">Altas Diciembre 2026</option>
-                <option value="2027-01">Altas Enero 2027</option>
-                <option value="2027-02">Altas Febrero 2027</option>
-                <option value="2027-03">Altas Marzo 2027</option>
-                <option value="2027-04">Altas Abril 2027</option>
-                <option value="2027-05">Altas Mayo 2027</option>
-                <option value="2027-06">Altas Junio 2027</option>
-                <option value="2027-07">Altas Julio 2027</option>
-                <option value="2027-08">Altas Agosto 2027</option>
-                <option value="residual">Plan Base Anual (Residual 2026)</option>
+                <option value="todas">Todas las tareas (Residual + Altas)</option>
+                <option value="residual">Plan Residual 2026 (Base)</option>
+                <option value="altas_todas">Todas las Altas Nuevas (Proveedor)</option>
+                <option value="2026-09">Altas Septiembre 2026 (M0)</option>
+                <option value="2026-10">Altas Octubre 2026 (M1)</option>
+                <option value="2026-11">Altas Noviembre 2026 (M2)</option>
+                <option value="2026-12">Altas Diciembre 2026 (M3)</option>
+                <option value="2027-01">Altas Enero 2027 (M4)</option>
+                <option value="2027-02">Altas Febrero 2027 (M5)</option>
+                <option value="2027-03">Altas Marzo 2027 (M6)</option>
+                <option value="2027-04">Altas Abril 2027 (M7)</option>
+                <option value="2027-05">Altas Mayo 2027 (M8)</option>
+                <option value="2027-06">Altas Junio 2027 (M9)</option>
+                <option value="2027-07">Altas Julio 2027 (M10)</option>
+                <option value="2027-08">Altas Agosto 2027 (M11)</option>
               </select>
             </label>
             <button type="button" class="btn btn-secondary" id="btnToggleFichaBar" onclick="togglePanelFicha()" style="min-height:36px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:6px; margin-left:auto; white-space:nowrap;" title="Mostrar u ocultar la ficha lateral">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               <span id="lblBtnToggleFicha">Ver Ficha</span>
-            </button>
-          </div>
-
-          <!-- SELECTOR DE COHORTE / ORIGEN -->
-          <div style="display:flex; gap:8px; align-items:center; margin:14px 0 6px; flex-wrap:wrap; background:#fff; padding:10px 14px; border:1px solid #D5D8D3; border-radius:2px;">
-            <span style="font-size:12px; font-weight:600; color:#17202A;">Cohorte / Origen del Plan:</span>
-            <button type="button" class="chip on" id="chipCohorteTodos" onclick="setFiltroCohorte('todos')">
-              Todas las tareas <span class="chip-count" id="countCohorteTodos">925</span>
-            </button>
-            <button type="button" class="chip" id="chipCohorteResidual" onclick="setFiltroCohorte('residual')">
-              Plan Residual 2026 (Base) <span class="chip-count" id="countCohorteResidual">925</span>
-            </button>
-            <button type="button" class="chip" id="chipCohorteAltas" onclick="setFiltroCohorte('altas_sep')">
-              Altas Nuevas Sep 2026 (Proveedor) <span class="chip-count" id="countCohorteAltas">0</span>
             </button>
           </div>
 
@@ -2036,7 +2059,7 @@
 </div>
 
 <!-- CARGA DE DATOS PRECARGADOS (CON CACHE-BUSTER) -->
-<script src="datos_precargados.js?v=20261102_0005"></script>
+<script src="datos_precargados.js?v=20261109_1730"></script>
 
 <!-- LÓGICA DE LA APLICACIÓN -->
 <script>
@@ -2070,7 +2093,9 @@ let modoChartPresupuesto = 'mensual';
 let filtroMesFallidas = 'acumulado';
 
 // Claves LocalStorage (V14: Base completa 1.082 registros + 153 visitas únicas deduplicadas)
-const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V20';
+// Claves LocalStorage (V25: Sincronización en vivo con Google Sheets + 1.203 registros)
+const LS_TASKS_KEY = 'IAPSER_GERENCIADAS_TASKS_V25';
+const SPREADSHEET_ID = '1xXEmPqATmcMR0JpO2IuTmf1YZ6fMRxyeAc9avbfDRqI';
 const LS_CONFIG_URL = 'IAPSER_APPS_SCRIPT_URL_V1';
 
 // LÍNEA DE TIEMPO DEL PROYECTO (1 AÑO INICIANDO EN SEPTIEMBRE 2026 = MES 0)
@@ -2098,6 +2123,8 @@ document.addEventListener('DOMContentLoaded', () => {
   configurarDragAndDrop();
   filtrarYRenderizar();
   actualizarKpis();
+  // Sincronización automática con Google Sheets cada vez que se abre la plataforma
+  sincronizarConBackend(false);
 });
 
 function cargarConfig() {
@@ -2311,6 +2338,22 @@ function normalizarTarea(t, idx) {
     tarea = 'RGRL/ Verosimilitud';
   } else if (tarLow.includes('obra')) {
     tarea = 'Visita obra';
+  } else if (tarLow.includes('agro')) {
+    tarea = 'Visita Agro';
+  } else if (tarLow.includes('investigacion at') || tarLow.includes('investigación at')) {
+    tarea = 'Investigacion AT';
+  } else if (tarLow.includes('investigacion ep') || tarLow.includes('investigación ep')) {
+    tarea = 'Investigacion EP';
+  } else if (tarLow.includes('seguimiento at')) {
+    tarea = 'Seguimiento AT';
+  } else if (tarLow.includes('seguimiento ep')) {
+    tarea = 'Seguimiento EP';
+  } else if (tarLow.includes('pese')) {
+    tarea = 'Pese';
+  } else if (tarLow.includes('inicial')) {
+    tarea = 'Visita inicial';
+  } else if (tarLow.includes('comercial')) {
+    tarea = 'Comercial';
   } else {
     tarea = 'Visita técnica';
   }
@@ -2372,7 +2415,7 @@ function normalizarTarea(t, idx) {
 
 function inicializarDatos() {
   // Limpiar versiones obsoletas de localStorage para evitar datos desactualizados
-  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13', 'IAPSER_GERENCIADAS_TASKS_V14', 'IAPSER_GERENCIADAS_TASKS_V15', 'IAPSER_GERENCIADAS_TASKS_V16'].forEach(k => {
+  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13', 'IAPSER_GERENCIADAS_TASKS_V14', 'IAPSER_GERENCIADAS_TASKS_V15', 'IAPSER_GERENCIADAS_TASKS_V16', 'IAPSER_GERENCIADAS_TASKS_V20'].forEach(k => {
     try { localStorage.removeItem(k); } catch(e) {}
   });
 
@@ -2380,7 +2423,7 @@ function inicializarDatos() {
   if (cached) {
     try {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length >= 1082) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         TASKS = parsed.map((item, idx) => normalizarTarea(item, idx));
       }
     } catch(e) {
@@ -2388,12 +2431,10 @@ function inicializarDatos() {
     }
   }
 
-  // Si no hay caché válida o si la base precargada tiene la totalidad de datos (>= 1.082 registros), cargarla directamente
-  if (!TASKS || TASKS.length < 1082) {
-    if (window.DATOS_INICIALES_IAPSER && window.DATOS_INICIALES_IAPSER.length >= 1082) {
-      TASKS = window.DATOS_INICIALES_IAPSER.map((item, idx) => normalizarTarea(item, idx));
-      guardarEnCacheLocal();
-    } else if (window.DATOS_INICIALES_IAPSER && window.DATOS_INICIALES_IAPSER.length > 0) {
+  // Si no hay caché o si la base precargada tiene más o iguales registros actualizados, priorizar la base precargada
+  const preLen = (window.DATOS_INICIALES_IAPSER && Array.isArray(window.DATOS_INICIALES_IAPSER)) ? window.DATOS_INICIALES_IAPSER.length : 0;
+  if (!TASKS || TASKS.length < preLen) {
+    if (preLen > 0) {
       TASKS = window.DATOS_INICIALES_IAPSER.map((item, idx) => normalizarTarea(item, idx));
       guardarEnCacheLocal();
     }
@@ -2437,22 +2478,34 @@ function llenarFiltroLocalidades() {
 
 // MANEJADOR DE CAMBIO DE MES DE ALTA / VIGENCIA
 function onMesAltaChange() {
-  const sel = document.getElementById('selMesAltaFiltro');
-  const val = sel ? sel.value : 'todas';
-  if (val !== 'todas' && val !== 'residual') {
-    // Si selecciona un mes del plan de altas (ej: Sep 2026), activar automáticamente Plan Mensual
-    if (VISTA_ACTIVA === 'pendientes') {
-      setMainView('mensual');
-      return;
-    }
-  } else if (val === 'residual') {
-    if (VISTA_ACTIVA === 'mensual') {
-      setMainView('pendientes');
-      return;
-    }
-  }
+  PAGINA_ACTUAL = 1;
   actualizarKpis();
   filtrarYRenderizar();
+}
+
+function actualizarOpcionesDesplegableCohortes() {
+  const sel = document.getElementById('selMesAltaFiltro');
+  if (!sel || !Array.isArray(TASKS)) return;
+  const origenesExtra = new Set();
+  TASKS.forEach(t => {
+    const o = (t.origenPlan || '').trim();
+    if (o && !o.toLowerCase().includes('residual')) origenesExtra.add(o);
+  });
+  origenesExtra.forEach(orig => {
+    let yaEsta = false;
+    for (let opt of sel.options) {
+      if (opt.text.toLowerCase().includes(orig.toLowerCase()) || opt.value.toLowerCase() === orig.toLowerCase()) {
+        yaEsta = true;
+        break;
+      }
+    }
+    if (!yaEsta) {
+      const nuevaOpt = document.createElement('option');
+      nuevaOpt.value = orig;
+      nuevaOpt.textContent = orig;
+      sel.appendChild(nuevaOpt);
+    }
+  });
 }
 
 // CAMBIO DE VISTA PRINCIPAL (PENDIENTES, MENSUAL ASIGNADO, PADRÓN GENERAL, KPIS)
@@ -2623,7 +2676,7 @@ function actualizarKpis() {
     if (desvioAcum >= 0) {
       elSubCad.innerHTML = `Cadencia: 100/mes · <strong style="color:#0F4C5C;">En meta (+${desvioAcum} visitas)</strong>`;
     } else {
-      elSubCad.innerHTML = `Cadencia: 100/mes · <strong style="color:#A8470A;">Con retraso (${desvioAcum} vs meta acum de ${metaAcumM1})</strong>`;
+      elSubCad.innerHTML = `Cadencia: 100/mes · <strong style="color:#A8470A;">Con retraso (${desvioAcum} vs meta acum de ${metaAcumM0})</strong>`;
     }
   }
 
@@ -3698,15 +3751,11 @@ function filtrarYRenderizar() {
   const filtrados = TASKS.filter(t => {
     // 0. Filtro base según Vista Activa
     if (VISTA_ACTIVA === 'pendientes') {
-      const filtrandoAltas = (filtroMesAlta !== 'todas' && filtroMesAlta !== 'residual') || FILTRO_COHORTE === 'altas_sep';
+      const filtrandoAltas = filtroMesAlta === 'altas_todas' || (filtroMesAlta !== 'todas' && filtroMesAlta !== 'residual');
       if (!filtrandoAltas && tieneVisitaRealizada(t)) return false;
     } else if (VISTA_ACTIVA === 'mensual') {
-      if (filtroMesAlta === 'todas') {
-        const orig = (t.origenPlan || '').toLowerCase();
-        if (orig.includes('residual')) return false;
-      } else {
-        if (!matcheaMesAlta(t, filtroMesAlta)) return false;
-      }
+      const orig = (t.origenPlan || '').toLowerCase();
+      if (orig.includes('residual')) return false;
     }
 
     // Filtro por Tab de navegación
@@ -3717,11 +3766,16 @@ function filtrarYRenderizar() {
       if ((t.resultadoVisita || '').toLowerCase() !== 'fallida') return false;
     }
 
-    // Filtro Cohorte / Origen del Plan (Chips)
-    if (FILTRO_COHORTE !== 'todos') {
+    // Filtro Cohorte / Origen del Plan (Desplegable)
+    if (filtroMesAlta !== 'todas') {
       const orig = (t.origenPlan || 'Residual 2026').toLowerCase();
-      if (FILTRO_COHORTE === 'residual' && !orig.includes('residual')) return false;
-      if (FILTRO_COHORTE === 'altas_sep' && !orig.includes('alta')) return false;
+      if (filtroMesAlta === 'residual') {
+        if (!orig.includes('residual')) return false;
+      } else if (filtroMesAlta === 'altas_todas') {
+        if (orig.includes('residual')) return false;
+      } else {
+        if (!matcheaMesAlta(t, filtroMesAlta)) return false;
+      }
     }
 
     // Filtro Chip Estado
@@ -5302,37 +5356,209 @@ async function probarConexionBackend() {
   }
 }
 
-async function sincronizarConBackend() {
+// =========================================================================
+// SINCRONIZACIÓN EN VIVO (DIRECTA CON GOOGLE SHEETS Y/O APPS SCRIPT)
+// =========================================================================
+
+function mostrarNotificacionToast(msg, duracionMs = 4000) {
+  let toast = document.getElementById('iapserToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'iapserToast';
+    toast.className = 'iapser-toast';
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = '<span>' + msg + '</span>';
+  toast.classList.add('show');
+  if (window._toastTimeout) clearTimeout(window._toastTimeout);
+  window._toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, duracionMs);
+}
+
+function cargarDesdeGoogleSheetsJSONP() {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'iapserGvizCallback_' + Date.now();
+    const script = document.createElement('script');
+
+    const timeout = setTimeout(() => {
+      delete window[callbackName];
+      if (script && script.parentNode) script.parentNode.removeChild(script);
+      reject(new Error('Tiempo de espera agotado al conectar con Google Sheets'));
+    }, 15000);
+
+    window[callbackName] = function(response) {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      if (script && script.parentNode) script.parentNode.removeChild(script);
+      if (response && response.status === 'ok' && response.table) {
+        resolve(response.table);
+      } else {
+        reject(new Error('Respuesta inesperada de Google Sheets'));
+      }
+    };
+
+    script.src = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID + '/gviz/tq?tqx=responseHandler:' + callbackName + '&_=' + Date.now();
+    script.onerror = function(err) {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      if (script && script.parentNode) script.parentNode.removeChild(script);
+      reject(err);
+    };
+    document.head.appendChild(script);
+  });
+}
+
+function mapearTablaGvizATareas(table) {
+  const cols = (table.cols || []).map(c => ((c && c.label) || '').trim());
+  const colMap = {};
+  cols.forEach((label, idx) => {
+    if (label) colMap[label.toLowerCase()] = idx;
+  });
+
+  function getVal(row, label) {
+    const idx = colMap[label.toLowerCase()];
+    if (idx === undefined || !row.c || !row.c[idx]) return '';
+    const cell = row.c[idx];
+    if (cell.f !== undefined && cell.f !== null) return String(cell.f).trim();
+    if (cell.v !== undefined && cell.v !== null) {
+      if (typeof cell.v === 'string' && cell.v.startsWith('Date(')) {
+        const m = cell.v.match(/Date\((\d+),(\d+),(\d+)\)/);
+        if (m) {
+          const y = m[1];
+          const mes = String(parseInt(m[2], 10) + 1).padStart(2, '0');
+          const d = String(m[3]).padStart(2, '0');
+          return d + '/' + mes + '/' + y;
+        }
+      }
+      return String(cell.v).trim();
+    }
+    return '';
+  }
+
+  // Preservar hipervínculos de Drive ya extraídos
+  const driveLinksPrevios = {};
+  if (Array.isArray(TASKS)) {
+    TASKS.forEach(t => {
+      if (t.documentoAdjunto && t.documentoAdjunto.startsWith('http')) {
+        driveLinksPrevios[t.rowId] = t.documentoAdjunto;
+      }
+    });
+  }
+  if (window.DATOS_INICIALES_IAPSER && Array.isArray(window.DATOS_INICIALES_IAPSER)) {
+    window.DATOS_INICIALES_IAPSER.forEach(t => {
+      if (t.documentoAdjunto && t.documentoAdjunto.startsWith('http')) {
+        if (!driveLinksPrevios[t.rowId]) driveLinksPrevios[t.rowId] = t.documentoAdjunto;
+      }
+    });
+  }
+
+  const tareas = [];
+  (table.rows || []).forEach((r, i) => {
+    const rowId = i + 2;
+    const cuit = getVal(r, 'Cuit');
+    const empleador = getVal(r, 'Empleador');
+    if (!cuit && !empleador) return;
+
+    let docAdj = getVal(r, 'Documento Adjunto');
+    if (!docAdj.startsWith('http') && driveLinksPrevios[rowId]) {
+      docAdj = driveLinksPrevios[rowId];
+    }
+
+    const tObj = {
+      rowId: rowId,
+      cuit: cuit,
+      empleador: empleador,
+      contrato: getVal(r, 'Contrato IAPART') || getVal(r, 'Contrato'),
+      establecimiento: getVal(r, 'Establecimiento'),
+      nroEstab: getVal(r, 'Nro Estab IAPART') || '1',
+      nroEstabIntercambio: getVal(r, 'Nro Estab Intercambio') || getVal(r, 'Nro Estab IAPART') || '1',
+      localidad: getVal(r, 'Localidad'),
+      preventor: getVal(r, 'Preventor Asignado') || getVal(r, 'Preventor'),
+      capitas: getVal(r, 'Capitas'),
+      tarea: getVal(r, 'Tarea') || 'Visita técnica',
+      origenPlan: getVal(r, 'Origen Plan') || 'Residual 2026',
+      fechaDesde: getVal(r, 'Fecha Desde'),
+      fechaHasta: getVal(r, 'Fecha Hasta') || getVal(r, 'Fecha Visita'),
+      fechaRealizada: getVal(r, 'Fecha Realizada'),
+      resultadoVisita: getVal(r, 'Resultado Visita'),
+      nroSiniestro: getVal(r, 'Nro Siniestro'),
+      observaciones: getVal(r, 'Observaciones'),
+      documentoAdjunto: docAdj,
+      estadoTarea: getVal(r, 'Estado Tarea'),
+      gestionFallida: getVal(r, 'Gestion Fallida')
+    };
+
+    tareas.push(normalizarTarea(tObj, i));
+  });
+
+  return tareas;
+}
+
+async function sincronizarConBackend(manual = true) {
   const url = localStorage.getItem(LS_CONFIG_URL);
   const dot = document.getElementById('syncDot');
   const txt = document.getElementById('syncText');
 
-  if (!url) {
-    abrirModalConfig();
+  if (dot) dot.className = 'sync-indicator warn';
+  if (txt) txt.textContent = 'Sincronizando con Google Sheets...';
+
+  let datosSincronizados = null;
+  let origenSync = '';
+
+  // 1. Si hay Apps Script configurado, intentar primero
+  if (url && url.startsWith('http')) {
+    try {
+      const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=getData', { mode: 'cors' });
+      const json = await res.json();
+      if (json.status === 'success' && Array.isArray(json.data) && json.data.length > 0) {
+        datosSincronizados = json.data.map((item, idx) => normalizarTarea(item, idx));
+        origenSync = 'Google Apps Script';
+      }
+    } catch(err) {
+      console.warn("Fallo fetch Apps Script, usando sincronización directa con Google Sheets:", err);
+    }
+  }
+
+  // 2. Sincronización directa en vivo con Google Sheets mediante gviz JSONP
+  if (!datosSincronizados) {
+    try {
+      const table = await cargarDesdeGoogleSheetsJSONP();
+      if (table && table.rows && table.rows.length > 0) {
+        datosSincronizados = mapearTablaGvizATareas(table);
+        origenSync = 'Google Sheets (En vivo)';
+      }
+    } catch(err) {
+      console.warn("Fallo sincronización directa con Google Sheets:", err);
+    }
+  }
+
+  // 3. Si se obtuvieron datos actualizados
+  if (datosSincronizados && datosSincronizados.length > 0) {
+    TASKS = datosSincronizados;
+    guardarEnCacheLocal();
+    llenarFiltroLocalidades();
+    actualizarKpis();
+    filtrarYRenderizar();
+    if (VISTA_ACTIVA === 'kpis') renderizarTableroKPIs();
+
+    if (dot) dot.className = 'sync-indicator ok';
+    const hora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (txt) txt.textContent = 'Sincronizado ' + hora + ' (' + TASKS.length + ' tareas)';
+
+    if (manual) {
+      mostrarNotificacionToast('✓ Sincronización exitosa desde ' + origenSync + ': ' + TASKS.length + ' tareas actualizadas.');
+    } else {
+      mostrarNotificacionToast('✓ Sincronizado automáticamente con Google Sheets (' + TASKS.length + ' tareas)', 3500);
+    }
     return;
   }
 
-  dot.classList.add('warn');
-  txt.textContent = 'Sincronizando con Google Sheets...';
-
-  try {
-    const res = await fetch(url + '?action=getData', { mode: 'cors' });
-    const json = await res.json();
-    if (json.status === 'success' && json.data) {
-      TASKS = json.data.map((item, idx) => normalizarTarea(item, idx));
-      guardarEnCacheLocal();
-      llenarFiltroLocalidades();
-      actualizarKpis();
-      filtrarYRenderizar();
-      if (VISTA_ACTIVA === 'kpis') renderizarTableroKPIs();
-      dot.classList.remove('warn');
-      txt.textContent = 'Sincronizado hoy ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-      alert(`✓ Sincronización exitosa: ${json.count} registros actualizados desde Google Sheets.`);
-    }
-  } catch(err) {
-    dot.classList.remove('warn');
-    txt.textContent = 'Modo local activo (sin conexión directa)';
-    console.warn("Error en sync:", err);
+  // 4. Si falló la conexión (offline)
+  if (dot) dot.className = 'sync-indicator';
+  if (txt) txt.textContent = 'Modo local activo (' + TASKS.length + ' tareas)';
+  if (manual) {
+    alert('No se pudo sincronizar en vivo con Google Sheets en este momento. La plataforma continúa funcionando con los ' + TASKS.length + ' registros locales.');
   }
 }
 
