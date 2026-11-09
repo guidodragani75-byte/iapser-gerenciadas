@@ -24122,7 +24122,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: MANIFIESTAN QUE LA RAZON SOCIAL SE MUDO DE DOMICILIO EL CUAL DESCONOCEN. SE ADJUNTA MATERIAL FOTOGRPAFICO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1J74iODVeia7sY_DHMxsqy3jQJpmJ73Bs/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24145,7 +24145,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "ANULAR. NO FIGURA EN EL SISTEMA. 04 11 2026. SE REALIZÓ PORQUE YA ESTABA ASIGNADA Y COORDINADA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1jYJ8p-TrV0RnPmjG_T6_yP4VurvM78Md/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24168,7 +24168,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: MANIFIESTAN DESCONOCER LA RAZON SOCIAL. SE ADJUNTA MATERIAL FOTOGRPAFICO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1q4N1Z63PKN2JQKCN4rWlWiAZULL55OFZ/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24191,7 +24191,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "NO SE REALIZA CAPACITACION YA QUE EL PERSONAL ESTABA AVOCADO A SUS TAREAS HABITUALES PROPIAS DEL SERVICIO DE LA SALA VELATORIA Y EMERGENCIAS AL MOMENTO DE LA VISITA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1dGHoTO9dV7KEhfzA90Rpv0CRlMNPDIRt/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24214,7 +24214,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: ES UN DOMICILIO PARTICULAR. SE ADJUNTA FOTO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/17Mh_HhLgLPxymg6PwcZdsJNsRnuCmbg8/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24237,7 +24237,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: CONDICIONES CLIMÁTICAS ADVERSAS",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1PfdarX86dS8HofFaBa0Wt7m3C_y-36mp/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24260,7 +24260,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1hv5I1KQSQ5Kr_G6dpI8bSiD5_P9zodxv/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24283,7 +24283,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "ANULAR. NO FIGURA EN EL SISTEMA. 04 11 2026. SE OFRECE CAP BAS PERO LA EMPRESA NO ACEPTA PORQUE LOS EMPLEADOS ESTAN REALIZANDO SUS TAREAS HABITUALES FUERA DEL ESTABLECIMIENTO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1EzscFsbEuvrNp8sFetehQMLwPO5vE7-_/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24306,7 +24306,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "ANULAR. NO FIGURA EN EL SISTEMA. 04 11 2026. SE REALIZÓ PORQUE YA ESTABA ASIGNADA Y COORDINADA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1BeQQhsxwCDnRHdh4AHQa9ehu11B5AAwS/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24329,7 +24329,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: ESTABLECIMIENTO SIN ACTIVIDAD LABORAL",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1uEPCVRdWJu3eQ4MuV6WPdveOsZEt1qqE/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24352,7 +24352,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "Piden SEG RGRL + CAP BASICA, NO tiene RGRL. CAMBIAR TAREA EN SIT A DDJJ+RGRL+RAR. NO SE PUDO REALIZAR LA CAPACITACIÓN PORQUE EL PERSONAL NO SE ENCONTRABA EN EL EST. AL MOMENTO DE LA VISISTA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1aaDgXkOekJXVHjgZNbUkv2d2Ev7YWx38/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24375,7 +24375,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/17NoUclDU06loK-cj-qx6YKnK6_4JJ0uS/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24398,7 +24398,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "ANULAR. NO FIGURA EN EL SISTEMA. 04 11 2026. SE REALIZÓ PORQUE YA ESTABA ASIGNADA Y COORDINADA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Co721ORHNb0CmqlmsjEhs-IFASkyfk2_/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24421,7 +24421,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1GBED-Xgw8Kr3hKAaD6I5aDjII8_D9Uxx/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24444,7 +24444,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "SE HIZO CAP. BÁSICA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1agjNgmPuUnPpU5djUbBSr9VfMuxqNuLq/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24467,7 +24467,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "ANULAR. NO FIGURA EN SISTEMA. 04 11 2026. SE HIZO PORQUE ESTABA ASIGNADA. VISITA FALLIDA - CARTEL DE VENTA EN LA PUERTA. SE ADJUNTO FOTOS",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1w_NzEOrpIlbHtuzN3_wHvvTz4usDyKl8/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24490,7 +24490,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "ANULAR. NO FIGURA EN EL SISTEMA. 04 11 2026. SE REALIZÓ PORQUE ESTABA YA COORDINADA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1QEZZggRJcKF24Yl-kBmABSE6_JAmvhmz/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24513,7 +24513,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: ES UN DOMICILIO PARTICULAR, SIN PERSONLA TABAJANDO. SE ADJUNTA MATERIAL FOTOGRÁFICO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1UdvcIQAcdSr9eYvGKcyf-IiXaihdbiQb/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24536,7 +24536,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: ESTABLECIMIENTO SIN ACTIVIDAD LABORAL",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/15BVaOD1CLEbNozOdM5Y_eRGnQEhlo0RF/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24559,7 +24559,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "PIDE SEG RGRL + CAP BASICA PERO NO TIENE RGRL CARGADO. CAMBIAR TAREA A DDJJ + RGRL + RAR",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1HCG97eqBEyjzN3NRtsYNnKWzuNWfRTES/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24582,7 +24582,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA - DESCONOCEN LA RAZON SOCIAL. SE ADJUNTAN FOTOS",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/10rTX79kyJj-olDkVN7A-QkWFrI-rUKMw/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24605,7 +24605,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "ANULAR. NO FIGURA EN SISTEMA. 04 11 26, PERO SE HABIA ASIGNADO. VISITA FALLIDA - DESCONOCEN LA RAZON SOCIAL. SE ADJUNTA REGISTRO FOTOGRÁFICO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1CdpJt3GNKAeBUaY34soTO2Y37b7Uj8oE/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24628,7 +24628,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "ANULAR. NO FIGURA EN EL SISTEMA. 04 11 2026. SE REALIZÓ PORQUE YA ESTABA ASIGNADA Y COORDINADA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1rmkW_6l2-K1pftsawc4TBqBbnR8ntPIc/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24651,7 +24651,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: ES UN DOMICILIO PARTICULAR. SE ADJUNTA REGISTRO FOTOGRÁFICO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Bw8Odv7zqxknwTjhUPCAzSf2FPGsjDYm/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24674,7 +24674,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: AL MOMENTO DE LA VISITA, EL EST ESTABA CERRADO. AL LLAMAR POR TELEFONO, MANIFIESTAN NO TENER PERSONAL EN RELACIÓN DE DEPENDENCIA.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Cd_r_azGb-TbtDOfWMNaLQtOFDBE-uxj/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24697,7 +24697,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: ES UN DOMICILIO PARTICULAR, SIN PERSONAL TABAJANDO. SE ADJUNTA MATERIAL FOTOGRÁFICO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1JBZOgMIZiH1FIXJVMhmlsuf2XrC0h2OZ/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24720,7 +24720,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: EN EL DOMICILIO NO SE ENCIENTRA LA EMPRESA. SE ADJUNTA MATERIAL FOTOGRÁFICO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1TliEDda3zcO7igSKvNDGh5mC59zrRMHN/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24743,7 +24743,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "FALLIDA - OBRA FINALIZADA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1hmsPWjf7Lr-He2vggT88cIpY58L5moSj/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24766,7 +24766,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: NO FUE POSIBLE ACCEDER AL LUGAR, PORQUE LAS CALLES PARA LLEGAR RESULTAN INTRANSITABLES. SE ADJUNTAN FOTOS Y GEOLOCALIZACION",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1SL0-MWoVnyz2qz1sYmV_EJ5OpWcztAlj/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24789,7 +24789,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1TW7dy0SAdDu8D5T9mH6f8JSKkq4Iflli/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24812,7 +24812,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1qqu_Uxm0HihSsw3_vPaxGaS5CLq3DwIL/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24835,7 +24835,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: PROBLEMAS DE COORDINACION CON LA EMPRESA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1IkmCxKOSrXnIaufdYKUNbVSJqzEzrgO-/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24858,7 +24858,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: NO SE PUDO INGRESAR A LA OBRA POR MAL CLIMA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1dZ9GYhqBwYzR7WECzHx6ElGn6IRrsKrH/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24881,7 +24881,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: NO SE PUDO INGRESAR A LA OBRA POR MAL CLIMA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1bqpnJTHmHiPUQ_PfBJfaDBWYx6446Frg/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24904,7 +24904,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: PROBLEMAS DE COORDINACION CON LA EMPRESA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1F2SypIoZ5gETOXoro92TPMlyvC36KtgE/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24927,7 +24927,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: Nos comunicamos con la Sra. Gabriela quien indicó que no se puede ingresar a la obra",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Nzovc7L6OL0MSsdZWZ3Na_3VFTsjEg2g/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24950,7 +24950,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "ANULAR. NO FIGURA EN EL SISTEMA. 04 11 2026. SE REALIZÓ PORQUE YA ESTABA ASIGNADA Y COORDINADASE OFRECE CAP BAS QUE NO ACEPTA LA EMPRESA POR FINALIZACION DE JORNADA LABORAL Y AUSENCIA DEL PERSONAL EN LAS INSTALACIONES",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1gmdUTeWdWDzHJTZPyEphU3f7CFcdcZBy/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24973,7 +24973,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "NO FIGURA EN SISTEMA 24/10/2026. PERO YA ESTABA ASIGNADO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1GKUyKANZFtouknD9FVjkiDP4nHXOLQCE/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -24996,7 +24996,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1BFfyRF5A4jE0YA4_W_9NA0IIbV_D1S1Q/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25019,7 +25019,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/18JYLisvKBQFYDs-zELZIdc2cJZN_dy7Z/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25042,7 +25042,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "ENTREGADO MUY TARDE POR PROBLEMAS DE COORDINACION",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1f6lkMXmEHu2f408PMoFxrv4xrOzxd02u/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25065,7 +25065,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/198OoIjvi_5mahVDJYhsIRHU2ylTK62dk/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25088,7 +25088,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1DSs9AOvEaP6ULIYe213VKPj3GIzM3vgR/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25111,7 +25111,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "SE ENTREGO MEGA TARDE",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Sr-pveRYtbFQteRHQLtKctMnY4A5LD_k/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25134,7 +25134,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "PIDE SEG RGRL + CAP BASICA PERO NO TIENE RGRL CARGADO. CAMBIAR TAREA A DDJJ + RGRL + RAR. Se hizo cap basica",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1XxikZJLJJUFNFwRozkM81ojHThsvQfjx/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25157,7 +25157,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1mw1qneEpG5-4_nYoivlcdZ8QsMkL_p0x/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25180,7 +25180,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/16gSOlInimtz_3aOu4nJyLoGqsr96-ivi/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25203,7 +25203,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "NO SE REALIZA CAPACITACON BÁSICA POR CUESTIONES OPERATIVAS DE LA EMPRESA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1V-ooAON1b-6AdxnoDHnr8bfbYQfBgps5/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25226,7 +25226,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1UatIB6sRpoD-bBH756n8J7LhEibw8kVF/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25249,7 +25249,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "NO SE REALIZA CAPACITACON BÁSICA POR CUESTIONES OPERATIVAS DE LA EMPRESA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1WQyJKllhAAG1qNwZUfa1nC9HM-C0HzBN/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25272,7 +25272,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "NO SE REALIZA CAPACITACON BÁSICA POR CUESTIONES OPERATIVAS DE LA EMPRESA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1XuPwxfUj1iONjI6JowRO1Ss43dIg7Gwd/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25295,7 +25295,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1js9Bb9VjCdzqPGAaLjwlyiES-28x0b20/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25318,7 +25318,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Ng2bXLKjAkYq7bqZS8Em93m8kK8CqiHq/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25341,7 +25341,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1BDFzfb5v_aN56QT2UFWYSLFMjf0dtMmE/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25364,7 +25364,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: EN EL LUGAR DECLARAN NO TENER PERSONAL TRABAJANDO. SE ADJUNTA FOTO Y CONST. ARCA 931",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1gMsl4JA9_mDhlzlNiXh7Yy0dqpzBxTBf/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25387,7 +25387,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1LdHRlV3yJhR40qAhIMIgJmDwpvxsz8HD/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25410,7 +25410,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "LA EMPRESA SOLO DEJÓ HACER EL SEG RGRL, NO LA INV AT NI LA CAP. BASICA. Tengo mail de la empresa que envio a IAPSER el 21/10/2026. finalmente se hizo el 29 10 26. se cargo en sistema",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1AeCBZxqHcyDi_y5A_JpO6lQS6OzvbVi4/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25433,7 +25433,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: CUESTIONES CLIMÁTICAS",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/12tSpPospDkTu2IOQPGj_V4ttxv2j4ABW/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25456,7 +25456,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: CUESTIONES DE COORDINACIÓN CON LA EMPRESA.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/16Kj0L5mVmOv8I9yxoSg456HPJ44Oq5pj/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25479,7 +25479,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: CUESTIONES DE COORDINACIÓN CON LA EMPRESA.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1OrAg_SVJQQTDvZboXLZzHoW9EAnrUMAE/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25502,7 +25502,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: CUESTIONES DE COORDINACIÓN CON LA EMPRESA.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1LQE-TrgALdn5Zki7b6K05IBwYbb3740r/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25525,7 +25525,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: OBRA FINALIZADA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1n6Xzoyj1_-KCDe4rQIt_v08oGB3j9L4g/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25548,7 +25548,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: OBRA FINALIZADA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1GGBVm3kcJHmUluUnFZfMYbitQMvRyIWh/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25571,7 +25571,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: SIN PERSONAL TRABAJANDO HASTA EL MES DE NOVIEMBRE 2026. TEL. 1161395584",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1AzSzzPQ9ilamPa6SNHiBb3XKSQh4E6J-/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25594,7 +25594,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: PROBLEMAS DE COORDINACIÓN CON LA EMPRESA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1twj79FvInIHreQNgXYMYijoEvAb_z2X1/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25617,7 +25617,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: PROBLEMAS CLIMÁTICOS",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1-DB1LLIPXDnL4P6SHYbmeJjSbiEjMSYy/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25640,7 +25640,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: OBRA FINALIZADA, SIN PERSONAL TRABAJANDO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1oH5CCy8cQdae0GOgBoEKH-26xTUYR_i7/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25663,7 +25663,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: NO SE PUDO CONCRETAR LA COORDINACIÓN. TEL. 1161395584",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1wBWpFIbbx6k0xVQPDj2j9WkXrxuscWAi/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25686,7 +25686,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: POR PORBLEMAS CLIMÁTICOS",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1pArIyBJB1dyKZQRKKMd4q4huf6UgIpca/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25709,7 +25709,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: PROBLEMAS DE COORDINACIÓN CON LA EMPRESA. TEL. 1161335584",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1dkLelO8chhZsqxzqJbEMnwKHD6gLhnNI/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25732,7 +25732,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: NO SE REALIZA VISITA POR PROBLEMAS CLIMÁTICOS",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1wnoXsP0W0MMzKnyr0GdVQD0OEAkOpXjM/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25755,7 +25755,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/16Wqo2W5LMxU9_5MN75Dy9gSvbh1cymQ_/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25778,7 +25778,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1wmycTqGy_2XtUmWYNOQJFySAoA_eed0z/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25801,7 +25801,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "NO SE HIZO CAP. POR TEMAS DE LA EMPRESA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1J7q0RVOoBQHsM0s18aKAAuwAd7zKbJJw/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25824,7 +25824,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Wzqf3ckP_Ki4_u3eD1DHD35crV8Rxu7S/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25847,7 +25847,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: PROBLEMAS DE COORDINACIÓN CON LA EMPRESA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1i7WaH2SJYg_vqTR6CGCuDzw-mF1adTEt/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25870,7 +25870,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: CONDICIONES CLIMÁTICAS ADVERSAS",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/183gA8LVMDZYF4ggWWCLlI2nikXwaum-T/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25893,7 +25893,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA - LA OBRA COMIENZA A MEDIADOS DE NOV 2026. HECTOR MASOLINI. 3364659455",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1qQHx9sp5PVPB0Mw4XIEZrzmEwvMAtklA/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25916,7 +25916,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Hu_DAOsdAxCIg99Sj4tQqvJX_3NCyduK/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25939,7 +25939,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1S2L-UG7BYFOEst4FH938enJG5KQegYtW/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25962,7 +25962,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1podnoZxt8pfmYbPsrrmolUmMK2ssA09M/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -25985,7 +25985,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/16a9_Gy4B20temzt5f8bMozkdVsI5SaD4/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26008,7 +26008,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1rxJJPBsSKzX7ge6aUs78N8rJO6mASrY9/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26031,7 +26031,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1_ielze8jmF2iMEvPVCW1ByZhLrfBflvj/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26054,7 +26054,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "NO PUDE CARGAR EN SIST PORQUE CAMBIÓ LA TAREA A VEROS RGRL Y NO ESTABA LA INV AT PARA CARGAR. MANDE MAIL A OSCAR ACEVEDO EL 28/10/26, sin respuesta 31/10/26",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1FuD9VZoog_dVOOoAPjJeQ8aU1xjfgYPF/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26077,7 +26077,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "SE REALICÓ LA CAP.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1MAHix1A0nVGyL9aksOQhXs9XjEv4W6X3/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26100,7 +26100,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "ANULAR. NO FIGURA EN EL SISTEMA. 04 11 2026. SE REALIZÓ PORQUE YA ESTABA ASIGNADA Y COORDINADA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/17FXDCCIE1yI5V_sEbCRz1Gii_HMhOGNy/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26123,7 +26123,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "EN SISTEMA PIDE SEG RGRL PERO NO TIENE CARGADO RGRL. SE CAMBIA TAREA A DDJJ + RAR + RGRL + CAP.BASICA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Ldo8sqSRf-eUPUtibhV8yXt_bEgJ1Pmo/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26146,7 +26146,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "FALLIDA - DIFICIL ACCESO Y POR REQUISITOS DE SEGURIDAD Y DE ACCESO A LA MINERA.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1C1kVF1TWCUhtemqJaD8J3nWOi8GLFjfG/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26169,7 +26169,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "SE ENTREGO SUPER TARDE",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1eB9utxSpAOb1yiZdjHFK6PmNVV3Fu92W/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26192,7 +26192,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: Se habló con RRHH, quienes informan que por el momento no hay personal trabajando.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/18He-aT4LhDtddR6CVEcBubiUKyDpFWjT/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26215,7 +26215,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: Se habló con RRHH, quienes informan que por el momento no hay personal trabajando.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1PkXk3YDtda6LzXNUgiLdAQjnF0YzqzMI/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26238,7 +26238,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: Se habló con RRHH, quienes informan que por el momento no hay personal trabajando.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/19dcV4riL-McXYrqvJFueFcxD-ADNcByp/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26261,7 +26261,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: Se habló con RRHH, quienes informan que por el momento no hay personal trabajando.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1WpTOGwxy3r7fot51SoL-hYapa6FrezOh/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26284,7 +26284,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: NO HABIA OPERARIOS TRABAJANDO EN LA OBRA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1bcWe_ckrTt36csJEgcW8_X4bQvJmfNxV/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26307,7 +26307,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISTA FALLIDA: NO SE REALIZA POR CONDICIONES CLIMÁTICAS ADVERSAS",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/13CzOLFYRTp5cOeYe_3ICx26LS4HWaYUt/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26330,7 +26330,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISTA FALLIDA: NO SE REALIZA POR CONDICIONES CLIMÁTICAS ADVERSAS",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1THKc3xANtfeudJHqWz1yJKmO94ioFMMp/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26353,7 +26353,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1B51e4_DCpTNcrpCJHxzM5BHxS654VgHp/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26376,7 +26376,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1pamr41Pr2SdhbLXBwKEtKTyZCxKCJkn6/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26399,7 +26399,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: PROBLEMAS DE COORDINACIÓN CON LA EMPRESA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1F11ESmq5u4S9V9MASmiTXtPIiqoaFEGl/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26422,7 +26422,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: EL SOCIO GERENTE MATEO LINARI, INFORMÓ QUE NO HAY PERSONAL EN LA OBRA POR FALTA DE PAGO.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1sJuo8lVUjWkR-W8ANSizab7NKHGqht4P/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26445,7 +26445,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: EL SOCIO GERENTE MATEO LINARI, INFORMÓ QUE NO HAY PERSONAL EN LA OBRA. VUELVEN EN EL MES DE NOVIEMBRE 2026",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1P6_HkleORh9lhoUkDS2oXuQWBOBfsYQc/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26468,7 +26468,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "ANULAR. NO FIGURA EN EL SISTEMA. 04 11 2026. SE REALIZÓ PORQUE YA ESTABA ASIGNADA Y COORDINADA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1BoCnNdmnsm_-BRmr9dcfghWfmPuaSRR5/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26491,7 +26491,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/15EHQEFzDQP5R0aCPdMY0H6YoKF9t-rHY/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26514,7 +26514,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: LUEGO DE VARIOS LLAMADOS TELEFÓNICOS SIN RESPUESTA, SE ARRIBA AL ESTABLECIMIENTO Y NO HABÍA PERSONAL PARA ATENDER LA VISITA. SE ADJUNTA REGISTRO FOTOGRÁFICO Y GEOLOCALIZACION. ANULAR. NO FIGURA EN EL SISTEMA. 04 11 2026.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1GO8x-9Vd95DgMduNmUZDvoh7243Vhylc/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26537,7 +26537,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: PROBLEMAS DE COORDINACIÓN CON LA EMPRESA. SERGIO VILLALBA 1139506825",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1izseLSlh1R59qoU8nDJ4E5DcIXk5fF7A/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26560,7 +26560,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1d17JCfyEM1xgt9E5olJnedYrmMJoFSlL/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26583,7 +26583,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: POR CONDICIONES CLIMÁTICAS ADVERSAS",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1meFmvwpNk2Ekkduc66GXpZloOXrVO-Ef/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26606,7 +26606,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: NO HAY PERSONAL TRABAJANDO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1v78R5pEMY-3I5HVTj48BvIC4klTFLwBG/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26629,7 +26629,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: NO SE PUEDE INGRESAR A LA OBRA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1AtlgnhpWBzEAo0ZrZflYF5xWaDw11sEi/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26652,7 +26652,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: POR PROBLEMAS DE COORDINACION CON LA EMPRESA. Resp. Veronica Sotelo",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1v3WgN2YOk8r4gk_4-6P7gBweX_6d8C09/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26675,7 +26675,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: PROBLEMAS CLIMÁTICOS",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1-_c--IIp1uRTE2gCOay3kd0uwfdwo6Yx/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26698,7 +26698,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1iz_VXtMzuMjDysunv6OYcsJw6RqpG_g4/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26721,7 +26721,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: EL ENCARGADO QUIROGA DANIEL, INFORMA QUE LOS TRABAJOS EN LA OBRA NO SE PUEDEN REALIZAR YA QUE NO CUENTAN CON EL MATERIAL NECESARIO. LOS OPERARIOS NO ASISTIERON",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1DPgMYBgXSDKe0KFZJ0gxTgm5VLYl19HT/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26744,7 +26744,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: NO SE TRABAJA POR CUESTIONES CLIMÁTICAS EN EL SECTOR",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/10QkLpQDR-8esNOo5M6qi5GhkNPX5oiYn/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26767,7 +26767,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: SE PROGRAMO LA VISITA PERO NO SE PUDO REALIZAR POR CUESTIONES CLIMATICAS, LLUVIA EN EL LUGAR QUE ES A LA INTEMPERIE",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/18z9RI9dpNfB2wsPFachskr9n8OBOonFk/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26790,7 +26790,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/17i_OjL5DfP3Do2kEaTJ-0KfG712sjPAo/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26813,7 +26813,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1BZqPW-_EiCDT9btudYQCvyMN555ISK3h/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26836,7 +26836,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Yj5p2-4jEJcMSRYSFp5jST5TBJaDXsJW/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26859,7 +26859,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: POR CUESTIONES CLIMATICAS NO HABIA PERSONAL TRABAJANDO",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Ar03hSZmQ7O7SF-cFod_zJIRaBtGvTqu/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26882,7 +26882,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/124OtyNzXyNgWVZk4m7I3IbuG4Z9P8ACB/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26905,7 +26905,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/10etmGpFq5I_rz7EvamUdyr8-O1h6pjed/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26928,7 +26928,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1bXTSAsanKD_ixhJ5Ln9MpYASS6WIee9c/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26951,7 +26951,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: Se coordinó la visita con la empresa, pero tuvieron un problema de ultimo momento y no había nadie para recibir al preventor.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Sm8NTju_KGpSIGCnzm2rVMWb1PcGSMm7/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26974,7 +26974,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "LA CAPACITACIÓN NO SE REALIZÓ POR PORBLEMAS OPERATIVOS DE LA EMOPRESA. Se adjunto planilla fiirmada",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1ElZbr48YbRAHqJJjNg6g2yi9KCbrKpuB/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -26997,7 +26997,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Imv6p6IQWs_r7nfFiHrpmY_gNbyu7HUq/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27020,7 +27020,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1rIB-9E2FUPEOSZzQCo2mXX2PDAVSUMrZ/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27043,7 +27043,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "PIDE DDJJ + RAR + RGRL PERO TIENE RGRL CARGADO 20/8/26",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1khg15VUfx5GVKruCzI64Sis-pSxPlN6G/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27066,7 +27066,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1R22eNxlcDsdh_2F--z15zveqWsP1R9km/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27089,7 +27089,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "SE REALICÓ LA CAP.",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Immmc48-3L7G1skRO5UL860Q6sfJ4w5_/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27112,7 +27112,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1pW8XMq0-PPfrlmHeWOWfqxA1tHm4Fymf/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27135,7 +27135,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: NO SE PUDO INGRESAR A LA OBRA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1WNYRCmzDAMtegZSMLElBRn0jTDdwHzk_/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27158,7 +27158,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: NO SE PUDO COORDINAR CON LA EMPRESA PARA VISITAR LA OBRA",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1qxmsGMYMxHavrMc8-ajlguHLV-wqN30I/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27181,7 +27181,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: NO LO PUEDEN RECIBIR DEBIDO A QUE ESTA SEMANA EN LA OBRA HAY CONTROLES POR PARTE DEL GOBIERNO PROVINICIAL",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1kxkgVE-SK4PRTla6K0MHEWVMrAq6hMQw/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27204,7 +27204,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/17zQkbR3AD2sp2p_DD0RZDndiyZul7-te/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27227,7 +27227,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/18CwKJMNLLCZG8IPaJ1X-kXBF-xeCdN8W/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27250,7 +27250,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1UOTC-jIsvBLigdofEiZWrOVDMjJC-9Se/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27273,7 +27273,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "LAS TAREAS ESTÁN DIVIDIDAS. POR UN LADO EL SEG RGRL + CAP BAS Y POR OTRO LA INV AT",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Vbu5DX2C_fyec0MDvia5EnFWz2ufq2Jq/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27296,7 +27296,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1l6GWqAF4Ibsk8LcDZZgbU9J4pIM3VNxo/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27319,7 +27319,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/11PI__dBILA3LNYm-0k5XZCL5LyJ6j60P/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27342,7 +27342,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1ZuWEWQEo2rzUusrJ_ZVVShSBUn9W3uy3/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27365,7 +27365,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1rdvvIU9yJSA83dORO_EC4_4OQokBrnfO/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27388,7 +27388,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1pIhaOuZ27DvhfQxEomdaiArFtglyTOkh/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27411,7 +27411,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1PJxoEKnkzrLactDvcXMti9MXlc5n5J18/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27434,7 +27434,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/13myaT1INo_L0YSg6dlclzzyXrEnVP4fK/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27457,7 +27457,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1gjIP5LsomAhHFn-rjIS3dBFTup7uw1PG/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27480,7 +27480,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/18V7MB9LwGs-u07ooWJdI2hh3JLXAB8fC/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27503,7 +27503,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "LAS TAREAS ESTÁN DIVIDIDAS. POR UN LADO EL SEG RGRL + CAP BAS Y POR OTRO LA INV AT",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1Vbu5DX2C_fyec0MDvia5EnFWz2ufq2Jq/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27526,7 +27526,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1scHChy0WDyE6lON-Tgk9RnQ8Y-6OeTC_/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27549,7 +27549,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1gccSib-7TKOpGa8xcJrKDk0DJNAz-fEX/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27572,7 +27572,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1CPo6g2YTXPt31cVgtNeaYavHFltMHglc/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27595,7 +27595,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1XahPwXsRv1ox8XGht0AjITVIuWs8ka3l/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27618,7 +27618,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Efectiva",
     "nroSiniestro": "",
     "observaciones": "",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1DGt43CTF0cC-Yx2NOe42g8qmNP5N0jcB/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27641,7 +27641,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: Se habló con María Lopez, Resp- HyS, quien dijo que la empresa opera dentro de otra empresa porque es servicio de limpieza. La direccion es una oficina administrativa. Tel. 2664568183",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/13kPXKhoenQfTGBc3gomdE8GqarUZYmej/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"
@@ -27664,7 +27664,7 @@ window.DATOS_INICIALES_IAPSER = [
     "resultadoVisita": "Fallida",
     "nroSiniestro": "",
     "observaciones": "VISITA FALLIDA: Se habló con María Lopez, Resp- HyS, quien dijo que la obra NO existe. Tel. 2664568183",
-    "documentoAdjunto": "",
+    "documentoAdjunto": "https://drive.google.com/file/d/1ArBSonM8sSyK0CUuDzfg7GCHGyl8O7w1/view",
     "estadoTarea": "Realizada",
     "gestionFallida": "",
     "origenPlan": "Alta Oct 2026"

@@ -22,7 +22,7 @@
 // CONFIGURACIÓN PRINCIPAL
 var CONFIG = {
   NOMBRE_HOJA: "Hoja 1",
-  CARPETA_DRIVE_PRINCIPAL_ID: "", // Opcional: ID de carpeta en Drive. Si se deja vacío, crea automáticamente "IAPSER_Gestion_Visitas"
+  CARPETA_DRIVE_PRINCIPAL_ID: "1RDkZA4EIjPxdvBZqPCcgu5k6vnz6eAUq", // ID Carpeta "IAPSER_Gestion_Visitas"
   PREFIJO_SUB_CARPETAS_MES: "IAPSER_Visitas_",
   DIAS_ALERTA_PROXIMA_A_VENCER: 7,
   
