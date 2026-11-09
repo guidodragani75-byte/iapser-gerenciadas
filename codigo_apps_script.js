@@ -532,9 +532,8 @@ function procesarCrearTarea(sheet, colMap, payload) {
 }
 
 /**
- * Guarda el archivo en Google Drive en DOBLE ESTRUCTURA:
- * 1. Por Empresa: IAPSER_Visitas_Por_Empresa / {CUIT - RazonSocial} / Estab_{NroEstab} /
- * 2. Por Mes: IAPSER_Visitas_Por_Mes / IAPSER_Visitas_YYYY-MM /
+ * Guarda el archivo en Google Drive EXCLUSIVAMENTE POR MES:
+ * IAPSER_Gestion_Visitas / IAPSER_Visitas_YYYY-MM /
  * con la nomenclatura estandarizada: CUIT_Estab_Tarea_YYYYMMDD.ext
  */
 function guardarArchivoEnDrive(base64Data, originalFileName, mimeType, cuit, nroEstab, tarea, fechaRealizadaStr, empleador) {
@@ -546,7 +545,7 @@ function guardarArchivoEnDrive(base64Data, originalFileName, mimeType, cuit, nro
   var extMatch = originalFileName.match(/\.([a-zA-Z0-9]+)$/);
   var ext = extMatch ? extMatch[1].toLowerCase() : "pdf";
 
-  // Fecha para nombre de archivo y carpeta
+  // Fecha para nombre de archivo y carpeta mensual
   var f = parsearFecha(fechaRealizadaStr) || new Date();
   var yyyy = f.getFullYear();
   var mm = ("0" + (f.getMonth() + 1)).slice(-2);
@@ -559,7 +558,6 @@ function guardarArchivoEnDrive(base64Data, originalFileName, mimeType, cuit, nro
   var tareaNorm = tareaSinTildes.replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 20);
   var cuitNorm = (cuit || "00000000000").toString().replace(/\D/g, "");
   var estabNorm = (nroEstab || "1").toString().replace(/\D/g, "") || "1";
-  var empNorm = (empleador || "").toString().replace(/[/\\:*?"<>|]/g, " ").slice(0, 30).trim();
 
   var standardFileName = cuitNorm + "_" + estabNorm + "_" + tareaNorm + "_" + fechaYMD + "." + ext;
 
@@ -568,22 +566,10 @@ function guardarArchivoEnDrive(base64Data, originalFileName, mimeType, cuit, nro
 
   var raiz = obtenerCarpetaRaizDrive();
 
-  // 1. Estructura Por Empresa: IAPSER_Visitas_Por_Empresa / {CUIT - RazonSocial} / Estab_{N}
-  var carpPorEmpresa = obtenerOCrearSubcarpeta(raiz, "IAPSER_Visitas_Por_Empresa");
-  var nombreEmpCarpeta = cuitNorm + (empNorm ? " - " + empNorm : "");
-  var carpEmpresa = obtenerOCrearSubcarpeta(carpPorEmpresa, nombreEmpCarpeta);
-  var carpEstab = obtenerOCrearSubcarpeta(carpEmpresa, "Estab_" + estabNorm);
-  var file = carpEstab.createFile(blob);
+  // Estructura única Por Mes: IAPSER_Gestion_Visitas / IAPSER_Visitas_YYYY-MM
+  var carpMes = obtenerOCrearSubcarpeta(raiz, CONFIG.PREFIJO_SUB_CARPETAS_MES + anioMes);
+  var file = carpMes.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
-  // 2. Estructura Por Mes: IAPSER_Visitas_Por_Mes / IAPSER_Visitas_YYYY-MM
-  var carpPorMes = obtenerOCrearSubcarpeta(raiz, "IAPSER_Visitas_Por_Mes");
-  var carpMes = obtenerOCrearSubcarpeta(carpPorMes, CONFIG.PREFIJO_SUB_CARPETAS_MES + anioMes);
-  try {
-    carpMes.addFile(file);
-  } catch(e) {
-    Logger.log("Nota en addFile a carpeta mensual: " + e.toString());
-  }
 
   return file.getUrl();
 }

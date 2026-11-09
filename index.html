@@ -2006,7 +2006,7 @@
 
     <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
       <div style="font-size:12px; color:#5B6670;">
-        Guardado automático en Drive: <strong style="color:#0F4C5C;">Por Empresa/Estab</strong> y <strong style="color:#0F4C5C;">Por Mes</strong>
+        Guardado automático en Drive: <strong style="color:#0F4C5C;">Por Mes (IAPSER_Visitas_AAAA-MM)</strong>
       </div>
       <div style="display:flex; gap:10px;">
         <button type="button" class="btn btn-secondary" onclick="cerrarModalAltaMasiva()">Cancelar</button>
@@ -5970,10 +5970,10 @@ function renderizarItemsLote() {
         </div>
       </div>
 
-      <!-- Fila Inferior: Nomenclatura Estándar y Destinos en Google Drive -->
+      <!-- Fila Inferior: Nomenclatura Estándar y Destino en Google Drive -->
       <div style="font-size:11px; font-family:'IBM Plex Mono', monospace; color:#0F4C5C; background:#EBF3F5; padding:6px 10px; border-radius:2px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
         <span>Archivo Drive: <strong>${item.nombreEstandarizado}</strong></span>
-        <span>Guardado: <strong>Por Empresa (Estab ${item.nroEstab})</strong> y <strong>Por Mes (${item.anioMes})</strong></span>
+        <span>Carpeta Drive: <strong>Por Mes (IAPSER_Visitas_${item.anioMes})</strong></span>
       </div>
     `;
 
@@ -6063,7 +6063,7 @@ async function confirmarSubidaLote() {
 
   const btn = document.getElementById('btnConfirmarLote');
   btn.disabled = true;
-  btn.textContent = 'Subiendo lote a Google Drive (Empresa y Mes)...';
+  btn.textContent = 'Subiendo lote a Google Drive (Por Mes)...';
 
   let cargados = 0;
   let pendientesCerradas = 0;
@@ -6214,7 +6214,7 @@ async function confirmarSubidaLote() {
   cerrarModalAltaMasiva();
 
   if (backendOk && subidosADriveCount > 0) {
-    alert('✓ Lote procesado exitosamente (' + cargados + ' visitas: ' + pendientesCerradas + ' pendientes cerradas y ' + altasNuevasCreadas + ' nuevas altas).\n✓ ' + subidosADriveCount + ' documentos subidos y organizados en Google Drive (Por Empresa y Por Mes).');
+    alert('✓ Lote procesado exitosamente (' + cargados + ' visitas: ' + pendientesCerradas + ' pendientes cerradas y ' + altasNuevasCreadas + ' nuevas altas).\n✓ ' + subidosADriveCount + ' documentos subidos y organizados en Google Drive por mes (IAPSER_Visitas_AAAA-MM).');
   } else {
     alert('⚠️ Lote registrado localmente (' + cargados + ' visitas: ' + pendientesCerradas + ' pendientes cerradas y ' + altasNuevasCreadas + ' nuevas altas).\nNota: No hubo conexión activa con Google Apps Script, por lo que los archivos físicos NO se subieron a Google Drive.');
   }
