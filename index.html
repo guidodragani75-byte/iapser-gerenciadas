@@ -1499,18 +1499,18 @@
             <div class="chart-panel" style="margin-bottom:0;">
               <div class="chart-header">
                 <div>
-                  <div class="chart-title">Evolución de Visitas Vencidas (Altas)</div>
-                  <div class="chart-subtitle">Cantidad de visitas vencidas por período mensual</div>
+                  <div class="chart-title">Cumplimiento en Plazo y Visitas Vencidas (Altas)</div>
+                  <div class="chart-subtitle">Visitas ejecutadas en término vs visitas vencidas por período mensual</div>
                 </div>
-                <span class="badge badge-ok" id="badgeStockVencidas">0 vencidas</span>
+                <span class="badge badge-ok" id="badgeStockVencidas">✓ 0 vencidas (100% en término)</span>
               </div>
               <div class="chart-canvas-box">
                 <canvas id="chartVencidas"></canvas>
               </div>
-              <div style="display:flex; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid #D5D8D3; font-size:12px; color:#5B6670;">
-                <div>Vencidas en M0 (Sep 26): <strong id="lblVencM0">0 visitas</strong></div>
-                <div>Vencidas en M1 (Oct 26): <strong id="lblVencM1">0 visitas</strong></div>
-                <div>Total vencidas Altas: <strong style="color:#0F4C5C;" id="lblVencTotal">0 vencidas</strong></div>
+              <div style="display:flex; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid #D5D8D3; font-size:12px; color:#5B6670; flex-wrap:wrap; gap:8px;">
+                <div>M0 (Sep 26): <strong id="lblVencM0" style="color:#0F4C5C;">123 en término · 0 vencidas</strong></div>
+                <div>M1 (Oct 26): <strong id="lblVencM1" style="color:#0F4C5C;">155 en término · 0 vencidas</strong></div>
+                <div>Total Altas: <strong style="color:#0F4C5C;" id="lblVencTotal">278 en término (100% en plazo)</strong></div>
               </div>
             </div>
 
@@ -2725,7 +2725,7 @@ function fusionarEdicionesLocalesEnTareas(listaRemota) {
 
 function inicializarDatos() {
   // Limpiar versiones antiguas de localStorage
-  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13', 'IAPSER_GERENCIADAS_TASKS_V14', 'IAPSER_GERENCIADAS_TASKS_V15', 'IAPSER_GERENCIADAS_TASKS_V16', 'IAPSER_GERENCIADAS_TASKS_V20', 'IAPSER_GERENCIADAS_TASKS_V25'].forEach(k => {
+  ['IAPSER_GERENCIADAS_TASKS_V1', 'IAPSER_GERENCIADAS_TASKS_V2', 'IAPSER_GERENCIADAS_TASKS_V10', 'IAPSER_GERENCIADAS_TASKS_V11', 'IAPSER_GERENCIADAS_TASKS_V12', 'IAPSER_GERENCIADAS_TASKS_V13', 'IAPSER_GERENCIADAS_TASKS_V14', 'IAPSER_GERENCIADAS_TASKS_V15', 'IAPSER_GERENCIADAS_TASKS_V16', 'IAPSER_GERENCIADAS_TASKS_V21', 'IAPSER_GERENCIADAS_TASKS_V25'].forEach(k => {
     try { localStorage.removeItem(k); } catch(e) {}
   });
 
@@ -3327,10 +3327,21 @@ function renderizarTableroKPIs() {
   if (document.getElementById('lblPromedioMensual')) document.getElementById('lblPromedioMensual').textContent = `${m1Tot} visitas (${efectivasAltasPorMes[1]} efec. + ${fallidasAltasPorMes[1]} fall.)`;
   if (document.getElementById('lblDesvioMensual')) document.getElementById('lblDesvioMensual').textContent = `${desvioAcumAltas >= 0 ? '+' : ''}${desvioAcumAltas} visitas vs meta acum. (${metaAcumuladaAltas})`;
 
-  if (document.getElementById('lblVencM0')) document.getElementById('lblVencM0').textContent = `${vencidasAltasPorMes[0] || 0} visitas`;
-  if (document.getElementById('lblVencM1')) document.getElementById('lblVencM1').textContent = `${vencidasAltasPorMes[1] || 0} visitas`;
-  if (document.getElementById('lblVencTotal')) document.getElementById('lblVencTotal').textContent = `${vencidasAltas} vencidas`;
-  if (document.getElementById('badgeStockVencidas')) document.getElementById('badgeStockVencidas').textContent = `${vencidasAltas} vencidas`;
+  const termM0 = m0Tot;
+  const termM1 = m1Tot;
+  if (document.getElementById('lblVencM0')) document.getElementById('lblVencM0').textContent = `${termM0} en término · ${vencidasAltasPorMes[0] || 0} vencidas`;
+  if (document.getElementById('lblVencM1')) document.getElementById('lblVencM1').textContent = `${termM1} en término · ${vencidasAltasPorMes[1] || 0} vencidas`;
+  const pctCumplimientoPlazo = (realizadasAltas + vencidasAltas) > 0 ? ((realizadasAltas / (realizadasAltas + vencidasAltas)) * 100).toFixed(1) : '100.0';
+  if (document.getElementById('lblVencTotal')) document.getElementById('lblVencTotal').textContent = `${realizadasAltas} en término · ${vencidasAltas} vencidas (${pctCumplimientoPlazo}%)`;
+  if (document.getElementById('badgeStockVencidas')) {
+    if (vencidasAltas === 0) {
+      document.getElementById('badgeStockVencidas').className = 'badge badge-ok';
+      document.getElementById('badgeStockVencidas').textContent = `✓ 0 vencidas (100% en término)`;
+    } else {
+      document.getElementById('badgeStockVencidas').className = 'badge badge-warn';
+      document.getElementById('badgeStockVencidas').textContent = `${vencidasAltas} vencidas`;
+    }
+  }
 
   // Actualizar Hero Dashboard - Universo 1 (Altas)
   if (document.getElementById('heroAltasRealizadas')) document.getElementById('heroAltasRealizadas').textContent = realizadasAltas;
@@ -3446,7 +3457,7 @@ function renderizarTableroKPIs() {
   // Renderizar vistas según pestaña activa
   if (KPI_UNIVERSE === 'altas') {
     renderChartPresupuesto(efectivasAltasPorMes, fallidasAltasPorMes, 100, ultimoMesActivoIdx);
-    renderChartVencidas(vencidasAltasPorMes, ultimoMesActivoIdx);
+    renderChartVencidas(efectivasAltasPorMes, fallidasAltasPorMes, vencidasAltasPorMes, ultimoMesActivoIdx);
     renderChartFallidas();
     renderizarTablaResumenMensual(efectivasAltasPorMes, fallidasAltasPorMes, vencidasAltasPorMes, 100, ultimoMesActivoIdx);
   } else if (KPI_UNIVERSE === 'residual') {
@@ -3618,14 +3629,28 @@ function toggleModoPresupuesto(modo) {
   renderizarTableroKPIs();
 }
 
-function renderChartVencidas(vencidasPorMes, ultimoMesActivoIdx = 1) {
+function renderChartVencidas(efectivasPorMes, fallidasPorMes, vencidasPorMes, ultimoMesActivoIdx = 1) {
   const canvas = document.getElementById('chartVencidas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (chartVencidasInstance) chartVencidasInstance.destroy();
 
   const labels = PROYECTO_TIMELINE.map(pt => pt.label);
-  const dataCantidades = vencidasPorMes.map((v, i) => i <= Math.max(1, ultimoMesActivoIdx) ? v : null);
+  const limiteMes = Math.max(1, ultimoMesActivoIdx);
+
+  const enTerminoData = PROYECTO_TIMELINE.map((pt, i) => {
+    if (i <= limiteMes) {
+      return (efectivasPorMes[i] || 0) + (fallidasPorMes[i] || 0);
+    }
+    return null;
+  });
+
+  const vencidasData = PROYECTO_TIMELINE.map((pt, i) => {
+    if (i <= limiteMes) {
+      return vencidasPorMes[i] || 0;
+    }
+    return null;
+  });
 
   chartVencidasInstance = new Chart(ctx, {
     type: 'bar',
@@ -3633,11 +3658,18 @@ function renderChartVencidas(vencidasPorMes, ultimoMesActivoIdx = 1) {
       labels: labels,
       datasets: [
         {
-          label: 'Altas Vencidas',
-          data: dataCantidades,
+          label: 'Visitas en Término (Ejecutadas)',
+          data: enTerminoData,
+          backgroundColor: '#0F4C5C',
+          borderRadius: 2,
+          barPercentage: 0.6
+        },
+        {
+          label: 'Visitas Vencidas (Fuera de Plazo)',
+          data: vencidasData,
           backgroundColor: '#A8470A',
-          borderRadius: 3,
-          barPercentage: 0.55
+          borderRadius: 2,
+          barPercentage: 0.6
         }
       ]
     },
@@ -3648,11 +3680,28 @@ function renderChartVencidas(vencidasPorMes, ultimoMesActivoIdx = 1) {
         legend: {
           position: 'top',
           labels: { font: { family: 'IBM Plex Sans', size: 12 }, usePointStyle: true }
+        },
+        tooltip: {
+          titleFont: { family: 'IBM Plex Sans' },
+          bodyFont: { family: 'IBM Plex Mono' },
+          callbacks: {
+            label: function(context) {
+              return ` ${context.dataset.label}: ${context.parsed.y} visitas`;
+            },
+            footer: function(items) {
+              const term = items.find(i => i.dataset.label.includes('Término'))?.parsed.y || 0;
+              const venc = items.find(i => i.dataset.label.includes('Vencidas'))?.parsed.y || 0;
+              const tot = term + venc;
+              const pct = tot > 0 ? ((term / tot) * 100).toFixed(1) : '100.0';
+              return `Tasa de cumplimiento en término: ${pct}%`;
+            }
+          }
         }
       },
       scales: {
         y: {
           beginAtZero: true,
+          suggestedMax: 180,
           grid: { color: '#E3E5E1' },
           ticks: { font: { family: 'IBM Plex Mono', size: 11 }, precision: 0 }
         },
