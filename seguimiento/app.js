@@ -297,8 +297,42 @@
     $('sync').textContent = (D.generado ? 'Datos base: ' + D.generado : '') + (pend ? ' · ' + pend + ' envío(s) pendiente(s)' : '');
   }
 
-  /* ---------- FICHA INDIVIDUAL (con detección automática al elegir PDF) ---------- */
+  /* ---------- FICHA INDIVIDUAL (con detección automática + vista previa PDF) ---------- */
   let editando = null;
+  let blobUrlIndividual = '';
+
+  function drivePreviewUrl(u) {
+    const m = String(u || '').match(/\/d\/([A-Za-z0-9_-]{10,})|[?&]id=([A-Za-z0-9_-]{10,})/);
+    const id = m && (m[1] || m[2]);
+    return id ? ('https://drive.google.com/file/d/' + id + '/preview') : '';
+  }
+
+  function renderPanePdf(container, src, titulo, openHref) {
+    if (!container) return;
+    if (!src) {
+      container.innerHTML = `<div class="pdf-pane-head"><span>Previsualización de PDF</span></div><div class="pdf-empty">Seleccioná o arrastrá un PDF para previsualizarlo acá al lado de los datos detectados.</div>`;
+      return;
+    }
+    container.innerHTML = `<div class="pdf-pane-head"><span title="${esc(titulo)}">📄 ${esc(titulo)}</span><a href="${esc(openHref || src)}" target="_blank">Abrir aparte ↗</a></div><iframe class="pdf-frame" src="${esc(src)}"></iframe>`;
+  }
+
+  function mostrarPreviewIndividual(src, titulo, openHref) {
+    const wrap = $('dvSplit');
+    const pane = $('dvPreview');
+    if (!wrap || !pane) return;
+    if (src) {
+      $('dlgVisita').classList.add('wide');
+      wrap.classList.add('split-preview');
+      pane.style.display = 'flex';
+      renderPanePdf(pane, src, titulo, openHref);
+    } else {
+      $('dlgVisita').classList.remove('wide');
+      wrap.classList.remove('split-preview');
+      pane.style.display = 'none';
+      pane.innerHTML = '';
+    }
+  }
+
   function intentoEditable(v) {
     const u = C.ultimoIntento(v.intentos);
     if (!u) return { n: 1 };
@@ -309,6 +343,7 @@
   function abrir(id) {
     const v = VISITAS.find(x => x.id === id);
     if (!v) return;
+    if (blobUrlIndividual) { URL.revokeObjectURL(blobUrlIndividual); blobUrlIndividual = ''; }
     const it = intentoEditable(v);
     editando = { id, it };
     const previos = v.intentos.filter(x => x.n !== it.n);
@@ -318,7 +353,7 @@
     const cruceHtml = v.cruceOct ? `<div class="info-box"><strong>Cruce con PDF de Octubre (CUIT + Estab ${esc(v.nroEstab)}):</strong><br>${v.cruceOct.items.map(x => `• ${esc(x.fecha)} — <b>${esc(x.resultado)}</b> (${esc(x.tarea)}) · <a href="${esc(x.url)}" target="_blank">Abrir PDF en Drive ↗</a>`).join('<br>')}</div>` : '';
 
     $('dvTitulo').textContent = v.empleador + ' · Estab ' + v.nroEstab;
-    $('dvBody').innerHTML = `<div class="kv">
+    $('dvBody').innerHTML = `<div id="dvSplit"><div><div class="kv">
       ${dato('CUIT / Contrato', v.cuit + ' / ' + v.contrato)}${dato('Establecimiento', v.establecimiento + ' — ' + v.domicilio)}
       ${dato('Localidad', v.localidad + ', ' + v.provincia)}${dato('Tareas', v.tareas.split('//').join(' · '))}
       ${dato('Cohorte / Etapa', v.cohorte + ' · ' + v.planificacion)}
@@ -337,9 +372,12 @@
         <div id="bFall" style="display:none"><div class="row2"><div><label>Motivo</label><select id="fMot"><option value="">—</option>${MOTIVOS.map(m => `<option ${m === motivoBase ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
           <div><label>¿Se vuelve a ir?</label><select id="fRep"><option value="">—</option><option value="Si" ${it.reprograma === 'Si' ? 'selected' : ''}>Sí (se reprograma)</option><option value="No" ${it.reprograma === 'No' ? 'selected' : ''}>No (se cierra)</option></select></div></div>
           <label>Detalle (opcional)</label><input id="fDet" value="${esc(detalle)}"></div>
-      </fieldset><div class="err" id="dvErr"></div>`;
+      </fieldset><div class="err" id="dvErr"></div></div>
+      <div class="pdf-pane" id="dvPreview" style="display:none"></div></div>`;
     $('dvFoot').innerHTML = `<button class="btn sec" onclick="dlgVisita.close()">Cancelar</button><button class="btn" id="btnGuardar" onclick="App.guardar()">Guardar</button>`;
     toggleRes();
+    const prevDrive = it.adjunto ? drivePreviewUrl(it.adjunto) : '';
+    mostrarPreviewIndividual(prevDrive, prevDrive ? 'PDF guardado en Drive' : '', it.adjunto);
     $('dlgVisita').showModal();
   }
 
@@ -351,6 +389,9 @@
   async function analizarPdfIndividual(file) {
     if (!file || !OCR) return;
     if (!C.esPDF(file)) { $('fOcrInfo').innerHTML = '<span class="venc">Solo se admiten archivos PDF.</span>'; return; }
+    if (blobUrlIndividual) URL.revokeObjectURL(blobUrlIndividual);
+    blobUrlIndividual = URL.createObjectURL(file);
+    mostrarPreviewIndividual(blobUrlIndividual + '#view=FitH', file.name, blobUrlIndividual);
     $('fOcrInfo').innerHTML = '<span class="pill p-ai">Analizando PDF…</span>';
     try {
       const det = await OCR.analizarPDF(file, { backendUrl: url(), visitas: VISITAS, useGemini: geminiActivo !== false });
@@ -409,9 +450,26 @@
     return [p[0], 'E' + p[1], (it.fechaReal || it.fechaAgendada || '').replace(/-/g, '')].join('_') + '.pdf';
   }
 
-  /* ---------- SUBIDA MASIVA (OCR + GEMINI IA) ---------- */
+  /* ---------- SUBIDA MASIVA (OCR + GEMINI IA + PREVISUALIZACIÓN) ---------- */
   let LOTE = [];
+  let previewUid = '';
+  let renderedPreviewUid = '';
   let dropBound = false;
+
+  function renderPreviewMasiva(force) {
+    const it = LOTE.find(x => x.uid === previewUid && x.blobUrl);
+    const key = it ? it.uid : '';
+    if (!force && key === renderedPreviewUid) return;
+    renderedPreviewUid = key;
+    if (it) renderPanePdf($('masivaPreview'), it.blobUrl + '#view=FitH', it.nombre, it.blobUrl);
+    else renderPanePdf($('masivaPreview'), '', '', '');
+  }
+
+  function verPdfLote(uid) {
+    previewUid = uid;
+    renderPreviewMasiva(true);
+    document.querySelectorAll('#masivaLista .bitem').forEach(el => el.classList.toggle('active', el.dataset.uid === uid));
+  }
 
   function actualizarBadgeMotor() {
     const el = $('masivaMotorBadge');
@@ -431,6 +489,7 @@
     }
     actualizarBadgeMotor();
     renderMasiva();
+    renderPreviewMasiva(true);
     $('dlgMasiva').showModal();
   }
 
@@ -448,14 +507,16 @@
       }
       const item = {
         uid: 'b_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-        file, nombre: file.name, status: 'analizando', source: '', base64: '',
+        file, nombre: file.name, blobUrl: URL.createObjectURL(file), status: 'analizando', source: '', base64: '',
         cuit: '', nroEstab: '', fechaReal: '', resultado: 'Efectiva', motivo: '', reprograma: 'No',
         visitaId: '', filtro: '', candidatos: [], error: ''
       };
       LOTE.push(item);
       nuevos.push(item);
+      if (!previewUid) previewUid = item.uid;
     });
     renderMasiva();
+    renderPreviewMasiva();
     for (const item of nuevos) {
       try {
         const det = await OCR.analizarPDF(item.file, { backendUrl: url(), visitas: VISITAS, useGemini: geminiActivo !== false });
@@ -512,12 +573,12 @@
       }
       const opciones = buscarOpcionesVisita(it.filtro, it.cuit);
       const selVisita = opciones.map(v => `<option value="${esc(v.id)}" ${v.id === it.visitaId ? 'selected' : ''}>${esc(v.cuit)} · ${esc(v.empleador)} · Estab ${esc(v.nroEstab)} (${esc(v.cohorte)} · ${esc(v.tareas.slice(0, 35))})</option>`).join('');
-      const cls = it.status === 'subido' ? 'ok' : (it.error ? 'bad' : '');
+      const cls = (it.status === 'subido' ? 'ok' : (it.error ? 'bad' : '')) + (it.uid === previewUid ? ' active' : '');
       const dis = (it.status === 'subiendo' || it.status === 'subido') ? 'disabled' : '';
-      return `<div class="bitem ${cls}">
+      return `<div class="bitem ${cls}" data-uid="${it.uid}">
         <div class="bitem-head">
-          <div><strong>📄 ${esc(it.nombre)}</strong> ${it.cuit ? `<span class="note">CUIT detectado: ${esc(it.cuit)}${it.nroEstab ? ' · Estab ' + esc(it.nroEstab) : ''}</span>` : ''}</div>
-          <div>${badge} <button class="btn sec sm" ${dis} onclick="App.quitarLote('${it.uid}')">✕</button></div>
+          <div style="cursor:pointer" onclick="App.verPdfLote('${it.uid}')"><strong>📄 ${esc(it.nombre)}</strong> ${it.cuit ? `<span class="note">CUIT: ${esc(it.cuit)}${it.nroEstab ? ' · Estab ' + esc(it.nroEstab) : ''}</span>` : ''}</div>
+          <div>${badge} <button class="btn sec sm" onclick="App.verPdfLote('${it.uid}')">👁 Ver</button> <button class="btn sec sm" ${dis} onclick="App.quitarLote('${it.uid}')">✕</button></div>
         </div>
         ${it.error && it.status !== 'subido' ? `<div class="venc" style="font-size:12px;margin-bottom:6px">${esc(it.error)}</div>` : ''}
         <div class="row2">
@@ -562,8 +623,23 @@
     }
   }
 
-  function quitarLote(uid) { LOTE = LOTE.filter(x => x.uid !== uid); renderMasiva(); }
-  function limpiarMasiva() { LOTE = []; renderMasiva(); }
+  function quitarLote(uid) {
+    const it = LOTE.find(x => x.uid === uid);
+    if (it && it.blobUrl) URL.revokeObjectURL(it.blobUrl);
+    LOTE = LOTE.filter(x => x.uid !== uid);
+    if (previewUid === uid) {
+      const next = LOTE.find(x => x.blobUrl);
+      previewUid = next ? next.uid : '';
+    }
+    renderMasiva();
+    renderPreviewMasiva();
+  }
+  function limpiarMasiva() {
+    LOTE.forEach(it => { if (it.blobUrl) URL.revokeObjectURL(it.blobUrl); });
+    LOTE = []; previewUid = '';
+    renderMasiva();
+    renderPreviewMasiva(true);
+  }
 
   async function confirmarLote() {
     const pendientes = LOTE.filter(x => x.status === 'listo');
@@ -664,11 +740,15 @@
     f(k, val, keep) { F[k] = val; pagina = 1; if (keep) { renderLista(); const i = document.querySelector('input[type=search]'); if (i) { i.focus(); i.setSelectionRange(val.length, val.length); } } else render(); },
     pag(d) { pagina = Math.max(1, pagina + d); renderLista(); },
     abrir, guardar, toggleRes, analizarPdfIndividual,
-    abrirMasiva, agregarArchivosMasiva, updLote, quitarLote, limpiarMasiva, confirmarLote,
+    abrirMasiva, agregarArchivosMasiva, updLote, quitarLote, limpiarMasiva, confirmarLote, verPdfLote,
     sincronizar, abrirConfig, guardarConfig, exportar,
     _estado: () => ({ VISITAS, INTENTOS, COLA, LOTE, geminiActivo })
   };
   window.dlgVisita = $('dlgVisita'); window.dlgCfg = $('dlgCfg'); window.dlgMasiva = $('dlgMasiva');
+  $('dlgVisita').addEventListener('close', () => {
+    if (blobUrlIndividual) { URL.revokeObjectURL(blobUrlIndividual); blobUrlIndividual = ''; }
+    $('dlgVisita').classList.remove('wide');
+  });
 
   recalcular(); render();
   if (url()) sincronizar();

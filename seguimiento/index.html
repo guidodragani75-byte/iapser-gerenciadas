@@ -70,11 +70,19 @@
   .btn.bad{background:#fff;color:var(--bad);border-color:var(--bad)}
   .btn:disabled{opacity:.5;cursor:not-allowed}
   dialog{border:1px solid var(--line);border-radius:6px;padding:0;width:min(820px,96vw);max-height:92vh}
-  dialog.wide{width:min(1040px,97vw)}
+  dialog.wide{width:min(1340px,97vw)}
   dialog::backdrop{background:rgba(23,32,42,.5)}
   .mh{padding:12px 18px;background:var(--ink);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px}
-  .mb{padding:14px 18px;overflow:auto;max-height:72vh}
+  .mb{padding:14px 18px;overflow:auto;max-height:76vh}
   .mf{padding:10px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;align-items:center;background:#FAFAF8}
+  .split-preview{display:grid;grid-template-columns:minmax(0,1fr) 500px;gap:14px;align-items:start}
+  @media(max-width:1020px){.split-preview{grid-template-columns:1fr}}
+  .pdf-pane{position:sticky;top:0;border:1px solid var(--line);border-radius:4px;background:#2b3137;overflow:hidden;display:flex;flex-direction:column;height:68vh;min-height:420px}
+  .pdf-pane-head{background:#1f272f;color:#e2e8f0;padding:7px 10px;font-size:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .pdf-pane-head span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pdf-pane-head a{color:#7dd3fc;text-decoration:none;white-space:nowrap;font-size:11.5px}
+  .pdf-frame{width:100%;flex:1;border:0;background:#525659}
+  .pdf-empty{flex:1;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;padding:20px;text-align:center}
   .kv{display:grid;grid-template-columns:150px 1fr;gap:3px 10px;font-size:13px;margin-bottom:10px}
   .kv b{color:var(--mut);font-weight:500}
   fieldset{border:1px solid var(--line);border-radius:4px;margin:10px 0;padding:10px 12px}
@@ -93,6 +101,7 @@
   .dropzone{border:2px dashed #8A949C;background:#FAFAF8;border-radius:4px;padding:22px 16px;text-align:center;cursor:pointer;transition:background .15s,border-color .15s}
   .dropzone:hover,.dropzone.over{border-color:var(--teal);background:#E6F1F4}
   .bitem{border:1px solid var(--line);border-radius:4px;background:#fff;padding:10px 12px;margin-top:10px}
+  .bitem.active{border-color:var(--teal);box-shadow:0 0 0 2px rgba(15,76,92,.18)}
   .bitem-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
   .bitem.ok{border-left:4px solid var(--ok)}
   .bitem.bad{border-left:4px solid var(--bad)}
@@ -115,17 +124,25 @@
 
 <dialog id="dlgMasiva" class="wide">
   <div class="mh">
-    <div><strong>Subida Masiva de PDFs (OCR + Gemini IA)</strong><div style="font-size:11.5px;color:#cbd5e1">Detecta CUIT, N° Estab (col. M), fecha real y si fue Efectiva o Fallida</div></div>
+    <div><strong>Subida Masiva de PDFs (OCR + Gemini IA)</strong><div style="font-size:11.5px;color:#cbd5e1">Detecta CUIT, N° Estab (col. M), fecha real y si fue Efectiva o Fallida · Con previsualización del PDF</div></div>
     <button class="btn sec sm" onclick="dlgMasiva.close()">✕</button>
   </div>
   <div class="mb">
     <div id="masivaMotorBadge" class="info-box" style="margin-top:0">Motor de detección: verificando…</div>
-    <div class="dropzone" id="dropMasiva" onclick="document.getElementById('inMasiva').click()">
-      <strong style="font-size:15px;color:var(--teal)">Arrastrá varios PDFs acá o hacé clic para seleccionar</strong>
-      <div class="note" style="margin-top:4px">Solo archivos .PDF (máx. 15 MB c/u). Cada archivo se asocia automáticamente a su visita pendiente.</div>
+    <div class="split-preview">
+      <div>
+        <div class="dropzone" id="dropMasiva" onclick="document.getElementById('inMasiva').click()">
+          <strong style="font-size:15px;color:var(--teal)">Arrastrá varios PDFs acá o hacé clic para seleccionar</strong>
+          <div class="note" style="margin-top:4px">Solo archivos .PDF (máx. 15 MB c/u). Hacé clic en "👁 Ver" en cualquier archivo para previsualizarlo al lado.</div>
+        </div>
+        <input type="file" id="inMasiva" multiple accept="application/pdf,.pdf" style="display:none" onchange="App.agregarArchivosMasiva(this.files); this.value=''">
+        <div id="masivaLista"></div>
+      </div>
+      <div class="pdf-pane" id="masivaPreview">
+        <div class="pdf-pane-head"><span>Previsualización de PDF</span></div>
+        <div class="pdf-empty">Seleccioná o arrastrá un PDF para previsualizarlo acá al lado de los datos detectados.</div>
+      </div>
     </div>
-    <input type="file" id="inMasiva" multiple accept="application/pdf,.pdf" style="display:none" onchange="App.agregarArchivosMasiva(this.files); this.value=''">
-    <div id="masivaLista"></div>
   </div>
   <div class="mf">
     <span class="note" id="masivaResumen" style="margin-right:auto">0 archivos en cola</span>
