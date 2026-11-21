@@ -168,18 +168,28 @@
         if (hits && hits.length) {
           const ef = hits.find(function (x) { return x.resultado === 'Efectiva'; });
           const pri = ef || hits[0];
-          cruceOct = { resultado: pri.resultado, fecha: pri.fecha, tarea: pri.tarea, url: pri.url, items: hits };
+          cruceOct = { resultado: pri.resultado, fecha: pri.fecha, fechaISO: pri.fechaISO, tarea: pri.tarea, url: pri.url, items: hits };
         }
       }
+      // Si no tiene intentos nuevos pero cruzó con un PDF de octubre, reflejar fecha real y estado en la grilla
+      const cerradaPorCruceOct = !u && !!cruceOct;
+      const estadoFinal = cerradaPorCruceOct
+        ? (cruceOct.resultado === 'Efectiva' ? ESTADOS.EFECTIVA : ESTADOS.FALLIDA_CERRADA)
+        : estado;
+      const cerradaFinal = estaCerrada(estadoFinal);
+      const fechaRealFinal = (u && u.fechaReal) ? u.fechaReal : (cerradaPorCruceOct ? cruceOct.fechaISO : '');
+      const resultadoFinal = (u && u.resultado) ? u.resultado : (cerradaPorCruceOct ? cruceOct.resultado : '');
       return Object.assign({}, b, {
         intentos: intentos,
-        estado: estado,
-        cerrada: cerrada,
-        cuentaObjetivo: cuentaObjetivo(estado),
+        estado: estadoFinal,
+        cerrada: cerradaFinal,
+        cuentaObjetivo: cuentaObjetivo(estadoFinal),
+        cerradaPorCruceOct: cerradaPorCruceOct,
         plazo: plazo,
-        vencida: !cerrada && !!plazo && plazo < hoy,
+        vencida: !cerradaFinal && !!plazo && plazo < hoy,
         fechaAgendada: u && u.fechaAgendada ? u.fechaAgendada : '',
-        fechaReal: u && u.fechaReal ? u.fechaReal : '',
+        fechaReal: fechaRealFinal,
+        resultadoActual: resultadoFinal,
         cruceOct: cruceOct
       });
     });
@@ -200,14 +210,15 @@
     return out;
   }
 
-  /** Cerradas con documento por mes de fecha real (visitas + histórico). */
+  /** Cerradas con documento por mes de fecha real (visitas nuevas + histórico, sin doble conteo del cruce Oct). */
   function cerradasPorMes(visitas, historico, soloCohorte) {
     const out = {};
     function add(m, k) { if (!m) return; out[m] = out[m] || { efectivas: 0, fallidas: 0 }; out[m][k]++; }
     visitas.forEach(function (v) {
       if (soloCohorte && v.cohorte !== soloCohorte) return;
-      if (!v.cuentaObjetivo) return;
+      if (!v.cuentaObjetivo || v.cerradaPorCruceOct) return;
       const u = ultimoIntento(v.intentos);
+      if (!u) return;
       add(mesDe(aISO(u.fechaReal)), u.resultado === 'Efectiva' ? 'efectivas' : 'fallidas');
     });
     if (!soloCohorte || soloCohorte === 'Emergente') {

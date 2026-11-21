@@ -29,7 +29,7 @@
   const enVista = {
     todas: () => true,
     agendadas: v => v.estado === E.AGENDADA,
-    realizadas: v => !!(C.ultimoIntento(v.intentos) || {}).resultado,
+    realizadas: v => !!v.resultadoActual,
     pendientes: v => !v.cerrada,
     revisar: v => v.revisarDuplicada
   };
@@ -45,8 +45,7 @@
     return VISITAS.filter(v => {
       if (vista !== 'tablero' && enVista[vista] && !enVista[vista](v)) return false;
       if (vista === 'realizadas' && F.sub) {
-        const r = (C.ultimoIntento(v.intentos) || {}).resultado;
-        if (r !== F.sub) return false;
+        if (v.resultadoActual !== F.sub) return false;
       }
       if (F.cohorte && v.cohorte !== F.cohorte) return false;
       if (F.plan && v.planificacion !== F.plan) return false;
@@ -376,8 +375,10 @@
       <div class="pdf-pane" id="dvPreview" style="display:none"></div></div>`;
     $('dvFoot').innerHTML = `<button class="btn sec" onclick="dlgVisita.close()">Cancelar</button><button class="btn" id="btnGuardar" onclick="App.guardar()">Guardar</button>`;
     toggleRes();
-    const prevDrive = it.adjunto ? drivePreviewUrl(it.adjunto) : '';
-    mostrarPreviewIndividual(prevDrive, prevDrive ? 'PDF guardado en Drive' : '', it.adjunto);
+    const prevDrive = it.adjunto ? drivePreviewUrl(it.adjunto) : (v.cerradaPorCruceOct && v.cruceOct ? drivePreviewUrl(v.cruceOct.url) : '');
+    const prevTitulo = it.adjunto ? 'PDF guardado en Drive' : (v.cerradaPorCruceOct && v.cruceOct ? `PDF Octubre (${v.cruceOct.fecha} · ${v.cruceOct.resultado})` : '');
+    const prevHref = it.adjunto || (v.cerradaPorCruceOct && v.cruceOct ? v.cruceOct.url : '');
+    mostrarPreviewIndividual(prevDrive, prevTitulo, prevHref);
     $('dlgVisita').showModal();
   }
 

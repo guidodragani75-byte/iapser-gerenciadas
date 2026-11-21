@@ -49,14 +49,23 @@ t('validaciones', () => {
   assert.ok(C.requiereAdjunto({ resultado: 'Fallida', reprograma: 'No' }) && !C.requiereAdjunto({ resultado: 'Fallida', reprograma: 'Si' }));
   assert.ok(C.esPDF({ name: 'a.PDF', type: 'application/pdf' }) && !C.esPDF({ name: 'a.jpg', type: 'image/jpeg' }) && !C.esPDF({ name: 'a.pdf.exe', type: '' }));
 });
-t('cruce PDFs de octubre vs Emergentes por CUIT + col. M (52 = 35 Ef + 17 Fa)', () => {
+t('cruce PDFs de octubre vs Emergentes por CUIT + col. M (52 = 35 Ef + 17 Fa, con fechaReal y estado)', () => {
   const vs = C.armarVisitas(D.visitas, {}, '2026-11-21', D.historico);
   const conCruce = vs.filter(v => v.cruceOct);
   assert.strictEqual(conCruce.length, 52);
   assert.strictEqual(conCruce.filter(v => v.cruceOct.resultado === 'Efectiva').length, 35);
   assert.strictEqual(conCruce.filter(v => v.cruceOct.resultado === 'Fallida').length, 17);
-  // Ninguna residual marcada por el cruce de emergentes
   assert.strictEqual(conCruce.filter(v => v.cohorte === 'Residual').length, 0);
+  // Refleja fechaReal, estado cerrado y resultadoActual en la grilla
+  assert.ok(conCruce.every(v => /^2026-10-\d{2}$/.test(v.fechaReal)));
+  assert.ok(conCruce.every(v => v.cerrada && !v.vencida && v.cerradaPorCruceOct));
+  assert.strictEqual(conCruce.filter(v => v.estado === E.EFECTIVA).length, 35);
+  assert.strictEqual(conCruce.filter(v => v.estado === E.FALLIDA_CERRADA).length, 17);
+  // Sin doble conteo en el tablero consolidado
+  const T = C.tablero(vs, D.historico, '2026-11-21');
+  assert.strictEqual(T.consolidado.realizadas, 277);
+  assert.strictEqual(T.emergentes.realizadas, 277);
+  assert.strictEqual(T.consolidado.sinAgendar, 2480 - 52);
 });
 t('tablero unificado: Consolidado (100 Sep-Oct, 500 Nov+) = Emergentes (100) + Residuales (400)', () => {
   const emerg = D.visitas.filter(v => v.cohorte === 'Emergente').slice(0, 2);
