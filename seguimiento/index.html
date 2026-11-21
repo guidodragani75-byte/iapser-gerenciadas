@@ -8,19 +8,34 @@
   :root{--ink:#17202A;--teal:#0F4C5C;--amber:#A8470A;--mut:#5B6670;--line:#D5D8D3;--bg:#F5F6F3;--ok:#1E7B4B;--bad:#B3261E;--warn:#D97706}
   *{box-sizing:border-box}
   body{margin:0;font-family:"IBM Plex Sans",system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
-  header{background:var(--ink);color:#fff;padding:12px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  header{background:var(--ink);color:#fff;padding:12px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
   header h1{font-size:17px;margin:0;font-weight:600}
   header .sp{flex:1}
-  header a,header button{color:#D9DEE2;font-size:12px;background:none;border:1px solid #4a5662;padding:5px 10px;border-radius:3px;cursor:pointer;text-decoration:none}
+  header a,header button{color:#D9DEE2;font-size:12px;background:none;border:1px solid #4a5662;padding:6px 11px;border-radius:3px;cursor:pointer;text-decoration:none}
+  header button.primary-hdr{background:var(--amber);border-color:var(--amber);color:#fff;font-weight:600}
+  header button.primary-hdr:hover{filter:brightness(1.08)}
   #sync{font-size:12px;color:#9fb3bd}
   nav.tabs{display:flex;gap:2px;background:#fff;border-bottom:1px solid var(--line);padding:0 12px;flex-wrap:wrap}
   nav.tabs button{border:0;background:none;padding:11px 14px;cursor:pointer;font-size:13px;color:var(--mut);border-bottom:3px solid transparent}
   nav.tabs button.on{color:var(--teal);border-bottom-color:var(--teal);font-weight:600}
   .badge{display:inline-block;background:#ECEEEA;border:1px solid var(--line);border-radius:10px;padding:0 7px;font-size:11px;margin-left:5px;color:var(--ink)}
   main{padding:16px 20px;max-width:1500px;margin:0 auto}
+  .subtabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+  .subtabs button{border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;border-radius:4px;cursor:pointer;font:inherit;font-size:13px;font-weight:500}
+  .subtabs button.on{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600}
+  .subtabs button small{opacity:.85;font-weight:400;margin-left:4px}
+  .hero-dual{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+  @media(max-width:850px){.hero-dual{grid-template-columns:1fr}}
+  .hero-box{background:#fff;border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:4px;padding:12px 16px;cursor:pointer;transition:box-shadow .15s}
+  .hero-box.res{border-left-color:var(--amber)}
+  .hero-box:hover{box-shadow:0 2px 8px rgba(0,0,0,.07)}
+  .hero-box .ht{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--teal);letter-spacing:.3px}
+  .hero-box.res .ht{color:var(--amber)}
+  .hero-box .hv{font-size:24px;font-weight:700;margin:4px 0}
+  .hero-box .hs{font-size:12px;color:var(--mut);display:flex;gap:12px;flex-wrap:wrap}
   .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
   .filters select,.filters input{padding:6px 8px;border:1px solid var(--line);border-radius:3px;font:inherit;background:#fff}
-  .filters input[type=search]{min-width:220px}
+  .filters input[type=search]{min-width:210px}
   table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--line)}
   th,td{padding:7px 9px;border-bottom:1px solid #ECEEEA;text-align:left;vertical-align:top}
   th{background:#EEF1EE;font-size:12px;position:sticky;top:0;z-index:1;white-space:nowrap}
@@ -31,26 +46,29 @@
   .p-ok{background:#E4F3EA;color:#1E7B4B;border-color:#B5DCC4}
   .p-bad{background:#FBE9E7;color:#B3261E;border-color:#F2C0BA}
   .p-warn{background:#FDF1DC;color:#9A5B00;border-color:#F0D49B}
+  .p-ai{background:#EDE9FE;color:#5B21B6;border-color:#C4B5FD}
   .venc{color:var(--bad);font-weight:600}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:16px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:10px;margin-bottom:16px}
   .card{background:#fff;border:1px solid var(--line);padding:12px 14px;border-radius:4px}
   .card .k{font-size:11.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.3px}
-  .card .v{font-size:26px;font-weight:700;color:var(--teal);margin-top:2px}
-  .card .s{font-size:12px;color:var(--mut)}
+  .card .v{font-size:25px;font-weight:700;color:var(--teal);margin-top:2px}
+  .card .s{font-size:12px;color:var(--mut);margin-top:2px}
   h2{font-size:15px;margin:18px 0 8px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  @media(max-width:950px){.grid2{grid-template-columns:1fr}}
   .pager{display:flex;gap:8px;align-items:center;margin:10px 0;font-size:12.5px;color:var(--mut)}
   .pager button{padding:4px 10px;border:1px solid var(--line);background:#fff;border-radius:3px;cursor:pointer}
   .btn{padding:7px 14px;border-radius:3px;border:1px solid var(--teal);background:var(--teal);color:#fff;cursor:pointer;font:inherit}
   .btn.sec{background:#fff;color:var(--teal)}
+  .btn.sm{padding:3px 8px;font-size:12px}
   .btn.bad{background:#fff;color:var(--bad);border-color:var(--bad)}
   .btn:disabled{opacity:.5;cursor:not-allowed}
-  dialog{border:1px solid var(--line);border-radius:6px;padding:0;width:min(780px,96vw);max-height:92vh}
+  dialog{border:1px solid var(--line);border-radius:6px;padding:0;width:min(820px,96vw);max-height:92vh}
+  dialog.wide{width:min(1040px,97vw)}
   dialog::backdrop{background:rgba(23,32,42,.5)}
-  .mh{padding:12px 18px;background:var(--ink);color:#fff;display:flex;justify-content:space-between;align-items:center}
-  .mb{padding:14px 18px;overflow:auto;max-height:70vh}
-  .mf{padding:10px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;background:#FAFAF8}
+  .mh{padding:12px 18px;background:var(--ink);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .mb{padding:14px 18px;overflow:auto;max-height:72vh}
+  .mf{padding:10px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;align-items:center;background:#FAFAF8}
   .kv{display:grid;grid-template-columns:150px 1fr;gap:3px 10px;font-size:13px;margin-bottom:10px}
   .kv b{color:var(--mut);font-weight:500}
   fieldset{border:1px solid var(--line);border-radius:4px;margin:10px 0;padding:10px 12px}
@@ -58,12 +76,20 @@
   label{display:block;font-size:12.5px;color:var(--mut);margin:7px 0 2px}
   .mb input,.mb select,.mb textarea{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:3px;font:inherit}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
   .err{background:#FBE9E7;border:1px solid #F2C0BA;color:var(--bad);padding:8px 10px;border-radius:3px;margin:8px 0;font-size:13px;display:none}
+  .info-box{background:#E6F1F4;border:1px solid #B7D5DD;color:#0F4C5C;padding:8px 10px;border-radius:3px;margin:8px 0;font-size:12.5px}
   .note{font-size:12px;color:var(--mut)}
   .hist td,.hist th{font-size:12px;padding:4px 6px}
-  .bar{height:8px;background:#E3E7E3;border-radius:4px;overflow:hidden;min-width:80px}
+  .bar{height:8px;background:#E3E7E3;border-radius:4px;overflow:hidden;min-width:75px}
   .bar i{display:block;height:100%;background:var(--teal)}
   .bar.m i{background:var(--amber)}
+  .dropzone{border:2px dashed #8A949C;background:#FAFAF8;border-radius:4px;padding:22px 16px;text-align:center;cursor:pointer;transition:background .15s,border-color .15s}
+  .dropzone:hover,.dropzone.over{border-color:var(--teal);background:#E6F1F4}
+  .bitem{border:1px solid var(--line);border-radius:4px;background:#fff;padding:10px 12px;margin-top:10px}
+  .bitem-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .bitem.ok{border-left:4px solid var(--ok)}
+  .bitem.bad{border-left:4px solid var(--bad)}
 </style>
 </head>
 <body>
@@ -71,6 +97,7 @@
   <h1>IAPSER ART · Seguimiento de Visitas</h1>
   <span id="sync">…</span>
   <span class="sp"></span>
+  <button class="primary-hdr" id="btnMasivaHdr" onclick="App.abrirMasiva()">⬆ Subida Masiva (OCR / IA)</button>
   <a href="../index.html">← Plataforma anterior</a>
   <button onclick="App.abrirConfig()">Configurar</button>
   <button onclick="App.sincronizar()">Sincronizar</button>
@@ -78,17 +105,43 @@
 <nav class="tabs" id="tabs"></nav>
 <main id="main"></main>
 
-<dialog id="dlgVisita"><div class="mh"><strong id="dvTitulo">Visita</strong><button class="btn sec" onclick="dlgVisita.close()">✕</button></div><div class="mb" id="dvBody"></div><div class="mf" id="dvFoot"></div></dialog>
-<dialog id="dlgCfg"><div class="mh"><strong>Configuración</strong><button class="btn sec" onclick="dlgCfg.close()">✕</button></div>
+<dialog id="dlgVisita"><div class="mh"><strong id="dvTitulo">Visita</strong><button class="btn sec sm" onclick="dlgVisita.close()">✕</button></div><div class="mb" id="dvBody"></div><div class="mf" id="dvFoot"></div></dialog>
+
+<dialog id="dlgMasiva" class="wide">
+  <div class="mh">
+    <div><strong>Subida Masiva de PDFs (OCR + Gemini IA)</strong><div style="font-size:11.5px;color:#cbd5e1">Detecta CUIT, N° Estab (col. M), fecha real y si fue Efectiva o Fallida</div></div>
+    <button class="btn sec sm" onclick="dlgMasiva.close()">✕</button>
+  </div>
+  <div class="mb">
+    <div id="masivaMotorBadge" class="info-box" style="margin-top:0">Motor de detección: verificando…</div>
+    <div class="dropzone" id="dropMasiva" onclick="document.getElementById('inMasiva').click()">
+      <strong style="font-size:15px;color:var(--teal)">Arrastrá varios PDFs acá o hacé clic para seleccionar</strong>
+      <div class="note" style="margin-top:4px">Solo archivos .PDF (máx. 15 MB c/u). Cada archivo se asocia automáticamente a su visita pendiente.</div>
+    </div>
+    <input type="file" id="inMasiva" multiple accept="application/pdf,.pdf" style="display:none" onchange="App.agregarArchivosMasiva(this.files); this.value=''">
+    <div id="masivaLista"></div>
+  </div>
+  <div class="mf">
+    <span class="note" id="masivaResumen" style="margin-right:auto">0 archivos en cola</span>
+    <button class="btn sec" onclick="App.limpiarMasiva()">Limpiar</button>
+    <button class="btn sec" onclick="dlgMasiva.close()">Cerrar</button>
+    <button class="btn" id="btnSubirLote" onclick="App.confirmarLote()" disabled>Confirmar y Subir Lote</button>
+  </div>
+</dialog>
+
+<dialog id="dlgCfg"><div class="mh"><strong>Configuración</strong><button class="btn sec sm" onclick="dlgCfg.close()">✕</button></div>
   <div class="mb">
     <label>URL de la Web App (Apps Script, termina en /exec)</label><input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec">
     <label>Tu nombre (queda registrado en "Cargado por")</label><input id="cfgUser" placeholder="Nombre de quien carga">
-    <p class="note">Sin URL la app funciona sin conexión: guarda en este navegador y envía los cambios pendientes cuando se configure.</p>
+    <p class="note" id="cfgGeminiInfo">Detección con Gemini IA: se configura de forma segura en Apps Script → Configuración del proyecto → Propiedades de la secuencia de comandos → <code>GEMINI_API_KEY</code>. Si no está cargada, la app usa PDF.js + Tesseract local automáticamente.</p>
   </div>
   <div class="mf"><button class="btn" onclick="App.guardarConfig()">Guardar</button></div></dialog>
 
 <script src="../chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="core.js"></script>
+<script src="ocr.js"></script>
 <script src="datos.js"></script>
 <script src="app.js"></script>
 </body>

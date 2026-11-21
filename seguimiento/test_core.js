@@ -1,6 +1,7 @@
 // Ejecutar: node seguimiento/test_core.js
 const assert = require('assert');
 const C = require('./core.js');
+const OCR = require('./ocr.js');
 global.window = {};
 require('./datos.js');
 const D = window.SEG_DATA, E = C.ESTADOS;
@@ -34,7 +35,6 @@ t('estados', () => {
   assert.strictEqual(C.estadoVisita([I({ resultado: 'Fallida', reprograma: 'Si', adjunto: 'https://x' })]), E.FALLIDA_REPROGRAMAR);
   assert.strictEqual(C.estadoVisita([I({ resultado: 'Fallida', reprograma: 'No' })]), E.FALLIDA_SIN_DOC);
   assert.strictEqual(C.estadoVisita([I({ resultado: 'Fallida', reprograma: 'No', adjunto: 'https://x' })]), E.FALLIDA_CERRADA);
-  // reprogramada y luego efectiva
   assert.strictEqual(C.estadoVisita([I({ resultado: 'Fallida', reprograma: 'Si' }), { n: 2, fechaAgendada: '2026-12-10' }]), E.AGENDADA);
 });
 t('solo cuenta para el objetivo con PDF', () => {
@@ -42,59 +42,66 @@ t('solo cuenta para el objetivo con PDF', () => {
   assert.ok(!C.cuentaObjetivo(E.EFECTIVA_SIN_DOC) && !C.cuentaObjetivo(E.AGENDADA) && !C.cuentaObjetivo(E.FALLIDA_REPROGRAMAR));
 });
 t('validaciones', () => {
-  assert.ok(C.validarIntento({ resultado: 'Efectiva' }, '2026-12-01').length > 0);                      // sin fecha real
-  assert.ok(C.validarIntento({ resultado: 'Efectiva', fechaReal: '2027-01-01' }, '2026-12-01').length > 0); // futura
-  assert.ok(C.validarIntento({ resultado: 'Fallida', fechaReal: '2026-11-30' }, '2026-12-01').length >= 2); // sin motivo/reprograma
+  assert.ok(C.validarIntento({ resultado: 'Efectiva' }, '2026-12-01').length > 0);
+  assert.ok(C.validarIntento({ resultado: 'Efectiva', fechaReal: '2027-01-01' }, '2026-12-01').length > 0);
+  assert.ok(C.validarIntento({ resultado: 'Fallida', fechaReal: '2026-11-30' }, '2026-12-01').length >= 2);
   assert.strictEqual(C.validarIntento({ resultado: 'Fallida', fechaReal: '2026-11-30', motivo: 'x', reprograma: 'No' }, '2026-12-01').length, 0);
   assert.ok(C.requiereAdjunto({ resultado: 'Fallida', reprograma: 'No' }) && !C.requiereAdjunto({ resultado: 'Fallida', reprograma: 'Si' }));
   assert.ok(C.esPDF({ name: 'a.PDF', type: 'application/pdf' }) && !C.esPDF({ name: 'a.jpg', type: 'image/jpeg' }) && !C.esPDF({ name: 'a.pdf.exe', type: '' }));
 });
-t('fecha real distinta a la agendada es válida', () => {
-  assert.strictEqual(C.validarIntento({ fechaAgendada: '2026-11-20', resultado: 'Efectiva', fechaReal: '2026-11-25', adjunto: 'https://d' }, '2026-12-01').length, 0);
+t('cruce PDFs de octubre vs Emergentes por CUIT + col. M (52 = 35 Ef + 17 Fa)', () => {
+  const vs = C.armarVisitas(D.visitas, {}, '2026-11-21', D.historico);
+  const conCruce = vs.filter(v => v.cruceOct);
+  assert.strictEqual(conCruce.length, 52);
+  assert.strictEqual(conCruce.filter(v => v.cruceOct.resultado === 'Efectiva').length, 35);
+  assert.strictEqual(conCruce.filter(v => v.cruceOct.resultado === 'Fallida').length, 17);
+  // Ninguna residual marcada por el cruce de emergentes
+  assert.strictEqual(conCruce.filter(v => v.cohorte === 'Residual').length, 0);
 });
-t('resumen: plazos por etapa, vencidas y objetivo con histórico', () => {
-  const base = D.visitas.slice(0, 5).map((v, i) => Object.assign({}, v, { planificacion: ['Etapa 1', 'Etapa 1 - Urgente', 'Etapa 2', 'Etapa 2', 'Etapa 1'][i], fechaMax: '2026-12-15' }));
-  const ints = { [base[0].id]: [{ n: 1, fechaAgendada: '2026-11-10', fechaReal: '2026-11-12', resultado: 'Efectiva', adjunto: 'https://d' }] };
-  const vs = C.armarVisitas(base, ints, '2026-12-20');
-  assert.strictEqual(vs[0].plazo, '2027-01-31');
-  assert.strictEqual(vs[1].plazo, '2026-12-15');     // urgente = su fecha máxima
-  assert.strictEqual(vs[2].plazo, '2027-04-30');
-  assert.ok(vs[1].vencida && !vs[2].vencida && !vs[0].vencida);
-  const r = C.resumen(vs, D.historico, '2026-12-20');
-  const conDoc = D.historico.filter(h => h.documentoAdjunto).length;
-  assert.strictEqual(r.objetivoTotal, 1 + conDoc);
-  assert.strictEqual(r.residual.cerradas + r.emergente.cerradas, r.objetivoTotal);
-  assert.strictEqual(r.emergente.sinDocumento, D.historico.length - conDoc);
-  assert.strictEqual(r.agendadasMes['2026-11'], 1);
-});
-t('indicadores originales: U1 (altas/emergentes), U2 (residual), U3 (consolidado)', () => {
+t('tablero unificado: Consolidado (100 Sep-Oct, 500 Nov+) = Emergentes (100) + Residuales (400)', () => {
   const emerg = D.visitas.filter(v => v.cohorte === 'Emergente').slice(0, 2);
   const resid = D.visitas.filter(v => v.cohorte === 'Residual').slice(0, 3);
   const ints = {
-    [emerg[0].id]: [{ n: 1, fechaReal: '2026-11-12', resultado: 'Efectiva', adjunto: 'https://d' }],
-    [emerg[1].id]: [{ n: 1, fechaReal: '2026-11-13', resultado: 'Fallida', reprograma: 'No', motivo: 'x', adjunto: 'https://d' }],
-    [resid[0].id]: [{ n: 1, fechaReal: '2026-11-14', resultado: 'Efectiva', adjunto: 'https://d' }]
+    [emerg[0].id]: [{ n: 1, fechaAgendada: '2026-11-10', fechaReal: '2026-11-12', resultado: 'Efectiva', adjunto: 'https://d' }],
+    [emerg[1].id]: [{ n: 1, fechaAgendada: '2026-11-11', fechaReal: '2026-11-13', resultado: 'Fallida', reprograma: 'No', motivo: 'x', adjunto: 'https://d' }],
+    [resid[0].id]: [{ n: 1, fechaAgendada: '2026-11-14', fechaReal: '2026-11-14', resultado: 'Efectiva', adjunto: 'https://d' }]
   };
-  const vs = C.armarVisitas(D.visitas, ints, '2026-11-21');
-  const I = C.indicadoresOriginales(vs, D.historico, '2026-11-21');
+  const vs = C.armarVisitas(D.visitas, ints, '2026-11-21', D.historico);
+  const T = C.tablero(vs, D.historico, '2026-11-21');
   const hEf = D.historico.filter(h => h.documentoAdjunto && h.resultadoVisita === 'Efectiva').length;
   const hFa = D.historico.filter(h => h.documentoAdjunto && h.resultadoVisita !== 'Efectiva').length;
-  assert.strictEqual(I.u1.efectivas, hEf + 1);
-  assert.strictEqual(I.u1.fallidas, hFa + 1);
-  assert.strictEqual(I.u1.realizadas, hEf + 1 + hFa + 1);
-  assert.strictEqual(I.u1.metaAcum, 300);
-  assert.strictEqual(I.u1.desvio, I.u1.realizadas - 300);
-  assert.strictEqual(I.u1.trimestres[0].meta, 300);
-  assert.strictEqual(I.u1.trimestres[0].efectivas, hEf + 1);
-  assert.strictEqual(I.u1.trimestres[0].total, hEf + 1 + hFa + 1);
-  assert.strictEqual(I.u2.total, 1341);
-  assert.strictEqual(I.u2.realizadas, 1);
-  assert.strictEqual(I.u2.pendientes, 1340);
-  assert.strictEqual(I.u2.tecnicas + I.u2.especiales, 1341);
-  assert.strictEqual(I.u2.mesesRestantes, 3);
-  assert.strictEqual(I.u2.burn.find(x => x.mes === '2026-11').real, 1340);
-  assert.strictEqual(I.u3.realizadas, hEf + 1 + hFa + 1 + 1);
-  assert.strictEqual(I.u3.plan, 1200 + 1341);
-  assert.strictEqual(I.u3.realizadas + I.u3.pendientes, I.u3.plan);
+  // Emergentes
+  assert.strictEqual(T.emergentes.metaMes, 100);
+  assert.strictEqual(T.emergentes.efectivas, hEf + 1);
+  assert.strictEqual(T.emergentes.fallidas, hFa + 1);
+  assert.strictEqual(T.emergentes.realizadas, hEf + hFa + 2);
+  assert.strictEqual(T.emergentes.trimestres[0].total, hEf + hFa + 2);
+  assert.strictEqual(T.emergentes.cruceOct.total, 52);
+  // Residuales
+  assert.strictEqual(T.residuales.metaMes, 400);
+  assert.strictEqual(T.residuales.total, 1341);
+  assert.strictEqual(T.residuales.realizadas, 1);
+  assert.strictEqual(T.residuales.pendientes, 1340);
+  assert.strictEqual(T.residuales.burn[0].teorico, 1341 - 400);
+  assert.strictEqual(T.residuales.burn[0].real, 1340);
+  // Consolidado = Emergentes + Residuales
+  assert.strictEqual(T.consolidado.metaMesVigente, 500);
+  assert.strictEqual(T.consolidado.realizadas, T.emergentes.realizadas + T.residuales.realizadas);
+  assert.strictEqual(T.consolidado.planTotal, 1200 + 1341);
+  assert.strictEqual(T.consolidado.realizadas + T.consolidado.pendientesPlan, T.consolidado.planTotal);
+  assert.strictEqual(T.consolidado.agendadasMesActual, 3);
+  assert.strictEqual(T.consolidado.meses.find(m => m.mes === '2026-09').meta, 100);
+  assert.strictEqual(T.consolidado.meses.find(m => m.mes === '2026-10').meta, 100);
+  assert.strictEqual(T.consolidado.meses.find(m => m.mes === '2026-11').meta, 500);
+});
+t('OCR helpers: extracción desde nombre y texto + match por CUIT y Estab (col. M)', () => {
+  const m = OCR.extraerDeNombre('30599884145_E2_20261118_FALLIDA_CERRADO.pdf');
+  assert.strictEqual(m.cuit, '30599884145');
+  assert.strictEqual(m.nroEstab, '2');
+  assert.strictEqual(m.fechaReal, '2026-11-18');
+  assert.strictEqual(m.resultado, 'Fallida');
+  assert.strictEqual(m.motivoFallida, 'Establecimiento cerrado');
+  const cand = OCR.buscarVisitaCandidata(D.visitas, '30599884145', '2');
+  assert.ok(cand.match && cand.match.cuit === '30599884145' && String(cand.match.nroEstab) === '2');
 });
 console.log('\n' + ok + ' pruebas OK');

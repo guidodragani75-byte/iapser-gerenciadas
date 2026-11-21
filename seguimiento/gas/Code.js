@@ -1,10 +1,15 @@
 /**
  * Backend del módulo Seguimiento Consultora (Google Apps Script).
- * Se vincula a la planilla "Detalle Visitas con Tareas CS" (1x2w2zY5BmxWJ29hh6pNiy1qLXv22RFkOx5DidNOx8_E).
+ * Planilla: "Detalle Visitas con Tareas CS" (1x2w2zY5BmxWJ29hh6pNiy1qLXv22RFkOx5DidNOx8_E).
  * NO toca las hojas de datos ni las columnas A..W: solo crea/usa la hoja "Seguimiento_Intentos".
  *
- * Acciones (doPost JSON, text/plain): saveIntento | getState ; (doGet): ?action=getState | ping
- * Adjuntos: SOLO PDF, se guardan en Drive por mes: IAPSER_Gestion_Visitas / IAPSER_Visitas_AAAA-MM
+ * Acciones:
+ *   doGet:  ?action=getState | ping
+ *   doPost: saveIntento | getState | analyzePdf (usa Gemini Flash si GEMINI_API_KEY está en Script Properties)
+ *
+ * Para activar detección por Gemini:
+ *   Apps Script -> Configuración del proyecto -> Propiedades de la secuencia de comandos ->
+ *   Agregar propiedad: GEMINI_API_KEY = <tu clave>
  */
 var CFG = {
   SPREADSHEET_ID: '1x2w2zY5BmxWJ29hh6pNiy1qLXv22RFkOx5DidNOx8_E',
@@ -12,9 +17,18 @@ var CFG = {
   CARPETA_PRINCIPAL_ID: '1RDkZA4EIjPxdvBZqPCcgu5k6vnz6eAUq',
   PREFIJO_MES: 'IAPSER_Visitas_',
   MAX_PDF_BYTES: 15 * 1024 * 1024,
+  GEMINI_MODEL: 'gemini-2.5-flash',
   ENCABEZADOS: ['ID Visita', 'Nro Intento', 'Fecha Agendada', 'Fecha Real', 'Resultado', 'Motivo',
                 'Reprograma', 'Adjunto Drive', 'Cargado por', 'Timestamp']
 };
+
+function getGeminiKey_() {
+  try {
+    return (PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || '').trim();
+  } catch (e) {
+    return '';
+  }
+}
 
 function hoja_() {
   var ss = SpreadsheetApp.openById(CFG.SPREADSHEET_ID);
@@ -47,20 +61,79 @@ function iso_(v) {
 
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'getState';
-  if (action === 'ping') return json_({ ok: true, ts: new Date().toISOString() });
-  if (action === 'getState') return json_({ ok: true, intentos: leerIntentos_() });
+  if (action === 'ping') return json_({ ok: true, ts: new Date().toISOString(), geminiConfigured: !!getGeminiKey_() });
+  if (action === 'getState') return json_({ ok: true, intentos: leerIntentos_(), geminiConfigured: !!getGeminiKey_() });
   return json_({ ok: false, error: 'Acción no reconocida: ' + action });
 }
 
 function doPost(e) {
   try {
     var p = JSON.parse(e.postData.contents);
-    if (p.action === 'getState') return json_({ ok: true, intentos: leerIntentos_() });
+    if (p.action === 'getState') return json_({ ok: true, intentos: leerIntentos_(), geminiConfigured: !!getGeminiKey_() });
     if (p.action === 'saveIntento') return json_(guardarIntento_(p));
+    if (p.action === 'analyzePdf') return json_(analizarPdfGemini_(p));
     return json_({ ok: false, error: 'Acción no reconocida: ' + p.action });
   } catch (err) {
     return json_({ ok: false, error: String(err && err.message || err) });
   }
+}
+
+function analizarPdfGemini_(p) {
+  var key = getGeminiKey_();
+  if (!key) return { ok: false, fallback: true, reason: 'no_api_key' };
+  if (!p.pdfBase64) return { ok: false, error: 'Falta pdfBase64' };
+  var bytes = Utilities.base64Decode(p.pdfBase64);
+  if (bytes.length > CFG.MAX_PDF_BYTES) return { ok: false, error: 'El PDF supera 15 MB' };
+  if (!(bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46)) {
+    return { ok: false, error: 'El adjunto debe ser un PDF válido' };
+  }
+
+  var prompt = [
+    'Analizá este documento PDF de visita de Higiene y Seguridad (ART IAPSER, Argentina).',
+    'Devolvé SOLO un JSON válido con las claves exactas:',
+    '{"cuit":"","nroEstab":"","fechaReal":"","resultado":"","motivoFallida":""}',
+    'Reglas:',
+    '- cuit: solo 11 dígitos sin guiones (ej: 30545756710), o "" si no figura.',
+    '- nroEstab: número de establecimiento / intercambio / sucursal como entero (ej: "1", "15", "0"), o "" si no figura.',
+    '- fechaReal: fecha en que se realizó la visita en formato YYYY-MM-DD, o "" si no figura.',
+    '- resultado: "Efectiva" si se realizó la visita con recepción/firma, "Fallida" si el establecimiento estaba cerrado/ausente/no atendió/sin acceso/rechazó, o "" si es dudoso.',
+    '- motivoFallida: si resultado es "Fallida", breve motivo (ej: "Establecimiento cerrado", "No atiende nadie / sin responsable", "Domicilio inexistente o incorrecto", "Empleador sin personal", "Rechazo de la visita"), si no "".'
+  ].join('\n');
+
+  var endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' + CFG.GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(key);
+  var body = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: 'application/pdf', data: p.pdfBase64 } }
+      ]
+    }],
+    generationConfig: { responseMimeType: 'application/json', temperature: 0 }
+  };
+
+  var res = UrlFetchApp.fetch(endpoint, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(body),
+    muteHttpExceptions: true
+  });
+  var code = res.getResponseCode();
+  if (code < 200 || code >= 300) {
+    return { ok: false, fallback: true, reason: 'gemini_http_' + code };
+  }
+  var parsed = JSON.parse(res.getContentText());
+  var txt = parsed && parsed.candidates && parsed.candidates[0] && parsed.candidates[0].content &&
+            parsed.candidates[0].content.parts && parsed.candidates[0].content.parts[0] &&
+            parsed.candidates[0].content.parts[0].text;
+  if (!txt) return { ok: false, fallback: true, reason: 'empty_response' };
+  var data = JSON.parse(txt.replace(/```json|```/g, '').trim());
+  var cuit = String(data.cuit || '').replace(/\D/g, '');
+  if (cuit.length !== 11) cuit = '';
+  var nroEstab = String(data.nroEstab == null ? '' : data.nroEstab).replace(/\D/g, '');
+  var fechaReal = /^\d{4}-\d{2}-\d{2}$/.test(String(data.fechaReal || '')) ? String(data.fechaReal) : '';
+  var resultado = (data.resultado === 'Efectiva' || data.resultado === 'Fallida') ? data.resultado : '';
+  var motivoFallida = resultado === 'Fallida' ? String(data.motivoFallida || '').slice(0, 120) : '';
+  return { ok: true, source: 'gemini', data: { cuit: cuit, nroEstab: nroEstab, fechaReal: fechaReal, resultado: resultado, motivoFallida: motivoFallida } };
 }
 
 function leerIntentos_() {
