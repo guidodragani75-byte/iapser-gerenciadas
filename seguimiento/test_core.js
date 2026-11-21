@@ -61,10 +61,12 @@ t('cruce PDFs de octubre vs Emergentes por CUIT + col. M (52 = 35 Ef + 17 Fa, co
   assert.ok(conCruce.every(v => v.cerrada && !v.vencida && v.cerradaPorCruceOct));
   assert.strictEqual(conCruce.filter(v => v.estado === E.EFECTIVA).length, 35);
   assert.strictEqual(conCruce.filter(v => v.estado === E.FALLIDA_CERRADA).length, 17);
-  // Sin doble conteo en el tablero consolidado
+  // Sin doble conteo en el tablero consolidado (268 PDFs reales en Sep-Oct: 113 Sep + 155 Oct; 10 de Sep sin PDF)
   const T = C.tablero(vs, D.historico, '2026-11-21');
-  assert.strictEqual(T.consolidado.realizadas, 277);
-  assert.strictEqual(T.emergentes.realizadas, 277);
+  const hConPdf = D.historico.filter(h => /^https?:\/\//i.test(h.documentoAdjunto || '')).length;
+  assert.strictEqual(hConPdf, 268);
+  assert.strictEqual(T.consolidado.realizadas, hConPdf);
+  assert.strictEqual(T.emergentes.realizadas, hConPdf);
   assert.strictEqual(T.consolidado.sinAgendar, 2480 - 52);
 });
 t('tablero unificado: Consolidado (100 Sep-Oct, 500 Nov+) = Emergentes (100) + Residuales (400)', () => {
@@ -77,8 +79,8 @@ t('tablero unificado: Consolidado (100 Sep-Oct, 500 Nov+) = Emergentes (100) + R
   };
   const vs = C.armarVisitas(D.visitas, ints, '2026-11-21', D.historico);
   const T = C.tablero(vs, D.historico, '2026-11-21');
-  const hEf = D.historico.filter(h => h.documentoAdjunto && h.resultadoVisita === 'Efectiva').length;
-  const hFa = D.historico.filter(h => h.documentoAdjunto && h.resultadoVisita !== 'Efectiva').length;
+  const hEf = D.historico.filter(h => /^https?:\/\//i.test(h.documentoAdjunto || '') && h.resultadoVisita === 'Efectiva').length;
+  const hFa = D.historico.filter(h => /^https?:\/\//i.test(h.documentoAdjunto || '') && h.resultadoVisita !== 'Efectiva').length;
   // Emergentes
   assert.strictEqual(T.emergentes.metaMes, 100);
   assert.strictEqual(T.emergentes.efectivas, hEf + 1);
@@ -112,5 +114,23 @@ t('OCR helpers: extracción desde nombre y texto + match por CUIT y Estab (col. 
   assert.strictEqual(m.motivoFallida, 'Establecimiento cerrado');
   const cand = OCR.buscarVisitaCandidata(D.visitas, '30599884145', '2');
   assert.ok(cand.match && cand.match.cuit === '30599884145' && String(cand.match.nroEstab) === '2');
+});
+t('filtros nuevos: vencimiento (vencida / mes_actual / otro_mes) y corte predeterminado >= May-2027', () => {
+  const vs = C.armarVisitas(D.visitas, {}, '2026-11-21', D.historico);
+  const nVenc = vs.filter(v => v.catVenc === 'vencida').length;
+  const nMes = vs.filter(v => v.catVenc === 'mes_actual').length;
+  const nOtro = vs.filter(v => v.catVenc === 'otro_mes').length;
+  const nCerr = vs.filter(v => v.catVenc === 'cerrada').length;
+  assert.strictEqual(nVenc + nMes + nOtro + nCerr, vs.length);
+  assert.strictEqual(nCerr, 52);
+  assert.ok(nVenc > 0 && nMes > 0 && nOtro > 0);
+  // Corte >= 2027-05-01
+  const prueba = [
+    { id: '1', fechaMax: '2027-04-30' },
+    { id: '2', fechaMax: '2027-05-01' },
+    { id: '3', fechaMax: '2027-08-15' }
+  ];
+  assert.strictEqual(C.filtrarCorteFuturo(prueba, true).length, 1);
+  assert.strictEqual(C.filtrarCorteFuturo(prueba, false).length, 3);
 });
 console.log('\n' + ok + ' pruebas OK');

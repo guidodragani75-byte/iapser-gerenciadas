@@ -7,6 +7,7 @@
 
   const CONFIG = {
     CORTE_RESIDUAL: '2026-10-01',        // fecha máxima < corte => Residual
+    CORTE_EXCLUIR_FUTURO: '2027-05-01',  // filtro predeterminado: excluye visitas desde May-2027 inclusive
     METAS: {
       EMERGENTE_MES: 100,                // 100/mes => 1.200/año (Sep-26 a Ago-27)
       EMERGENTE_ANUAL: 1200,
@@ -71,6 +72,24 @@
   function esObra(tareas) { return /obra/i.test(sinTildes(tareas)); }
   function esTecnica(tareas) { return /visita tecnica/i.test(sinTildes(tareas)); }
 
+  function esMayo2027OAdelante(v) {
+    const f = (v && (v.fechaMax || v.plazo)) || '';
+    return !!f && f >= CONFIG.CORTE_EXCLUIR_FUTURO;
+  }
+
+  function filtrarCorteFuturo(visitas, excluir) {
+    if (!excluir) return visitas;
+    return (visitas || []).filter(function (v) { return !esMayo2027OAdelante(v); });
+  }
+
+  function categoriaVencimiento(v, hoy) {
+    hoy = hoy || hoyISO();
+    if (v.cerrada || !v.plazo) return 'cerrada';
+    if (v.plazo < hoy) return 'vencida';
+    if (mesDe(v.plazo) === mesDe(hoy)) return 'mes_actual';
+    return 'otro_mes';
+  }
+
   function plazoVisita(v) {
     const et = String(v.planificacion || '');
     if (/urgente/i.test(et)) return v.fechaMax;
@@ -132,11 +151,15 @@
     return /\.pdf$/i.test(file.name || '') && (!file.type || file.type === 'application/pdf');
   }
 
-  /** Índice de PDFs de octubre del histórico por CUIT|NroEstabIntercambio (col. M). */
+  function esLinkValido(u) {
+    return /^https?:\/\//i.test(String(u || '').trim());
+  }
+
+  /** Índice de PDFs de octubre del histórico por CUIT|NroEstabIntercambio (col. M / col. I en Hoja 1). */
   function indexarCruceOctubre(historico) {
     const mapa = {};
     (historico || []).forEach(function (h) {
-      if (!h.documentoAdjunto) return;
+      if (!esLinkValido(h.documentoAdjunto)) return;
       const iso = aISO(h.fechaRealizada);
       if (mesDe(iso) !== '2026-10') return;
       const k = String(h.cuit || '').trim() + '|' + String(h.nroEstabIntercambio || '').trim();
@@ -179,6 +202,7 @@
       const cerradaFinal = estaCerrada(estadoFinal);
       const fechaRealFinal = (u && u.fechaReal) ? u.fechaReal : (cerradaPorCruceOct ? cruceOct.fechaISO : '');
       const resultadoFinal = (u && u.resultado) ? u.resultado : (cerradaPorCruceOct ? cruceOct.resultado : '');
+      const catVenc = cerradaFinal || !plazo ? 'cerrada' : (plazo < hoy ? 'vencida' : (mesDe(plazo) === mesDe(hoy) ? 'mes_actual' : 'otro_mes'));
       return Object.assign({}, b, {
         intentos: intentos,
         estado: estadoFinal,
@@ -186,7 +210,8 @@
         cuentaObjetivo: cuentaObjetivo(estadoFinal),
         cerradaPorCruceOct: cerradaPorCruceOct,
         plazo: plazo,
-        vencida: !cerradaFinal && !!plazo && plazo < hoy,
+        vencida: catVenc === 'vencida',
+        catVenc: catVenc,
         fechaAgendada: u && u.fechaAgendada ? u.fechaAgendada : '',
         fechaReal: fechaRealFinal,
         resultadoActual: resultadoFinal,
@@ -223,7 +248,7 @@
     });
     if (!soloCohorte || soloCohorte === 'Emergente') {
       (historico || []).forEach(function (h) {
-        if (!h.documentoAdjunto) return;
+        if (!esLinkValido(h.documentoAdjunto)) return;
         add(mesDe(aISO(h.fechaRealizada)), h.resultadoVisita === 'Efectiva' ? 'efectivas' : 'fallidas');
       });
     }
@@ -242,7 +267,7 @@
     const M = CONFIG.METAS;
     const mesHoy = hoy.slice(0, 7);
     const hist = historico || [];
-    const histCerr = hist.filter(function (h) { return !!h.documentoAdjunto; });
+    const histCerr = hist.filter(function (h) { return esLinkValido(h.documentoAdjunto); });
     const histEf = histCerr.filter(function (h) { return h.resultadoVisita === 'Efectiva'; }).length;
     const histFa = histCerr.length - histEf;
     const histSinDoc = hist.length - histCerr.length;
@@ -402,7 +427,8 @@
 
   const API = {
     CONFIG, ESTADOS, aISO, aDMY, mesDe, hoyISO, sumarMeses, diffMeses, sinTildes,
-    cohorte, esObra, esTecnica, plazoVisita, ultimoIntento, estadoVisita,
+    cohorte, esObra, esTecnica, esMayo2027OAdelante, filtrarCorteFuturo, categoriaVencimiento,
+    plazoVisita, ultimoIntento, estadoVisita,
     cuentaObjetivo, estaCerrada, validarIntento, requiereAdjunto, esPDF,
     indexarCruceOctubre, armarVisitas, agendadasPorMes, cerradasPorMes,
     metaConsolidadaMes, tablero

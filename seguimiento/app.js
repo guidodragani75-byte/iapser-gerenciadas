@@ -15,16 +15,20 @@
 
   let INTENTOS = load(LS_INT, {});
   let COLA = load(LS_COLA, []);
+  let VISITAS_TODAS = [];
   let VISITAS = [];
   let vista = 'tablero', subTab = 'consolidado', pagina = 1;
   let chMain = null, chSec = null;
   let geminiActivo = null; // null = sin verificar, true/false según backend
-  const F = { cohorte: '', plan: '', ambito: '', estado: '', mes: '', cruceOct: '', q: '', sub: '' };
+  const F = { cohorte: '', plan: '', ambito: '', estado: '', mes: '', venc: '', cruceOct: '', q: '', sub: '', excluirMay27: true };
 
   const TABS = [['tablero', 'Tablero'], ['todas', 'Todas'], ['agendadas', 'Agendadas'],
     ['realizadas', 'Realizadas'], ['pendientes', 'Pendientes'], ['revisar', 'A revisar (duplicadas)']];
 
-  function recalcular() { VISITAS = C.armarVisitas(D.visitas, INTENTOS, C.hoyISO(), D.historico); }
+  function recalcular() {
+    VISITAS_TODAS = C.armarVisitas(D.visitas, INTENTOS, C.hoyISO(), D.historico);
+    VISITAS = C.filtrarCorteFuturo(VISITAS_TODAS, F.excluirMay27);
+  }
 
   const enVista = {
     todas: () => true,
@@ -52,6 +56,7 @@
       if (F.ambito && v.ambito !== F.ambito) return false;
       if (F.estado && v.estado !== F.estado) return false;
       if (F.mes && C.mesDe(v.fechaMax) !== F.mes) return false;
+      if (F.venc && v.catVenc !== F.venc) return false;
       if (F.cruceOct === 'con' && !v.cruceOct) return false;
       if (F.cruceOct === 'Efectiva' && !(v.cruceOct && v.cruceOct.resultado === 'Efectiva')) return false;
       if (F.cruceOct === 'Fallida' && !(v.cruceOct && v.cruceOct.resultado === 'Fallida')) return false;
@@ -70,10 +75,11 @@
   const n1 = x => (Math.round(x * 10) / 10).toLocaleString('es-AR');
 
   function renderTabs() {
+    const excluidas = VISITAS_TODAS.length - C.filtrarCorteFuturo(VISITAS_TODAS, true).length;
     $('tabs').innerHTML = TABS.map(([k, n]) => {
       const c = k === 'tablero' ? '' : `<span class="badge">${VISITAS.filter(enVista[k]).length}</span>`;
       return `<button class="${k === vista ? 'on' : ''}" onclick="App.ir('${k}')">${n}${c}</button>`;
-    }).join('');
+    }).join('') + `<label class="cut-toggle" title="Predeterminado: excluye visitas con fecha desde Mayo 2027 inclusive en adelante"><input type="checkbox" ${F.excluirMay27 ? 'checked' : ''} onchange="App.toggleMay27(this.checked)"> Excluir ≥ May-2027${excluidas ? ` (${excluidas})` : ''}</label>`;
   }
 
   /* ---------- TABLERO UNIFICADO (Consolidado 500 | Emergentes 100 | Residuales 400) ---------- */
@@ -256,8 +262,17 @@
     if (pagina > pags) pagina = pags;
     const sl = lista.slice((pagina - 1) * PAGE, pagina * PAGE);
     const meses = Array.from(new Set(D.visitas.map(v => C.mesDe(v.fechaMax)).filter(Boolean))).sort();
+    const nVenc = VISITAS.filter(v => v.catVenc === 'vencida').length;
+    const nMesAct = VISITAS.filter(v => v.catVenc === 'mes_actual').length;
+    const nOtroMes = VISITAS.filter(v => v.catVenc === 'otro_mes').length;
     let h = `<div class="filters">
       <input type="search" placeholder="Buscar CUIT, empleador, contrato, localidad…" value="${esc(F.q)}" oninput="App.f('q',this.value,true)">
+      <select onchange="App.f('venc',this.value)">
+        <option value="">Vencimiento: todos</option>
+        <option value="vencida" ${F.venc === 'vencida' ? 'selected' : ''}>Vencidas (${nVenc})</option>
+        <option value="mes_actual" ${F.venc === 'mes_actual' ? 'selected' : ''}>Vencen mes actual (${nMesAct})</option>
+        <option value="otro_mes" ${F.venc === 'otro_mes' ? 'selected' : ''}>Vencen otro mes (${nOtroMes})</option>
+      </select>
       <select onchange="App.f('cohorte',this.value)">${opts(['Residual', 'Emergente'], F.cohorte, 'Cohorte: todas')}</select>
       <select onchange="App.f('plan',this.value)">${opts(uniq('planificacion'), F.plan, 'Etapa: todas')}</select>
       <select onchange="App.f('ambito',this.value)">${opts(uniq('ambito'), F.ambito, 'Ámbito: todos')}</select>
@@ -737,6 +752,7 @@
   window.App = {
     ir(v) { vista = v; pagina = 1; render(); },
     sub(s) { subTab = s; vista = 'tablero'; render(); },
+    toggleMay27(checked) { F.excluirMay27 = !!checked; pagina = 1; recalcular(); render(); },
     verCruceOct() { F.cohorte = 'Emergente'; F.cruceOct = 'con'; vista = 'todas'; pagina = 1; render(); },
     f(k, val, keep) { F[k] = val; pagina = 1; if (keep) { renderLista(); const i = document.querySelector('input[type=search]'); if (i) { i.focus(); i.setSelectionRange(val.length, val.length); } } else render(); },
     pag(d) { pagina = Math.max(1, pagina + d); renderLista(); },

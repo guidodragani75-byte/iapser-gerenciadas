@@ -70,6 +70,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--detalle')
     ap.add_argument('--emergentes')
+    ap.add_argument('--hoja1', help='CSV de Hoja 1 (Prioridad mes vencido): col A+I=clave, F=fecha, AB=resultado, AE=link')
+    ap.add_argument('--hoja1-links', help='JSON de read-links de col AE de Hoja 1 (hipervinculos embebidos)')
     ap.add_argument('--salida', default=os.path.join(HERE, 'datos.js'))
     a = ap.parse_args()
 
@@ -143,13 +145,55 @@ def main():
                 v['revisarDuplicada'] = True
                 n_rev += 1
 
-    # historico Sep/Oct (modelo anterior)
-    js = subprocess.check_output(['node', '-e',
-        "global.window={};require('./datos_precargados.js');console.log(JSON.stringify(window.DATOS_INICIALES_IAPSER))"],
-        cwd=ROOT)
-    campos = ['rowId', 'cuit', 'empleador', 'contrato', 'establecimiento', 'nroEstab', 'nroEstabIntercambio',
-              'localidad', 'tarea', 'fechaRealizada', 'resultadoVisita', 'observaciones', 'documentoAdjunto', 'origenPlan']
-    hist = [{c: r.get(c, '') for c in campos} for r in json.loads(js) if r.get('origenPlan') != 'Residual 2026']
+    # historico Sep/Oct (desde Hoja 1 directa: col A=Cuit, I=Nro Estab Intercambio, F=Fecha Realizada, AB=Resultado, AE=Link)
+    def extraer_url(celda):
+        s = (celda or '').strip()
+        m = re.search(r'\((https?://[^)]+)\)', s)
+        if m:
+            return m.group(1)
+        m = re.search(r'https?://\S+', s)
+        return m.group(0) if m else ''
+
+    if a.hoja1:
+        h_rows = list(csv.reader(open(a.hoja1, encoding='utf-8')))
+        h_links = []
+        if a.hoja1_links:
+            raw_b = open(a.hoja1_links, 'rb').read()
+            txt_l = raw_b.decode('utf-16') if raw_b.startswith((b'\xff\xfe', b'\xfe\xff')) else raw_b.decode('utf-8-sig')
+            h_links = json.loads(txt_l)
+        hist = []
+        for idx_r, r in enumerate(h_rows[1:], start=1):
+            # col A(0)=Cuit, B(1)=Empleador, C(2)=Contrato, D(3)=Estab, F(5)=Fecha Realizada, G(6)=Localidad,
+            # H(7)=Nro Estab IAPART, I(8)=Nro Estab Intercambio, X(23)=Tarea, Y(24)=Origen Plan,
+            # AB(27)=Resultado Visita, AD(29)=Observaciones, AE(30)=Documento Adjunto
+            f_real = r[5].strip() if len(r) > 5 else ''
+            if not a_iso(f_real):
+                continue
+            ae_lnk = h_links[idx_r][0] if idx_r < len(h_links) and h_links[idx_r] else ''
+            ae_csv = r[30].strip() if len(r) > 30 else ''
+            hist.append({
+                'rowId': idx_r + 1,
+                'cuit': r[0].strip() if len(r) > 0 else '',
+                'empleador': r[1].strip() if len(r) > 1 else '',
+                'contrato': r[2].strip() if len(r) > 2 else '',
+                'establecimiento': r[3].strip() if len(r) > 3 else '',
+                'localidad': r[6].strip() if len(r) > 6 else '',
+                'nroEstab': r[7].strip() if len(r) > 7 else '',
+                'nroEstabIntercambio': r[8].strip() if len(r) > 8 else '',
+                'tarea': r[23].strip() if len(r) > 23 else '',
+                'origenPlan': r[24].strip() if len(r) > 24 else '',
+                'fechaRealizada': f_real,
+                'resultadoVisita': r[27].strip() if len(r) > 27 else '',
+                'observaciones': r[29].strip() if len(r) > 29 else '',
+                'documentoAdjunto': extraer_url(ae_lnk) or extraer_url(ae_csv)
+            })
+    else:
+        js = subprocess.check_output(['node', '-e',
+            "global.window={};require('./datos_precargados.js');console.log(JSON.stringify(window.DATOS_INICIALES_IAPSER))"],
+            cwd=ROOT)
+        campos = ['rowId', 'cuit', 'empleador', 'contrato', 'establecimiento', 'nroEstab', 'nroEstabIntercambio',
+                  'localidad', 'tarea', 'fechaRealizada', 'resultadoVisita', 'observaciones', 'documentoAdjunto', 'origenPlan']
+        hist = [{c: r.get(c, '') for c in campos} for r in json.loads(js) if r.get('origenPlan') != 'Residual 2026']
 
     datos = {'generado': datetime.now().strftime('%Y-%m-%d %H:%M'), 'visitas': visitas, 'historico': hist}
     with open(a.salida, 'w', encoding='utf-8') as fh:
