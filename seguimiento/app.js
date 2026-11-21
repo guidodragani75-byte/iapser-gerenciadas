@@ -137,21 +137,21 @@
 
     if (chart) chart.destroy();
     if (window.Chart) {
-      const ms = mesesR.filter(m => m >= '2026-11');
-      // Acumulado cerradas c/PDF: arranca con el histórico Sep–Oct ya cerrado
-      let acumBase = r.historico.conDocumento;
-      const acumCerradas = ms.map(m => {
-        const c = r.cerradasMes[m]; acumBase += c ? c.efectivas + c.fallidas : 0; return acumBase;
-      });
+      // Incluir sep y oct (histórico) + meses futuros hasta abr-27
+      const ms = mesesR; // ya contiene 2026-09, 2026-10 y los meses siguientes
+      const ef  = ms.map(m => { const c = r.cerradasMes[m]; return c ? c.efectivas  : 0; });
+      const fa  = ms.map(m => { const c = r.cerradasMes[m]; return c ? c.fallidas   : 0; });
+      const ag  = ms.map(m => r.agendadasMes[m] || 0);
       chart = new Chart($('chAg'), { type: 'bar',
         data: { labels: ms, datasets: [
-          { label: 'Agendadas', data: ms.map(m => r.agendadasMes[m] || 0), backgroundColor: '#0F4C5C', order: 2 },
-          { label: 'Cerradas c/PDF (mes)', data: ms.map(m => { const c = r.cerradasMes[m]; return c ? c.efectivas + c.fallidas : 0; }), backgroundColor: '#1E7B4B', order: 2 },
-          { type: 'line', label: 'Meta agenda ' + meta, data: ms.map(() => meta), borderColor: '#A8470A', pointRadius: 0, borderDash: [6, 4], order: 1 },
-          { type: 'line', label: 'Objetivo acumulado c/PDF', data: acumCerradas, borderColor: '#1E7B4B', backgroundColor: 'rgba(30,123,75,0.08)', fill: true, pointRadius: 4, pointBackgroundColor: '#1E7B4B', tension: 0.3, order: 1, yAxisID: 'yAcum' }] },
+          { label: 'Efectivas c/PDF', data: ef, backgroundColor: '#1E7B4B', stack: 'cerradas' },
+          { label: 'Fallidas c/PDF',  data: fa, backgroundColor: '#B3261E', stack: 'cerradas' },
+          { label: 'Agendadas',       data: ag, backgroundColor: 'rgba(15,76,92,0.35)', stack: 'agenda' },
+          { type: 'line', label: 'Meta agenda ' + meta, data: ms.map(() => meta),
+            borderColor: '#A8470A', pointRadius: 0, borderDash: [6, 4], order: 0 }] },
         options: { responsive: true, maintainAspectRatio: false,
-          scales: { yAcum: { position: 'right', title: { display: true, text: 'Acumulado c/PDF' }, grid: { drawOnChartArea: false } } },
-          plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y } } } } });
+          scales: { x: { stacked: true }, y: { stacked: false, beginAtZero: true } },
+          plugins: { legend: { position: 'bottom' } } } });
     }
   }
 
@@ -187,24 +187,14 @@
     $('main').innerHTML = h;
     if (ch1) ch1.destroy(); if (ch2) ch2.destroy();
     if (!window.Chart) return;
-    const act = u1.meses;
-    // Acumulado cerradas c/PDF (efectivas + fallidas) mes a mes con sep-oct ya incluidos
-    let acum = 0;
-    const acumSeries = act.map(x => {
-      if (!x.futuro) { acum += x.efectivas + x.fallidas; return acum; }
-      return null;
-    });
-    // Meta acumulada mes a mes desde inicio del ciclo
-    let metaAcumSeries = 0;
-    const metaAcumArr = act.map(x => { metaAcumSeries += u1.metaMes; return x.futuro ? null : metaAcumSeries; });
+    const act = u1.meses; // 12 meses sep-26 a ago-27, sep y oct ya tienen datos del histórico
     ch1 = new Chart($('chU1'), { type: 'bar', data: { labels: act.map(x => x.mes), datasets: [
-      { label: 'Efectivas c/PDF', data: act.map(x => x.futuro ? null : x.efectivas), backgroundColor: '#1E7B4B', order: 2 },
-      { label: 'Fallidas c/PDF', data: act.map(x => x.futuro ? null : x.fallidas), backgroundColor: '#B3261E', order: 2 },
-      { type: 'line', label: 'Meta mensual ' + u1.metaMes, data: act.map(() => u1.metaMes), borderColor: '#A8470A', pointRadius: 0, borderDash: [6, 4], order: 1 },
-      { type: 'line', label: 'Objetivo acum. c/PDF', data: acumSeries, borderColor: '#1E7B4B', pointRadius: 4, pointBackgroundColor: '#1E7B4B', tension: 0.3, order: 1, yAxisID: 'yAcum' },
-      { type: 'line', label: 'Meta acum. (' + u1.metaMes + '/mes)', data: metaAcumArr, borderColor: '#A8470A', borderDash: [4, 3], pointRadius: 0, order: 1, yAxisID: 'yAcum' }] },
+      { label: 'Efectivas c/PDF', data: act.map(x => x.futuro ? null : x.efectivas), backgroundColor: '#1E7B4B', stack: 'cerradas' },
+      { label: 'Fallidas c/PDF',  data: act.map(x => x.futuro ? null : x.fallidas),  backgroundColor: '#B3261E', stack: 'cerradas' },
+      { type: 'line', label: 'Meta mensual ' + u1.metaMes, data: act.map(() => u1.metaMes),
+        borderColor: '#A8470A', pointRadius: 0, borderDash: [6, 4], order: 0 }] },
       options: { responsive: true, maintainAspectRatio: false,
-        scales: { yAcum: { position: 'right', title: { display: true, text: 'Acumulado c/PDF' }, grid: { drawOnChartArea: false } } },
+        scales: { x: { stacked: true }, y: { stacked: false, beginAtZero: true } },
         plugins: { legend: { position: 'bottom' } } } });
     ch2 = new Chart($('chU2'), { type: 'line', data: { labels: u2.burn.map(x => x.mes), datasets: [
       { label: 'Trayectoria teórica', data: u2.burn.map(x => x.teorico), borderColor: '#A8470A', borderDash: [6, 4], pointRadius: 3 },
