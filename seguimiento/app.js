@@ -273,14 +273,17 @@
       ${vista === 'realizadas' ? `<select onchange="App.f('sub',this.value)"><option value="">Efectivas y fallidas</option><option value="Efectiva" ${F.sub === 'Efectiva' ? 'selected' : ''}>Solo efectivas</option><option value="Fallida" ${F.sub === 'Fallida' ? 'selected' : ''}>Solo fallidas</option></select>` : ''}
       <button class="btn sec sm" onclick="App.exportar()">Exportar CSV</button>
       <span class="note">${total} visitas</span></div>`;
-    h += `<div style="overflow:auto;max-height:68vh"><table><thead><tr><th>Cohorte</th><th>Etapa</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Localidad</th><th>Tareas</th><th>Fecha máx.</th><th>Agendada</th><th>Fecha real</th><th>Estado</th><th>Acción</th></tr></thead><tbody>`;
+    h += `<div style="overflow:auto;max-height:72vh"><table class="grid-op"><thead><tr><th>Cohorte</th><th>Etapa</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Localidad</th><th>Tareas</th><th>Fecha máx.</th><th>Agendada</th><th>Fecha real</th><th>Estado</th><th>Acción</th></tr></thead><tbody>`;
     sl.forEach(v => {
+      const tareasTxt = v.tareas.split('//').join(' · ');
+      const estabTxt = `${v.nroEstab} · ${v.establecimiento}`;
+      const locTxt = `${v.localidad}, ${v.provincia}`;
       const cruceTag = v.cruceOct ? ` <a href="${esc(v.cruceOct.url)}" target="_blank" onclick="event.stopPropagation()" class="pill ${v.cruceOct.resultado === 'Efectiva' ? 'p-ok' : 'p-bad'}" title="PDF cargado en Octubre (${esc(v.cruceOct.fecha)} · ${esc(v.cruceOct.tarea)})">PDF Oct: ${v.cruceOct.resultado} ↗</a>` : '';
-      h += `<tr data-id="${esc(v.id)}" onclick="App.abrir(this.dataset.id)"><td>${v.cohorte}</td><td>${esc(v.planificacion)}</td><td>${esc(v.cuit)}</td><td>${esc(v.empleador)}</td>
-        <td>${esc(v.nroEstab)} · ${esc(v.establecimiento)}</td><td>${esc(v.localidad)}, ${esc(v.provincia)}</td>
-        <td style="max-width:250px">${esc(v.tareas.split('//').join(' · '))}${v.revisarDuplicada ? ' <span class="pill p-warn">revisar</span>' : ''}${cruceTag}</td>
+      h += `<tr data-id="${esc(v.id)}" onclick="App.abrir(this.dataset.id)"><td>${v.cohorte}</td><td>${esc(v.planificacion)}</td><td>${esc(v.cuit)}</td><td class="clip" style="max-width:190px" title="${esc(v.empleador)}">${esc(v.empleador)}</td>
+        <td class="clip" style="max-width:140px" title="${esc(estabTxt)}">${esc(estabTxt)}</td><td class="clip" style="max-width:140px" title="${esc(locTxt)}">${esc(locTxt)}</td>
+        <td class="clip" style="max-width:220px" title="${esc(tareasTxt)}">${esc(tareasTxt)}${v.revisarDuplicada ? ' <span class="pill p-warn">revisar</span>' : ''}${cruceTag}</td>
         <td class="${v.vencida ? 'venc' : ''}">${C.aDMY(v.plazo)}${v.vencida ? ' ⚠' : ''}</td><td>${C.aDMY(v.fechaAgendada)}</td><td>${C.aDMY(v.fechaReal)}</td><td>${pillEstado(v.estado)}</td>
-        <td><button class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📄 Cargar / PDF</button></td></tr>`;
+        <td><button class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📄 PDF</button></td></tr>`;
     });
     if (!sl.length) h += '<tr><td colspan="12" class="note" style="padding:20px">Sin resultados.</td></tr>';
     h += `</tbody></table></div><div class="pager"><button onclick="App.pag(-1)">‹</button> Página ${pagina} de ${pags} <button onclick="App.pag(1)">›</button></div>`;
