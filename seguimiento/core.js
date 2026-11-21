@@ -425,13 +425,113 @@
     return { consolidado: consolidado, emergentes: emergentes, residuales: residuales };
   }
 
+  const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  function labelMes(ym) {
+    if (!ym || ym.indexOf('<') === 0) return ym || '';
+    const y = ym.slice(2, 4), m = parseInt(ym.slice(5, 7), 10) - 1;
+    return (MESES_CORTOS[m] || ym) + ' ' + y;
+  }
+
+  /**
+   * Indicadores "Cumplimiento en Plazo vs Vencidas" y "Participación Fallidas vs Efectivas"
+   * para cualquiera de los 3 universos: 'consolidado' | 'emergentes' | 'residuales'.
+   */
+  function cumplimientoYParticipacion(visitas, historico, scope, hoy) {
+    hoy = hoy || hoyISO();
+    const M = CONFIG.METAS;
+    const incluirHist = (scope === 'emergentes' || scope === 'consolidado');
+    const filtrarScope = function (v) {
+      if (scope === 'emergentes') return v.cohorte === 'Emergente';
+      if (scope === 'residuales') return v.cohorte === 'Residual';
+      return true;
+    };
+    const arr = (visitas || []).filter(filtrarScope);
+    const ini = scope === 'residuales' ? M.RESIDUAL_INICIO : M.EMERGENTE_INICIO;
+    const fin = scope === 'emergentes' ? sumarMeses(M.EMERGENTE_INICIO, 11) : M.ETAPA2_FIN.slice(0, 7);
+    const nMes = diffMeses(ini, fin) + 1;
+    const timeline = [];
+    for (let i = 0; i < nMes; i++) timeline.push(sumarMeses(ini, i));
+
+    const prevKey = '< ' + labelMes(ini);
+    const buckets = {};
+    function getB(k) { return (buckets[k] = buckets[k] || { key: k, label: k === prevKey ? prevKey : labelMes(k), enTermino: 0, vencidas: 0, efectivas: 0, fallidas: 0 }); }
+    timeline.forEach(getB);
+
+    function keyParaMes(ym) {
+      if (!ym) return prevKey;
+      if (ym < ini) return prevKey;
+      if (!buckets[ym]) getB(ym);
+      return ym;
+    }
+
+    // 1. Histórico con PDF válido (Sep–Oct = Emergentes ejecutadas en término)
+    if (incluirHist) {
+      (historico || []).forEach(function (h) {
+        if (!esLinkValido(h.documentoAdjunto)) return;
+        const ym = mesDe(aISO(h.fechaRealizada));
+        const b = getB(keyParaMes(ym));
+        b.enTermino++;
+        if (h.resultadoVisita === 'Efectiva') b.efectivas++; else b.fallidas++;
+      });
+    }
+
+    // 2. Visitas de la tabla nueva
+    let fallidasReprog = 0;
+    arr.forEach(function (v) {
+      if (v.estado === ESTADOS.FALLIDA_REPROGRAMAR) fallidasReprog++;
+      if (v.cerradaPorCruceOct) return; // ya contabilizado en histórico sin doble conteo
+      if (v.cuentaObjetivo) {
+        const u = ultimoIntento(v.intentos);
+        const fReal = u ? aISO(u.fechaReal) : '';
+        const ym = mesDe(fReal);
+        const b = getB(keyParaMes(ym));
+        if (v.plazo && fReal && fReal > v.plazo) b.vencidas++;
+        else b.enTermino++;
+        if (u && u.resultado === 'Efectiva') b.efectivas++; else b.fallidas++;
+      } else if (v.vencida) {
+        const ym = mesDe(v.plazo);
+        getB(keyParaMes(ym)).vencidas++;
+      }
+    });
+
+    const series = [];
+    if (buckets[prevKey] && (buckets[prevKey].enTermino + buckets[prevKey].vencidas) > 0) {
+      series.push(buckets[prevKey]);
+    }
+    timeline.forEach(function (m) { series.push(buckets[m]); });
+    Object.keys(buckets).sort().forEach(function (k) {
+      if (k !== prevKey && timeline.indexOf(k) < 0 && (buckets[k].enTermino + buckets[k].vencidas) > 0) series.push(buckets[k]);
+    });
+
+    const totEnTermino = series.reduce((s, x) => s + x.enTermino, 0);
+    const totVencidas = series.reduce((s, x) => s + x.vencidas, 0);
+    const totEf = series.reduce((s, x) => s + x.efectivas, 0);
+    const totFa = series.reduce((s, x) => s + x.fallidas, 0);
+    const mesesConActividad = series.filter(x => (x.efectivas + x.fallidas) > 0);
+
+    return {
+      scope: scope,
+      series: series,
+      enTermino: totEnTermino,
+      vencidas: totVencidas,
+      pctEnTermino: (totEnTermino + totVencidas) ? totEnTermino / (totEnTermino + totVencidas) : 1,
+      efectivas: totEf,
+      fallidas: totFa,
+      totalCerradas: totEf + totFa,
+      pctEfectivas: (totEf + totFa) ? totEf / (totEf + totFa) : 0,
+      pctFallidas: (totEf + totFa) ? totFa / (totEf + totFa) : 0,
+      fallidasReprog: fallidasReprog,
+      mesesActivos: mesesConActividad
+    };
+  }
+
   const API = {
-    CONFIG, ESTADOS, aISO, aDMY, mesDe, hoyISO, sumarMeses, diffMeses, sinTildes,
+    CONFIG, ESTADOS, aISO, aDMY, mesDe, hoyISO, sumarMeses, diffMeses, sinTildes, labelMes,
     cohorte, esObra, esTecnica, esMayo2027OAdelante, filtrarCorteFuturo, categoriaVencimiento,
     plazoVisita, ultimoIntento, estadoVisita,
     cuentaObjetivo, estaCerrada, validarIntento, requiereAdjunto, esPDF,
     indexarCruceOctubre, armarVisitas, agendadasPorMes, cerradasPorMes,
-    metaConsolidadaMes, tablero
+    metaConsolidadaMes, tablero, cumplimientoYParticipacion
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.SegCore = API;

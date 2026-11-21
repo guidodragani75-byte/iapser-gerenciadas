@@ -18,7 +18,9 @@
   let VISITAS_TODAS = [];
   let VISITAS = [];
   let vista = 'tablero', subTab = 'consolidado', pagina = 1;
-  let chMain = null, chSec = null;
+  let chMain = null, chSec = null, chPlazo = null, chPart = null;
+  let partFiltro = 'all'; // 'all' | 'YYYY-MM'
+  let ultimoCP = null;
   let geminiActivo = null; // null = sin verificar, true/false según backend
   const F = { cohorte: '', plan: '', ambito: '', estado: '', mes: '', venc: '', cruceOct: '', q: '', sub: '', excluirMay27: true };
 
@@ -86,6 +88,99 @@
   function destruirCharts() {
     if (chMain) { chMain.destroy(); chMain = null; }
     if (chSec) { chSec.destroy(); chSec = null; }
+    if (chPlazo) { chPlazo.destroy(); chPlazo = null; }
+    if (chPart) { chPart.destroy(); chPart = null; }
+  }
+
+  function bloqueCumplimientoHTML(cp, tituloScope) {
+    const okBadge = cp.vencidas === 0
+      ? `<span class="pill p-ok">✓ 0 vencidas (${pct1(cp.pctEnTermino)} en término)</span>`
+      : `<span class="pill p-bad">⚠ ${cp.vencidas} vencidas (${pct1(cp.pctEnTermino)} en término)</span>`;
+    const activeBtns = `<button class="${partFiltro === 'all' ? 'on' : ''}" onclick="App.partMes('all')">Acumulado</button>` +
+      cp.mesesActivos.map(m => `<button class="${partFiltro === m.key ? 'on' : ''}" onclick="App.partMes('${esc(m.key)}')">${esc(m.label)}</button>`).join('');
+    const resumenMeses = cp.series.filter(x => (x.enTermino + x.vencidas) > 0).slice(0, 4)
+      .map(x => `<span>${esc(x.label)}: <b>${x.enTermino}</b> en término · <b class="${x.vencidas ? 'venc' : ''}">${x.vencidas}</b> venc.</span>`).join('');
+    return `<div class="grid2" style="margin-top:16px">
+      <div class="exec-card">
+        <div class="exec-head">
+          <div><div class="exec-title">Cumplimiento en Plazo y Visitas Vencidas (${esc(tituloScope)})</div>
+          <div class="exec-sub">Visitas ejecutadas en término vs visitas vencidas por período mensual</div></div>
+          ${okBadge}
+        </div>
+        <div style="height:230px"><canvas id="chPlazo"></canvas></div>
+        <div class="exec-foot">
+          <div style="display:flex;gap:14px;flex-wrap:wrap">${resumenMeses || 'Sin actividad registrada aún'}</div>
+          <div>Total ${esc(tituloScope)}: <b>${cp.enTermino} en término</b> · <b class="${cp.vencidas ? 'venc' : ''}">${cp.vencidas} vencidas</b> (${pct1(cp.pctEnTermino)})</div>
+        </div>
+      </div>
+      <div class="exec-card">
+        <div class="exec-head">
+          <div><div class="exec-title">Participación: Fallidas vs Efectivas (${esc(tituloScope)})</div>
+          <div class="exec-sub">Distribución de visitas efectivas y fallidas cerradas con PDF</div></div>
+          <div class="seg-btns" id="partBtns">${activeBtns}</div>
+        </div>
+        <div style="height:230px;position:relative"><canvas id="chPart"></canvas><div id="partEmpty" class="note" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center">Sin visitas cerradas c/PDF todavía en ${esc(tituloScope)}.</div></div>
+        <div class="exec-foot" id="partFoot"></div>
+      </div>
+    </div>`;
+  }
+
+  function renderChartParticipacion(cp, tituloScope) {
+    if (chPart) { chPart.destroy(); chPart = null; }
+    let ef = cp.efectivas, fa = cp.fallidas;
+    if (partFiltro !== 'all') {
+      const m = cp.mesesActivos.find(x => x.key === partFiltro);
+      if (m) { ef = m.efectivas; fa = m.fallidas; }
+    }
+    const tot = ef + fa;
+    const pEf = tot ? pct1(ef / tot) : '0%';
+    const pFa = tot ? pct1(fa / tot) : '0%';
+    const foot = $('partFoot');
+    if (foot) {
+      foot.innerHTML = `<span>Efectivas: <b style="color:var(--teal)">${ef} (${pEf})</b></span>
+        <span>Fallidas: <b style="color:var(--amber)">${fa} (${pFa})</b></span>
+        <span>Cerradas c/PDF: <b>${tot}</b> | A reprogramar: <b>${cp.fallidasReprog}</b></span>`;
+    }
+    const emptyEl = $('partEmpty');
+    if (!tot) {
+      if (emptyEl) emptyEl.style.display = 'flex';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (!window.Chart || !$('chPart')) return;
+    chPart = new Chart($('chPart'), {
+      type: 'doughnut',
+      data: {
+        labels: [`Efectivas (${tituloScope})`, `Fallidas (${tituloScope})`],
+        datasets: [{ data: [ef, fa], backgroundColor: ['#0F4C5C', '#A8470A'], borderWidth: 2, borderColor: '#fff' }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '62%',
+        plugins: { legend: { position: 'right', labels: { usePointStyle: true, padding: 14 } } }
+      }
+    });
+  }
+
+  function renderChartsCumplimiento(cp, tituloScope) {
+    ultimoCP = { cp, tituloScope };
+    if (window.Chart && $('chPlazo')) {
+      chPlazo = new Chart($('chPlazo'), {
+        type: 'bar',
+        data: {
+          labels: cp.series.map(x => x.label),
+          datasets: [
+            { label: 'Visitas en Término (Ejecutadas)', data: cp.series.map(x => x.enTermino), backgroundColor: '#0F4C5C', maxBarThickness: 22 },
+            { label: 'Visitas Vencidas (Fuera de Plazo)', data: cp.series.map(x => x.vencidas), backgroundColor: '#A8470A', maxBarThickness: 22 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true } },
+          plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 10 } } }
+        }
+      });
+    }
+    renderChartParticipacion(cp, tituloScope);
   }
 
   function renderTablero() {
@@ -173,8 +268,13 @@
       </tbody></table>`;
     }
 
+    const cp = C.cumplimientoYParticipacion(VISITAS, D.historico, subTab, C.hoyISO());
+    if (partFiltro !== 'all' && !cp.mesesActivos.some(m => m.key === partFiltro)) partFiltro = 'all';
+    const tituloScope = subTab === 'consolidado' ? 'Consolidado' : (subTab === 'emergentes' ? 'Emergentes' : 'Residuales');
+    h += bloqueCumplimientoHTML(cp, tituloScope);
     h += `<p class="note" style="margin-top:14px">Solo cierra y cuenta para el objetivo lo que tiene documento PDF asociado. Datos base: ${esc(D.generado || '')}.</p>`;
     $('main').innerHTML = h;
+    renderChartsCumplimiento(cp, tituloScope);
 
     if (!window.Chart) return;
     if (subTab === 'consolidado') {
@@ -751,7 +851,14 @@
 
   window.App = {
     ir(v) { vista = v; pagina = 1; render(); },
-    sub(s) { subTab = s; vista = 'tablero'; render(); },
+    sub(s) { subTab = s; partFiltro = 'all'; vista = 'tablero'; render(); },
+    partMes(k) {
+      partFiltro = k;
+      if (ultimoCP) {
+        document.querySelectorAll('#partBtns button').forEach(b => b.classList.toggle('on', b.getAttribute('onclick') === `App.partMes('${k}')`));
+        renderChartParticipacion(ultimoCP.cp, ultimoCP.tituloScope);
+      }
+    },
     toggleMay27(checked) { F.excluirMay27 = !!checked; pagina = 1; recalcular(); render(); },
     verCruceOct() { F.cohorte = 'Emergente'; F.cruceOct = 'con'; vista = 'todas'; pagina = 1; render(); },
     f(k, val, keep) { F[k] = val; pagina = 1; if (keep) { renderLista(); const i = document.querySelector('input[type=search]'); if (i) { i.focus(); i.setSelectionRange(val.length, val.length); } } else render(); },

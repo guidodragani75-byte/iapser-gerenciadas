@@ -133,4 +133,20 @@ t('filtros nuevos: vencimiento (vencida / mes_actual / otro_mes) y corte predete
   assert.strictEqual(C.filtrarCorteFuturo(prueba, true).length, 1);
   assert.strictEqual(C.filtrarCorteFuturo(prueba, false).length, 3);
 });
+t('cumplimiento en plazo y participacion en los 3 universos (consolidado / emergentes / residuales)', () => {
+  const vs = C.armarVisitas(D.visitas, {}, '2026-11-21', D.historico);
+  const cCons = C.cumplimientoYParticipacion(vs, D.historico, 'consolidado', '2026-11-21');
+  const cEmer = C.cumplimientoYParticipacion(vs, D.historico, 'emergentes', '2026-11-21');
+  const cRes  = C.cumplimientoYParticipacion(vs, D.historico, 'residuales', '2026-11-21');
+  // Consolidado = Emergentes + Residuales
+  assert.strictEqual(cCons.enTermino, cEmer.enTermino + cRes.enTermino);
+  assert.strictEqual(cCons.vencidas, cEmer.vencidas + cRes.vencidas);
+  assert.strictEqual(cCons.efectivas, cEmer.efectivas + cRes.efectivas);
+  assert.strictEqual(cCons.fallidas, cEmer.fallidas + cRes.fallidas);
+  assert.strictEqual(cCons.totalCerradas, 268);
+  assert.strictEqual(cCons.vencidas, 106);
+  assert.strictEqual(cEmer.vencidas, 57);
+  assert.strictEqual(cRes.vencidas, 49);
+  assert.strictEqual(cEmer.mesesActivos.length, 2); // Sep 26, Oct 26
+});
 console.log('\n' + ok + ' pruebas OK');
