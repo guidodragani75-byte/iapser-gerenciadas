@@ -63,9 +63,11 @@ t('resumen: plazos por etapa, vencidas y objetivo con histórico', () => {
   const r = C.resumen(vs, D.historico, '2026-12-20');
   const conDoc = D.historico.filter(h => h.documentoAdjunto).length;
   assert.strictEqual(r.objetivoTotal, 1 + conDoc);
+  assert.strictEqual(r.residual.cerradas + r.emergente.cerradas, r.objetivoTotal);
+  assert.strictEqual(r.emergente.sinDocumento, D.historico.length - conDoc);
   assert.strictEqual(r.agendadasMes['2026-11'], 1);
 });
-t('indicadores originales: U1 (altas), U2 (residual), U3 (consolidado)', () => {
+t('indicadores originales: U1 (altas/emergentes), U2 (residual), U3 (consolidado)', () => {
   const emerg = D.visitas.filter(v => v.cohorte === 'Emergente').slice(0, 2);
   const resid = D.visitas.filter(v => v.cohorte === 'Residual').slice(0, 3);
   const ints = {
@@ -79,9 +81,12 @@ t('indicadores originales: U1 (altas), U2 (residual), U3 (consolidado)', () => {
   const hFa = D.historico.filter(h => h.documentoAdjunto && h.resultadoVisita !== 'Efectiva').length;
   assert.strictEqual(I.u1.efectivas, hEf + 1);
   assert.strictEqual(I.u1.fallidas, hFa + 1);
+  assert.strictEqual(I.u1.realizadas, hEf + 1 + hFa + 1);
   assert.strictEqual(I.u1.metaAcum, 300);
+  assert.strictEqual(I.u1.desvio, I.u1.realizadas - 300);
   assert.strictEqual(I.u1.trimestres[0].meta, 300);
   assert.strictEqual(I.u1.trimestres[0].efectivas, hEf + 1);
+  assert.strictEqual(I.u1.trimestres[0].total, hEf + 1 + hFa + 1);
   assert.strictEqual(I.u2.total, 1341);
   assert.strictEqual(I.u2.realizadas, 1);
   assert.strictEqual(I.u2.pendientes, 1340);
@@ -90,5 +95,6 @@ t('indicadores originales: U1 (altas), U2 (residual), U3 (consolidado)', () => {
   assert.strictEqual(I.u2.burn.find(x => x.mes === '2026-11').real, 1340);
   assert.strictEqual(I.u3.realizadas, hEf + 1 + hFa + 1 + 1);
   assert.strictEqual(I.u3.plan, 1200 + 1341);
+  assert.strictEqual(I.u3.realizadas + I.u3.pendientes, I.u3.plan);
 });
 console.log('\n' + ok + ' pruebas OK');

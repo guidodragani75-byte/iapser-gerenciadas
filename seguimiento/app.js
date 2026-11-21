@@ -112,46 +112,54 @@
     const agMes = r.agendadasMes[mesActual] || 0;
     const card = (k, v, s) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`;
     let h = `<div class="cards">
-      ${card('Objetivo: cerradas con PDF', r.objetivoTotal, `incluye ${r.historico.conDocumento} del histórico Sep–Oct`)}
+      ${card('Objetivo: cerradas con PDF', r.objetivoTotal, `incluye ${r.historico.conDocumento} del histórico Sep–Oct (emergentes)`)}
       ${card('Agendadas este mes (' + mesActual + ')', agMes, `meta de gestión ${meta} · ${pct(agMes, meta)}`)}
       ${card('Sin agendar / a reprogramar', r.residual.sinAgendar + r.emergente.sinAgendar, 'pendientes de agenda')}
       ${card('Agendadas pendientes', r.residual.agendadasPend + r.emergente.agendadasPend, 'con fecha, sin resultado')}
       ${card('Vencidas', r.residual.vencidas + r.emergente.vencidas, 'pasó su plazo y no están cerradas')}
-      ${card('Con resultado sin PDF', r.residual.sinDocumento + r.emergente.sinDocumento, 'no cuentan para el objetivo')}
+      ${card('Con resultado sin PDF', r.residual.sinDocumento + r.emergente.sinDocumento, 'no cuentan para el objetivo' + (r.historico.sinDocumento ? ` (${r.historico.sinDocumento} en histórico Sep–Oct)` : ''))}
       ${card('Duplicadas a revisar', r.duplicadasRevisar, 'misma tarea/estab, fechas distintas')}</div>`;
 
-    h += `<div class="grid2"><div><h2>Agenda de la consultora por mes (meta ${meta}/mes)</h2><div class="card" style="height:260px"><canvas id="chAg"></canvas></div></div>
+    h += `<div class="grid2"><div><h2>Cerradas c/PDF (efectivas + fallidas) y agenda por mes (meta ${meta}/mes)</h2><div class="card" style="height:260px"><canvas id="chAg"></canvas></div></div>
       <div><h2>Por cohorte</h2><table><thead><tr><th>Cohorte</th><th>Total</th><th>Cerradas c/PDF</th><th>Avance</th><th>Agendadas</th><th>Sin agendar</th><th>Vencidas</th></tr></thead><tbody>
-      ${[['Residual (anterior a oct-26)', r.residual], ['Emergente (oct-26 en adelante)', r.emergente]].map(([n, b]) => `<tr style="cursor:default"><td>${n}</td><td>${b.total}</td><td>${b.cerradas}</td><td><div class="bar"><i style="width:${b.total ? b.cerradas * 100 / b.total : 0}%"></i></div>${pct(b.cerradas, b.total)}</td><td>${b.agendadasPend}</td><td>${b.sinAgendar}</td><td class="${b.vencidas ? 'venc' : ''}">${b.vencidas}</td></tr>`).join('')}
+      ${[['Residual (anterior a oct-26)', r.residual], ['Emergente (Sep–Oct histórico + oct-26 en adelante)', r.emergente]].map(([n, b]) => `<tr style="cursor:default"><td>${n}</td><td>${b.total}</td><td>${b.cerradas}</td><td><div class="bar"><i style="width:${b.total ? b.cerradas * 100 / b.total : 0}%"></i></div>${pct(b.cerradas, b.total)}</td><td>${b.agendadasPend}</td><td>${b.sinAgendar}</td><td class="${b.vencidas ? 'venc' : ''}">${b.vencidas}</td></tr>`).join('')}
       </tbody></table>
       <h2>Por etapa</h2><table><thead><tr><th>Etapa</th><th>Plazo</th><th>Total</th><th>Cerradas</th><th>Avance</th><th>Sin agendar</th><th>Vencidas</th></tr></thead><tbody>
       ${r.etapas.map(b => `<tr style="cursor:default"><td>${esc(b.etapa)}</td><td>${/Urgente/.test(b.etapa) ? 'fecha máx. de cada fila' : C.aDMY(C.CONFIG.PLAZO_ETAPA[b.etapa])}</td><td>${b.total}</td><td>${b.cerradas}</td><td><div class="bar"><i style="width:${b.total ? b.cerradas * 100 / b.total : 0}%"></i></div>${pct(b.cerradas, b.total)}</td><td>${b.sinAgendar}</td><td class="${b.vencidas ? 'venc' : ''}">${b.vencidas}</td></tr>`).join('')}
+      ${r.historico.total ? `<tr style="cursor:default"><td>Histórico Sep–Oct (Emergentes)</td><td>ejecutadas</td><td>${r.historico.total}</td><td>${r.historico.conDocumento}</td><td><div class="bar"><i style="width:${r.historico.conDocumento * 100 / r.historico.total}%"></i></div>${pct(r.historico.conDocumento, r.historico.total)}</td><td>0</td><td>0</td></tr>` : ''}
       </tbody></table></div></div>`;
 
     h += `<h2>Detalle mensual</h2><table><thead><tr><th>Mes</th><th>Agendadas</th><th>vs ${meta}</th><th>Efectivas c/PDF</th><th>Fallidas cerradas c/PDF</th><th>Total cerradas</th></tr></thead><tbody>
       ${mesesR.map(m => { const a = r.agendadasMes[m] || 0, c = r.cerradasMes[m] || { efectivas: 0, fallidas: 0 }; const aplica = m >= '2026-11';
         return `<tr style="cursor:default"><td>${m}</td><td>${a || (aplica ? 0 : '–')}</td><td>${aplica ? `<div class="bar m"><i style="width:${Math.min(100, a * 100 / meta)}%"></i></div>${pct(a, meta)}` : '–'}</td><td>${c.efectivas}</td><td>${c.fallidas}</td><td><b>${c.efectivas + c.fallidas}</b></td></tr>`; }).join('')}
       </tbody></table>
-      <p class="note">Sep–Oct provienen del histórico (modelo anterior). Solo cuenta para el objetivo lo que tiene PDF asociado. Datos base generados: ${esc(D.generado || '')}.</p>`;
+      <p class="note">Sep–Oct corresponden a las emergentes ejecutadas en el módulo anterior (277 con PDF + ${r.historico.sinDocumento} sin PDF). Solo cuenta para el objetivo lo que tiene PDF asociado. Datos base generados: ${esc(D.generado || '')}.</p>`;
     $('main').innerHTML = h;
 
     if (chart) chart.destroy();
     if (window.Chart) {
-      // Incluir sep y oct (histórico) + meses futuros hasta abr-27
-      const ms = mesesR; // ya contiene 2026-09, 2026-10 y los meses siguientes
-      const ef  = ms.map(m => { const c = r.cerradasMes[m]; return c ? c.efectivas  : 0; });
-      const fa  = ms.map(m => { const c = r.cerradasMes[m]; return c ? c.fallidas   : 0; });
-      const ag  = ms.map(m => r.agendadasMes[m] || 0);
+      // Incluir sep y oct (histórico emergentes) + meses siguientes hasta abr-27
+      const ms = mesesR;
+      const ef = ms.map(m => { const c = r.cerradasMes[m]; return c ? c.efectivas : 0; });
+      const fa = ms.map(m => { const c = r.cerradasMes[m]; return c ? c.fallidas : 0; });
+      const ag = ms.map(m => m >= '2026-11' ? (r.agendadasMes[m] || 0) : null);
       chart = new Chart($('chAg'), { type: 'bar',
         data: { labels: ms, datasets: [
-          { label: 'Efectivas c/PDF', data: ef, backgroundColor: '#1E7B4B', stack: 'cerradas' },
-          { label: 'Fallidas c/PDF',  data: fa, backgroundColor: '#B3261E', stack: 'cerradas' },
-          { label: 'Agendadas',       data: ag, backgroundColor: 'rgba(15,76,92,0.35)', stack: 'agenda' },
+          { label: 'Efectivas c/PDF', data: ef, backgroundColor: '#1E7B4B', stack: 'cerradas', order: 2 },
+          { label: 'Fallidas c/PDF',  data: fa, backgroundColor: '#B3261E', stack: 'cerradas', order: 2 },
+          { label: 'Agendadas',       data: ag, backgroundColor: 'rgba(15,76,92,0.6)', stack: 'agenda', order: 2 },
           { type: 'line', label: 'Meta agenda ' + meta, data: ms.map(() => meta),
-            borderColor: '#A8470A', pointRadius: 0, borderDash: [6, 4], order: 0 }] },
+            borderColor: '#A8470A', pointRadius: 0, borderDash: [6, 4], stack: 'meta', order: 1 }] },
         options: { responsive: true, maintainAspectRatio: false,
-          scales: { x: { stacked: true }, y: { stacked: false, beginAtZero: true } },
-          plugins: { legend: { position: 'bottom' } } } });
+          scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+          plugins: { legend: { position: 'bottom' },
+            tooltip: { mode: 'index', intersect: false, callbacks: {
+              afterBody: items => {
+                const i = items[0] ? items[0].dataIndex : -1;
+                const tot = i >= 0 ? (ef[i] || 0) + (fa[i] || 0) : 0;
+                return tot ? ['Total cerradas c/PDF: ' + tot] : [];
+              }
+            } } } } });
     }
   }
 
@@ -162,15 +170,14 @@
     const p = x => Math.round(x * 1000) / 10 + '%';
     const n1 = x => (Math.round(x * 10) / 10).toLocaleString('es-AR');
     const card = (k, v, s) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`;
-    let h = `<h2>Universo 1 · Altas mensuales (meta ${u1.metaAnual.toLocaleString('es-AR')} / año · ${u1.metaMes} / mes)</h2><div class="cards">
-      ${card('Efectivas del ciclo', u1.efectivas, 'de ' + u1.metaAnual.toLocaleString('es-AR') + ' · ' + p(u1.pct))}
-      ${card('Meta acumulada a hoy', u1.metaAcum, 'desvío ' + (u1.desvio >= 0 ? '+' : '') + u1.desvio)}
-      ${card('Fallidas cerradas', u1.fallidas, 'con PDF')}
-      ${card('Tasa de efectividad', p(u1.tasaEfectividad), 'efectivas / (efectivas + fallidas)')}
-      ${card('Promedio mensual', n1(u1.promedioMensual), u1.mejorMes ? 'mejor mes ' + u1.mejorMes.mes + ': ' + u1.mejorMes.efectivas : '')}</div>
+    let h = `<h2>Universo 1 · Altas / Emergentes mensuales (meta ${u1.metaAnual.toLocaleString('es-AR')} / año · ${u1.metaMes} / mes)</h2><div class="cards">
+      ${card('Realizadas del ciclo (c/PDF)', u1.realizadas, 'de ' + u1.metaAnual.toLocaleString('es-AR') + ' · ' + p(u1.pct) + ' · restan ' + Math.max(0, u1.metaAnual - u1.realizadas).toLocaleString('es-AR'))}
+      ${card('Efectivas / Fallidas', u1.efectivas + ' / ' + u1.fallidas, 'tasa de efectividad ' + p(u1.tasaEfectividad))}
+      ${card('Meta acumulada a hoy', u1.metaAcum, 'desvío ' + (u1.desvio >= 0 ? '+' : '') + u1.desvio + ' (efectivas + fallidas c/PDF)')}
+      ${card('Promedio mensual', n1(u1.promedioMensual), u1.mejorMes ? 'mejor mes ' + u1.mejorMes.mes + ': ' + u1.mejorMes.total + ' (' + u1.mejorMes.efectivas + ' ef + ' + u1.mejorMes.fallidas + ' fa)' : '')}</div>
       <div class="grid2"><div class="card" style="height:260px"><canvas id="chU1"></canvas></div>
-      <table><thead><tr><th>Corte</th><th>Período</th><th>Meta</th><th>Efectivas</th><th>Fallidas</th><th>Cumplimiento</th></tr></thead><tbody>
-      ${u1.trimestres.map(t => `<tr style="cursor:default"><td>${t.q}</td><td>${t.desde} → ${t.hasta}</td><td>${t.meta}</td><td>${t.efectivas}</td><td>${t.fallidas}</td><td><div class="bar"><i style="width:${Math.min(100, t.efectivas * 100 / t.meta)}%"></i></div>${pct(t.efectivas, t.meta)}</td></tr>`).join('')}</tbody></table></div>
+      <table><thead><tr><th>Corte</th><th>Período</th><th>Meta</th><th>Efectivas</th><th>Fallidas</th><th>Total</th><th>Cumplimiento</th></tr></thead><tbody>
+      ${u1.trimestres.map(t => `<tr style="cursor:default"><td>${t.q}</td><td>${t.desde} → ${t.hasta}</td><td>${t.meta}</td><td>${t.efectivas}</td><td>${t.fallidas}</td><td><b>${t.total}</b></td><td><div class="bar"><i style="width:${Math.min(100, t.total * 100 / t.meta)}%"></i></div>${pct(t.total, t.meta)}</td></tr>`).join('')}</tbody></table></div>
       <h2>Universo 2 · Stock residual (anterior a oct-26): liquidar hasta ${C.aDMY(u2.fin)}</h2><div class="cards">
       ${card('Realizadas (c/PDF)', u2.realizadas, 'de ' + u2.total + ' · ' + p(u2.pct))}
       ${card('Pendientes', u2.pendientes, 'remanente a liquidar')}
@@ -180,22 +187,29 @@
       <div class="card" style="height:260px"><canvas id="chU2"></canvas></div>
       <h2>Universo 3 · Vista consolidada (metas independientes)</h2><div class="cards">
       ${card('Realizadas totales', u3.realizadas, 'de ' + u3.plan.toLocaleString('es-AR') + ' del plan · ' + p(u3.pct))}
-      ${card('Efectivas altas / fallidas', u3.efAltas + ' / ' + u3.faAltas, 'Universo 1')}
+      ${card('Emergentes (Ef / Fa)', u3.efAltas + ' / ' + u3.faAltas, 'total ' + u3.realAltas + ' · Universo 1')}
       ${card('Realizadas residual', u3.realResidual, 'Universo 2')}
       ${card('Pendientes totales', u3.pendientes.toLocaleString('es-AR'), 'altas por cumplir + residual')}</div>
-      <p class="note">Conteo con la regla vigente: solo cierra y cuenta lo que tiene PDF asociado. Altas = histórico Sep–Oct + emergentes cerradas desde octubre.</p>`;
+      <p class="note">Conteo con la regla vigente: solo cierra y cuenta lo que tiene PDF asociado (efectivas + fallidas cerradas). Universo 1 = histórico Sep–Oct (emergentes previas) + emergentes cerradas desde octubre.</p>`;
     $('main').innerHTML = h;
     if (ch1) ch1.destroy(); if (ch2) ch2.destroy();
     if (!window.Chart) return;
     const act = u1.meses; // 12 meses sep-26 a ago-27, sep y oct ya tienen datos del histórico
     ch1 = new Chart($('chU1'), { type: 'bar', data: { labels: act.map(x => x.mes), datasets: [
-      { label: 'Efectivas c/PDF', data: act.map(x => x.futuro ? null : x.efectivas), backgroundColor: '#1E7B4B', stack: 'cerradas' },
-      { label: 'Fallidas c/PDF',  data: act.map(x => x.futuro ? null : x.fallidas),  backgroundColor: '#B3261E', stack: 'cerradas' },
+      { label: 'Efectivas c/PDF', data: act.map(x => x.futuro ? null : x.efectivas), backgroundColor: '#1E7B4B', stack: 'cerradas', order: 2 },
+      { label: 'Fallidas c/PDF',  data: act.map(x => x.futuro ? null : x.fallidas),  backgroundColor: '#B3261E', stack: 'cerradas', order: 2 },
       { type: 'line', label: 'Meta mensual ' + u1.metaMes, data: act.map(() => u1.metaMes),
-        borderColor: '#A8470A', pointRadius: 0, borderDash: [6, 4], order: 0 }] },
+        borderColor: '#A8470A', pointRadius: 0, borderDash: [6, 4], stack: 'meta', order: 1 }] },
       options: { responsive: true, maintainAspectRatio: false,
-        scales: { x: { stacked: true }, y: { stacked: false, beginAtZero: true } },
-        plugins: { legend: { position: 'bottom' } } } });
+        scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+        plugins: { legend: { position: 'bottom' },
+          tooltip: { mode: 'index', intersect: false, callbacks: {
+            afterBody: items => {
+              const i = items[0] ? items[0].dataIndex : -1;
+              const x = i >= 0 ? act[i] : null;
+              return x && !x.futuro && x.total ? ['Total cerradas c/PDF: ' + x.total] : [];
+            }
+          } } } } });
     ch2 = new Chart($('chU2'), { type: 'line', data: { labels: u2.burn.map(x => x.mes), datasets: [
       { label: 'Trayectoria teórica', data: u2.burn.map(x => x.teorico), borderColor: '#A8470A', borderDash: [6, 4], pointRadius: 3 },
       { label: 'Stock remanente real', data: u2.burn.map(x => x.real), borderColor: '#0F4C5C', backgroundColor: '#0F4C5C', pointRadius: 4 }] },

@@ -178,7 +178,11 @@
     const por = {};
     Object.keys(ESTADOS).forEach(function (k) { por[ESTADOS[k]] = cuenta(visitas, function (v) { return v.estado === ESTADOS[k]; }); });
     const cerr = cerradasPorMes(visitas, historico);
-    const histCerr = (historico || []).filter(function (h) { return h.documentoAdjunto; });
+    const hist = historico || [];
+    const histCerr = hist.filter(function (h) { return !!h.documentoAdjunto; });
+    const histEf = histCerr.filter(function (h) { return h.resultadoVisita === 'Efectiva'; }).length;
+    const histFa = histCerr.length - histEf;
+    const histSinDoc = hist.length - histCerr.length;
     const sub = function (coh) { return visitas.filter(function (v) { return v.cohorte === coh; }); };
     const bloque = function (arr) {
       return {
@@ -192,22 +196,37 @@
         vencidas: cuenta(arr, function (v) { return v.vencida; })
       };
     };
+    const resBloque = bloque(sub('Residual'));
+    // El histórico Sep–Oct corresponde a las emergentes ya ejecutadas
+    const emBase = bloque(sub('Emergente'));
+    const emBloque = {
+      total: emBase.total + hist.length,
+      cerradas: emBase.cerradas + histCerr.length,
+      efectivas: emBase.efectivas + histEf,
+      fallidasCerradas: emBase.fallidasCerradas + histFa,
+      agendadasPend: emBase.agendadasPend,
+      sinAgendar: emBase.sinAgendar,
+      sinDocumento: emBase.sinDocumento + histSinDoc,
+      vencidas: emBase.vencidas
+    };
     return {
       hoy: hoy,
       porEstado: por,
-      residual: bloque(sub('Residual')),
-      emergente: bloque(sub('Emergente')),
+      residual: resBloque,
+      emergente: emBloque,
       etapas: ['Etapa 1', 'Etapa 1 - Urgente', 'Etapa 2'].map(function (e) {
         return Object.assign({ etapa: e }, bloque(visitas.filter(function (v) { return v.planificacion === e; })));
       }),
       agendadasMes: agendadasPorMes(visitas),
       cerradasMes: cerr,
       historico: {
-        total: (historico || []).length,
+        total: hist.length,
         conDocumento: histCerr.length,
-        sinDocumento: (historico || []).length - histCerr.length
+        efectivas: histEf,
+        fallidas: histFa,
+        sinDocumento: histSinDoc
       },
-      objetivoTotal: cuenta(visitas, function (v) { return v.cuentaObjetivo; }) + histCerr.length,
+      objetivoTotal: resBloque.cerradas + emBloque.cerradas,
       duplicadasRevisar: cuenta(visitas, function (v) { return !!v.revisarDuplicada; })
     };
   }
@@ -243,24 +262,26 @@
     const meses = [];
     for (let i = 0; i < 12; i++) {
       const m = sumarMeses(K.CICLO_INICIO, i), d = porMes[m] || { efectivas: 0, fallidas: 0 };
-      meses.push({ mes: m, efectivas: d.efectivas, fallidas: d.fallidas, meta: K.META_MES, futuro: m > mesHoy });
+      meses.push({ mes: m, efectivas: d.efectivas, fallidas: d.fallidas, total: d.efectivas + d.fallidas, meta: K.META_MES, futuro: m > mesHoy });
     }
     const ef = meses.reduce((s, x) => s + x.efectivas, 0), fa = meses.reduce((s, x) => s + x.fallidas, 0);
+    const tot = ef + fa;
     const transcurridos = Math.max(0, Math.min(12, diffMeses(K.CICLO_INICIO, mesHoy) + 1));
     const metaAcum = transcurridos * K.META_MES;
     const act = meses.filter(function (x) { return !x.futuro; });
     const q = [0, 1, 2, 3].map(function (i) {
       const ms = meses.slice(i * 3, i * 3 + 3);
+      const qEf = ms.reduce(function (s, x) { return s + x.efectivas; }, 0);
+      const qFa = ms.reduce(function (s, x) { return s + x.fallidas; }, 0);
       return { q: 'Q' + (i + 1), desde: ms[0].mes, hasta: ms[2].mes, meta: K.META_MES * 3,
-        efectivas: ms.reduce(function (s, x) { return s + x.efectivas; }, 0),
-        fallidas: ms.reduce(function (s, x) { return s + x.fallidas; }, 0) };
+        efectivas: qEf, fallidas: qFa, total: qEf + qFa };
     });
-    const mejor = act.reduce(function (b, x) { return !b || x.efectivas > b.efectivas ? x : b; }, null);
+    const mejor = act.reduce(function (b, x) { return !b || x.total > b.total ? x : b; }, null);
     const u1 = {
-      metaAnual: K.META_ANUAL, metaMes: K.META_MES, efectivas: ef, fallidas: fa,
-      pct: K.META_ANUAL ? ef / K.META_ANUAL : 0, metaAcum: metaAcum, desvio: ef - metaAcum,
-      tasaEfectividad: ef + fa ? ef / (ef + fa) : 0,
-      promedioMensual: act.length ? ef / act.length : 0, mejorMes: mejor, meses: meses, trimestres: q
+      metaAnual: K.META_ANUAL, metaMes: K.META_MES, realizadas: tot, efectivas: ef, fallidas: fa,
+      pct: K.META_ANUAL ? tot / K.META_ANUAL : 0, metaAcum: metaAcum, desvio: tot - metaAcum,
+      tasaEfectividad: tot ? ef / tot : 0,
+      promedioMensual: act.length ? tot / act.length : 0, mejorMes: mejor, meses: meses, trimestres: q
     };
     // U2: stock residual
     const res = visitas.filter(function (v) { return v.cohorte === 'Residual'; });
@@ -286,9 +307,10 @@
       fin: K.RESIDUAL_FIN
     };
     // U3: consolidado (series con metas independientes)
-    const plan = K.META_ANUAL + u2.total, real = ef + fa + u2.realizadas;
+    const plan = K.META_ANUAL + u2.total, real = tot + u2.realizadas;
     const u3 = { plan: plan, realizadas: real, pct: plan ? real / plan : 0,
-      efAltas: ef, faAltas: fa, realResidual: u2.realizadas, pendientes: Math.max(0, K.META_ANUAL - ef) + u2.pendientes };
+      efAltas: ef, faAltas: fa, realAltas: tot, realResidual: u2.realizadas,
+      pendientes: Math.max(0, K.META_ANUAL - tot) + u2.pendientes };
     return { u1: u1, u2: u2, u3: u3 };
   }
 
