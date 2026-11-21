@@ -7,6 +7,7 @@
  * Adjuntos: SOLO PDF, se guardan en Drive por mes: IAPSER_Gestion_Visitas / IAPSER_Visitas_AAAA-MM
  */
 var CFG = {
+  SPREADSHEET_ID: '1x2w2zY5BmxWJ29hh6pNiy1qLXv22RFkOx5DidNOx8_E',
   HOJA: 'Seguimiento_Intentos',
   CARPETA_PRINCIPAL_ID: '1RDkZA4EIjPxdvBZqPCcgu5k6vnz6eAUq',
   PREFIJO_MES: 'IAPSER_Visitas_',
@@ -16,7 +17,7 @@ var CFG = {
 };
 
 function hoja_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(CFG.SPREADSHEET_ID);
   var sh = ss.getSheetByName(CFG.HOJA);
   if (!sh) {
     sh = ss.insertSheet(CFG.HOJA);

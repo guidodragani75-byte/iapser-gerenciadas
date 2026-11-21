@@ -286,7 +286,8 @@
   }
 
   /* ---------- sincronización ---------- */
-  const url = () => load(LS_URL, '');
+  const URL_POR_DEFECTO = 'https://script.google.com/macros/s/AKfycbw8JBrmXonEGfn0ypWzXRaVrzuPdi8CNN4sqRVtOFvWpKvu1Jeq5_IRyPXN84lX8xqilQ/exec';
+  const url = () => load(LS_URL, '') || URL_POR_DEFECTO;
 
   async function post(payload) {
     const r = await fetch(url(), { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
@@ -328,7 +329,7 @@
     recalcular(); render();
   }
 
-  function abrirConfig() { $('cfgUrl').value = load(LS_URL, ''); $('cfgUser').value = load(LS_USER, ''); $('dlgCfg').showModal(); }
+  function abrirConfig() { $('cfgUrl').value = url(); $('cfgUser').value = load(LS_USER, ''); $('dlgCfg').showModal(); }
   function guardarConfig() { save(LS_URL, $('cfgUrl').value.trim()); save(LS_USER, $('cfgUser').value.trim()); $('dlgCfg').close(); sincronizar(); }
 
   function exportar() {
