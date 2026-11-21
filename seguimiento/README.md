@@ -20,13 +20,13 @@ Todo se indexa **por nombre de columna**; las columnas A–W no pueden cambiar d
 - Adjunto: solo PDF (se valida extensión en la app y firma `%PDF` en el backend).
 
 ## Puesta en marcha del backend (una vez)
-1. En la planilla nueva: Extensiones → Apps Script → pegar `backend.gs.js`.
+**Ya está hecho** (script `1DqZ0YJv…`, desplegado; la URL está en `app.js`). Para rehacerlo: pegar `backend.gs.js` en Apps Script o `clasp push` desde `seguimiento/gas`.
 2. Implementar → Aplicación web → Ejecutar como *Yo*, acceso *Cualquier usuario*.
 3. Copiar la URL `/exec` y pegarla en la app (botón **Configurar**) junto con el nombre de quien carga.
 
 ## Actualizar datos base
-`python seguimiento/build_data.py` (necesita la planilla con lectura por enlace) o pasarle `--detalle` y `--emergentes` con CSV exportados.
+Exportá las hojas a CSV y ejecutá `python seguimiento/build_data.py --detalle detalle.csv --emergentes emergentes.csv` (la descarga directa solo funciona si la planilla está compartida por enlace).
 El estado cargado por la consultora se guarda aparte (clave = `ID` de visita), por lo que regenerar `datos.js` no pisa nada.
 
-## Indicadores del m�dulo original
-La pesta�a **Plan anual y residual (KPIs)** mantiene los 3 universos: U1 altas (meta 1.200/a�o, 100/mes, cortes Q1�Q4, tasa de efectividad, desv�o), U2 stock residual (avance, ritmo requerido, burn-down) y U3 consolidado. Par�metros en `CONFIG.ORIGINAL` de `core.js`. Ultima version de la plataforma original: tag `v21-ultima-version-funcional` / rama `archivo/v21-funcional`.
+## Indicadores del m�dulo original
+La pesta�a **Plan anual y residual (KPIs)** mantiene los 3 universos: U1 altas (meta 1.200/a�o, 100/mes, cortes Q1�Q4, tasa de efectividad, desv�o), U2 stock residual (avance, ritmo requerido, burn-down) y U3 consolidado. Par�metros en `CONFIG.ORIGINAL` de `core.js`. Ultima version de la plataforma original: tag `v21-ultima-version-funcional` / rama `archivo/v21-funcional`.

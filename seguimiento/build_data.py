@@ -2,8 +2,8 @@
 """Genera seguimiento/datos.js a partir de la planilla CS (indexado POR NOMBRE de columna).
 
 Uso:
-  python build_data.py --detalle detalle.csv --emergentes emergentes.csv
-  python build_data.py            # descarga los CSV de la planilla (requiere link publico de lectura)
+  python build_data.py --detalle detalle.csv --emergentes emergentes.csv   # CSV exportados de la planilla
+  python build_data.py            # descarga directo (solo si la planilla esta compartida por enlace)
 
 Las columnas A..W no pueden cambiar de nombre: si falta alguna, el script falla.
 """
@@ -54,8 +54,11 @@ def validar_encabezados(idx, nombre, columnas):
 
 def descargar(hoja):
     url = 'https://docs.google.com/spreadsheets/d/%s/gviz/tq?tqx=out:csv&sheet=%s' % (SHEET_ID, urllib.parse.quote(hoja))
-    with urllib.request.urlopen(url) as r:
-        return r.read().decode('utf-8')
+    try:
+        with urllib.request.urlopen(url) as r:
+            return r.read().decode('utf-8')
+    except Exception as e:
+        sys.exit('ERROR: no se pudo descargar la planilla (%s). Si no esta compartida por enlace, exporta las hojas a CSV y usa --detalle y --emergentes.' % e)
 
 
 def get(fila, idx, col):

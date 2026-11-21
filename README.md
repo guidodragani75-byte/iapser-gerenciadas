@@ -1,89 +1,46 @@
-# IAPSER ART · Plataforma de Control y Gestión de Visitas Gerenciadas
+# IAPSER ART · Gestión de Visitas Gerenciadas
 
-Plataforma unificada de gestión, seguimiento de vencimientos, registro de visitas, carga documental y **Tablero Ejecutivo de KPIs HyS** para preventores y el equipo de gestión de **IAPSER ART Gerenciadas**.
+Plataforma de seguimiento de visitas de Higiene y Seguridad para las empresas gerenciadas de **IAPSER ART**. Tiene dos módulos:
 
-Diseñada bajo el estándar visual institucional de Higiene y Seguridad (`IBM Plex Sans / Mono`, `#17202A` / `#0F4C5C` / `#A8470A`), con integración a **Google Sheets** como base de datos centralizada y **Google Drive** para el resguardo mensual estructurado de actas y constancias.
+| Módulo | Ubicación | Estado |
+| :--- | :--- | :--- |
+| **Seguimiento Consultora** (vigente) | [`seguimiento/`](./seguimiento/index.html) | La consultora agenda, carga el resultado y adjunta el PDF; vos hacés el seguimiento. Fuente: planilla `Detalle Visitas con Tareas CS (10-11-26)` |
+| **Plataforma original** (V21) | [`index.html`](./index.html) | Se conserva. Última versión funcional guardada en el tag `v21-ultima-version-funcional` y la rama `archivo/v21-funcional` |
 
----
+## Seguimiento Consultora
+Detalle completo en [`seguimiento/README.md`](./seguimiento/README.md). Resumen de reglas:
 
-## 🎯 Modelo de Gestión y Arquitectura de Doble Cohorte
+- **Residual** = fecha máxima (`Fecha Programada`) anterior al 01/10/2026; **Emergente** = desde octubre. Todo lo nuevo se carga como emergente.
+- Cada fila es una visita con historial de intentos: Sin agendar → Agendada → Efectiva (con PDF) | Fallida → se reprograma o se cierra con PDF.
+- Solo cuenta para el objetivo lo cerrado **con PDF**. Agendar ≥ 400 por mes es un indicador de gestión de la consultora.
+- Plazos: Etapa 1 hasta 31/01/2027, Etapa 2 hasta 30/04/2027; las "Urgente" vencen en su fecha máxima.
+- Pestañas: Tablero, **Plan anual y residual (KPIs: Universos 1, 2 y 3 del módulo original)**, Todas, Agendadas, Realizadas, Pendientes y A revisar (duplicadas).
+- Lo realizado en Sep–Oct se conserva como histórico y suma al objetivo si tiene documento.
+- Backend: Apps Script publicado como Web App (código en `seguimiento/backend.gs.js` y `seguimiento/gas/`). Guarda los intentos en la hoja `Seguimiento_Intentos` de la planilla y los PDF en Drive por mes (`IAPSER_Gestion_Visitas / IAPSER_Visitas_AAAA-MM`).
 
-El sistema implementa una **arquitectura dual de control** para responder tanto a los compromisos institucionales anuales como al control contractual estricto del proveedor:
+## Estructura del repositorio
 
-```mermaid
-flowchart TD
-    subgraph Planilla["Google Sheets Central (Base de Datos)"]
-        R["Cohorte 1: Plan Residual 2026 (Stock Inicial: 925 tareas)\n- 736 Visitas Técnicas: 01/01/2026 al 31/12/2026\n- 189 Tareas Especiales (RGRL / Siniestros): Plazo manual"]
-        A["Cohorte 2: Altas Nuevas desde Septiembre 2026\n- Tareas diarias cargadas para el prestador"]
-    end
+| Ruta | Contenido |
+| :--- | :--- |
+| `seguimiento/` | Módulo vigente: `index.html`, `app.js`, `core.js`, `datos.js` (generado), `build_data.py`, `backend.gs.js`, `gas/`, `test_core.js` |
+| `index.html`, `datos_precargados.js`, `codigo_apps_script.js`, `chart.umd.min.js` | Plataforma original (V21) y su backend |
+| `update_from_sheets.js`, `actualizar_planilla.bat`, `actualizar_todo_con_github.bat` | Sincronización de la plataforma original; el `.bat` sube a GitHub **solo** los archivos de datos |
+| `herramientas/` | Scripts de auditoría/OCR de PDFs (Python) y sus datos de trabajo. No forman parte de la app |
+| `MANUAL_ARQUITECTURA_Y_SINCRONIZACION.md` | Arquitectura de la plataforma original |
 
-    subgraph Dashboard["Plataforma Web STD HyS (index.html)"]
-        K1["MÓDULO 1: CONTROL PRESTADOR (1.200 VISITAS ANUALES)\n- Meta: 100 visitas/mes mínimas (Sep 2026 a Ago 2027)\n- Cortes Trimestrales: Q1 (300) | Q2 (300) | Q3 (300) | Q4 (300)\n- Alerta de Cadencia y Desvíos Acumulados"]
-        K2["MÓDULO 2: SEGUIMIENTO STOCK RESIDUAL 2026\n- Avance sobre el total de la tabla base (925 tareas)\n- Desglose: 736 Técnicas con plazo anual vs 189 Especiales"]
-        TAB["GRILLA OPERATIVA UNIFICADA\n- Selector de Cohorte (Todas / Residual 2026 / Altas Sep 2026)\n- Header Fijo / Sticky en scroll vertical\n- Carga de Fechas Desde/Hasta para tareas sin plazo\n- Carga de Fecha Realizada + Adjunto en Drive"]
-    end
-
-    Planilla <--> Dashboard
+## Pruebas
+```bash
+node seguimiento/test_core.js
 ```
 
-### 1. Universo 1: Altas Mensuales del Prestador (Ciclo Sep 2026 – Ago 2027)
-* **Meta Contractual**: **100 visitas / mes** $\rightarrow$ **1.200 visitas anuales**.
-* **Cortes Trimestrales de Compensación**: Diseñados para permitir que un desvío o déficit mensual sea compensado dentro de la ventana del trimestre:
-  * **Q1 (Sep 2026 – Nov 2026)**: Meta 300 visitas acumuladas (123 realizadas en Septiembre M0: 71 efectivas + 52 fallidas).
-  * **Q2 (Dic 2026 – Feb 2027)**: Meta 600 visitas acumuladas (300 en el Q).
-  * **Q3 (Mar 2027 – May 2027)**: Meta 900 visitas acumuladas (300 en el Q).
-  * **Q4 (Jun 2027 – Ago 2027)**: Meta 1.200 visitas acumuladas (300 en el Q).
-* **Métricas**: Avance acumulado sobre 1.200, cadencia vs meta acumulada de 100/mes, tasa de efectividad (efectivas vs fallidas) y evolución mensual.
+## Actualizar los datos del módulo Seguimiento
+Cuando cambia la planilla, exportá las hojas `Detalle…(General)` y `Visitas emergentes mensuales` a CSV y ejecutá:
+```bash
+python seguimiento/build_data.py --detalle detalle.csv --emergentes emergentes.csv
+```
+Regenerar `datos.js` no pisa lo cargado por la consultora (se guarda aparte, con una clave por visita).
 
-### 2. Universo 2: Plan Residual 2026 (Stock Inicial - 925 tareas en 2 Meses)
-* **Composición**: 736 Visitas Técnicas (plazo anual) + 189 Tareas Especiales (176 *RGRL / Verosimilitud* y 13 *Siniestros*).
-* **Plazo de Ejecución**: **2 meses exactos** contados desde la **Fecha Desde** y hasta la **Fecha Hasta** (ej. 09/11/2026 al 09/01/2027 o configurable dinámicamente).
-* **Cadencia de Extinción**: **462.5 visitas / mes** (~21.5 a 22 visitas diarias hábiles).
-* **Gráfico de Quemado (Burn-down)**: Trayectoria teórica de extinción de 925 a 0 en la ventana de 2 meses vs stock remanente real.
-
-### 3. Vista Consolidada (Multiserie · Sin Mezclar Metas)
-* Los dos universos se monitorean juntos pero preservando sus metas independientes para evitar distorsiones operativas.
-
----
-
-## 🚀 Estructura de Archivos
-
-| Archivo | Descripción |
-| :--- | :--- |
-| **`index.html`** | Aplicación web principal interactiva. Incluye tabla con **encabezado fijo (sticky header)**, selector de cohortes (*Todas*, *Plan Residual 2026*, *Altas Sep 2026*), columna visual `Origen Plan`, modal de nueva tarea, semáforos, ficha lateral de carga con edición de plazos, dropzone de archivos, detector OCR y el **Tablero Ejecutivo de KPIs HyS**. |
-| **`chart.umd.min.js`** | Librería Chart.js incluida localmente para funcionamiento 100% offline. |
-| **`datos_precargados.js`** | Base de datos real con los **925 registros** de la planilla de Google Sheets: **736 visitas técnicas con fechas 01/01/2026 a 31/12/2026**, 189 especiales con fechas para carga manual, todas marcadas como `Residual 2026`, con contador inicial limpio (**0 realizadas**). |
-| **`codigo_apps_script.js`** | Código backend para **Google Apps Script**. Incluye la columna `Origen Plan`, precarga de fechas 2026 en `inicializarColumnas()`, endpoint `createTask` para altas diarias del proveedor (`Alta Sep 2026`), subida estructurada a Google Drive por mes (`CUIT_Estab_Tarea_YYYYMMDD.ext`), y actualización atómica en Google Sheets. |
-| **`planilla_iapser_raw.csv`** | Copia de respaldo en formato CSV de la planilla original de Google Sheets. |
-
----
-
-## 📌 Control de Versiones con Git y GitHub
-
-El repositorio Git local está inicializado en la rama principal `main` con la configuración del proyecto HyS.
-
-Para vincularlo y sincronizarlo con tu cuenta de GitHub (`guidodragani75-byte`):
-
-1. Crear un nuevo repositorio en GitHub: [https://github.com/new](https://github.com/new) con el nombre (por ejemplo `iapser-gerenciadas`).
-2. Vincular el repositorio remoto y subir los cambios:
-   ```bash
-   git remote add origin https://github.com/guidodragani75-byte/iapser-gerenciadas.git
-   git push -u origin main
-   ```
-
----
-
-## ☁️ Instrucciones de Despliegue en Google Sheets & Drive
-
-1. **Abrir la Planilla de Google Sheets:**
-   [Prioridad mes vencido IAPSER Gerenciadas](https://docs.google.com/spreadsheets/d/1xXEmPqATmcMR0JpO2IuTmf1YZ6fMRxyeAc9avbfDRqI/edit?usp=drive_link)
-2. **Abrir el editor de Apps Script:**
-   Ir a **Extensiones** $\rightarrow$ **Apps Script**.
-3. **Pegar el Backend:**
-   Copiar todo el contenido de [`codigo_apps_script.js`](file:///c:/Users/cript/OneDrive/Escritorio/Antigravity/IAPSER%20Gerenciadas/codigo_apps_script.js) y pegarlo en el editor.
-4. **Inicializar Columnas y Fechas 2026:**
-   Ejecutar la función `inicializarColumnas`. Esto agregará automáticamente las columnas nuevas (`Origen Plan`, `Fecha Desde`, `Fecha Hasta`, `Fecha Realizada`, etc.) y precargará las fechas `01/01/2026` y `31/12/2026` para todas las filas de `Visita tecnica`.
-5. **Implementar como Web App:**
-   * **Implementar** $\rightarrow$ **Nueva implementación** $\rightarrow$ Tipo: **Aplicación web**.
-   * Ejecutar como: **Yo**; Quién tiene acceso: **Cualquier usuario**.
-   * Copiar la URL generada y pegarla en **Configurar Sheets & Drive** en `index.html`.
+## Planilla y repositorio
+- Planilla vigente: <https://docs.google.com/spreadsheets/d/1x2w2zY5BmxWJ29hh6pNiy1qLXv22RFkOx5DidNOx8_E/edit>
+- Planilla de la plataforma original: <https://docs.google.com/spreadsheets/d/1xXEmPqATmcMR0JpO2IuTmf1YZ6fMRxyeAc9avbfDRqI/edit>
+- Repositorio: <https://github.com/guidodragani75-byte/iapser-gerenciadas>

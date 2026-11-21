@@ -12,7 +12,7 @@ El repositorio consta de **3 archivos centrales** que trabajan de forma acoplada
 | :--- | :--- | :--- |
 | [`index.html`](./index.html) | Aplicación web principal (Frontend SPA): Tabla operativa, Filtros, Ficha lateral (Aside), Visor Ampliado, Alta Masiva OCR y Tablero Analítico de KPIs (3 Universos). | Lee [`datos_precargados.js`](./datos_precargados.js) como base offline, consulta Google Sheets en vivo vía `gviz/tq` (JSONP) al abrirse y envía escrituras/archivos a [`codigo_apps_script.js`](./codigo_apps_script.js). |
 | [`datos_precargados.js`](./datos_precargados.js) | Base inicial precargada (`window.DATOS_INICIALES_IAPSER`, actualmente **1.203 registros**: `925` Residual 2026 + `123` Alta Sep 2026 + `155` Alta Oct 2026). | Respaldo inmediato al abrir la app sin conexión o antes de que termine el fetch en vivo a Google Sheets. |
-| [`codigo_apps_script.js`](./codigo_apps_script.js) | Backend en Google Apps Script (`doGet` / `doPost`) conectado a la planilla Google Sheets (`1RV3891125-cN13hL5422sG8G4JwN4e0bF6g_vT0mU5c`) y a Google Drive. | Recibe acciones `saveVisit`, `createTask`, `batchUpload` y `gestionarFallida`; organiza archivos en Drive exclusivamente **Por Mes** (`IAPSER_Gestion_Visitas / IAPSER_Visitas_AAAA-MM`) y devuelve el link real de Drive. |
+| [`codigo_apps_script.js`](./codigo_apps_script.js) | Backend en Google Apps Script (`doGet` / `doPost`) conectado a la planilla Google Sheets (`1xXEmPqATmcMR0JpO2IuTmf1YZ6fMRxyeAc9avbfDRqI`) y a Google Drive. | Recibe acciones `saveVisit`, `createTask`, `batchUpload` y `gestionarFallida`; organiza archivos en Drive exclusivamente **Por Mes** (`IAPSER_Gestion_Visitas / IAPSER_Visitas_AAAA-MM`) y devuelve el link real de Drive. |
 
 ---
 
@@ -74,7 +74,7 @@ Todo cambio en `TASKS` debe invocar `renderizarTableroKPIs()`, el cual actualiza
    - Gráficos de Universo 2:
      - `renderChartResidualAvance(residualPorMes, totalResidual, realizadasResidual)`
      - `renderChartResidualTipologia(tecnicasResidual, especialesResidual)`
-3. **Universo 3 — Vista Consolidada Multi-Serie (`2.125` tareas totales)**:
+3. **Universo 3 — Vista Consolidada Multi-Serie (plan total = meta anual + stock residual; las cantidades se calculan en tiempo de ejecución)**:
    - Tarjetas: `#kpiUniv3TotalRealizadas`, `#kpiUniv3TotalPlan`, `#kpiUniv3PctGlobal`, `#kpiUniv3DesgloseBadge`, `#kpiUniv3EfAltas`, `#kpiUniv3FaAltas`, `#kpiUniv3RealResidual`, `#kpiUniv3PendientesTotal`.
    - Gráfico y tabla consolidada:
      - `renderChartConsolidado(efectivasAltasPorMes, fallidasAltasPorMes, residualPorMes, ultimoMesActivoIdx)`
@@ -110,3 +110,9 @@ Todo cambio en `TASKS` debe invocar `renderizarTableroKPIs()`, el cual actualiza
   - **Controles de Zoom**: botones `−`, indicador de porcentaje (`100%`, clickeable para restablecer) y `+` (desde `50%` hasta `300%`).
   - **Nueva pestaña ↗**: abre el documento completo en una nueva pestaña del navegador mediante `Blob URL`.
   - **Cierre rápido**: tecla `Esc`, click en el fondo oscuro o botón `✕ Cerrar (Esc)`.
+
+---
+
+## 5. Nota: módulo vigente
+
+Este manual describe la **plataforma original (V21)**. El módulo vigente es [seguimiento/](./seguimiento/README.md), con otra planilla (1x2w2zY5BmxWJ29hh6pNiy1qLXv22RFkOx5DidNOx8_E) y su propio backend. Los scripts de auditoría de PDFs están en [herramientas/](./herramientas).
