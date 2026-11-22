@@ -71,6 +71,71 @@
 
   function esObra(tareas) { return /obra/i.test(sinTildes(tareas)); }
   function esTecnica(tareas) { return /visita tecnica/i.test(sinTildes(tareas)); }
+  function subtareasNorm(tareas) {
+    return String(tareas || '').split('//').map(function (x) { return sinTildes(x).toLowerCase().trim(); }).filter(Boolean);
+  }
+
+  /**
+   * Detecta filas con errores / a revisar (excluye obras):
+   * 1) misma_tarea_anios: mismo CUIT + Nro Estab (col. M) comparte al menos una tarea entre año pasado y año actual.
+   * 2) duplicada_fecha: mismo CUIT + Nro Estab (col. M) + mismas tareas exactas con fechas máximas distintas.
+   */
+  function detectarErroresVisitas(visitas, hoy) {
+    hoy = hoy || hoyISO();
+    const anioAct = String(parseInt(hoy.slice(0, 4), 10));
+    const anioPrev = String(parseInt(hoy.slice(0, 4), 10) - 1);
+    const out = {}; // id -> { tipos: Set/Array, tareasComunes: [], etiqueta: '' }
+    function marcar(id, tipo, comunes) {
+      const o = out[id] = out[id] || { tipos: [], tareasComunes: [] };
+      if (o.tipos.indexOf(tipo) < 0) o.tipos.push(tipo);
+      (comunes || []).forEach(function (t) { if (o.tareasComunes.indexOf(t) < 0) o.tareasComunes.push(t); });
+    }
+
+    const porCE = {};
+    const porCET = {};
+    (visitas || []).forEach(function (v) {
+      if (v.esObra || esObra(v.tareas)) return;
+      const ce = String(v.cuit || '').trim() + '|' + String(v.nroEstab || '').trim();
+      (porCE[ce] = porCE[ce] || []).push(v);
+      const cet = ce + '|' + sinTildes(v.tareas).toLowerCase().trim();
+      (porCET[cet] = porCET[cet] || []).push(v);
+    });
+
+    // Regla 1: misma tarea año pasado y este año para mismo CUIT + Estab
+    Object.keys(porCE).forEach(function (k) {
+      const g = porCE[k];
+      if (g.length < 2) return;
+      const prev = g.filter(function (v) { return (v.fechaMax || '').slice(0, 4) === anioPrev; });
+      const act = g.filter(function (v) { return (v.fechaMax || '').slice(0, 4) === anioAct; });
+      if (!prev.length || !act.length) return;
+      const setPrev = {};
+      prev.forEach(function (v) { subtareasNorm(v.tareas).forEach(function (t) { setPrev[t] = true; }); });
+      const comunes = [];
+      act.forEach(function (v) {
+        subtareasNorm(v.tareas).forEach(function (t) {
+          if (setPrev[t] && comunes.indexOf(t) < 0) comunes.push(t);
+        });
+      });
+      if (!comunes.length) return;
+      prev.concat(act).forEach(function (v) {
+        const hit = subtareasNorm(v.tareas).filter(function (t) { return comunes.indexOf(t) >= 0; });
+        if (hit.length) marcar(v.id, 'misma_tarea_anios', hit);
+      });
+    });
+
+    // Regla 2: mismas tareas exactas con distinta fecha máxima
+    Object.keys(porCET).forEach(function (k) {
+      const g = porCET[k];
+      if (g.length < 2) return;
+      const fechas = {};
+      g.forEach(function (v) { if (v.fechaMax) fechas[v.fechaMax] = true; });
+      if (Object.keys(fechas).length > 1) {
+        g.forEach(function (v) { marcar(v.id, 'duplicada_fecha', []); });
+      }
+    });
+
+    return out;
+  }
 
   function esMayo2027OAdelante(v) {
     const f = (v && (v.fechaMax || v.plazo)) || '';
@@ -174,10 +239,11 @@
     return mapa;
   }
 
-  /** Combina visitas base + intentos por id + cruce opcional con PDFs de octubre en Emergentes. */
+  /** Combina visitas base + intentos por id + cruce opcional con PDFs de octubre + detección de errores. */
   function armarVisitas(base, intentosPorId, hoy, historico) {
     hoy = hoy || hoyISO();
     const mapaOct = historico ? indexarCruceOctubre(historico) : {};
+    const mapaErr = detectarErroresVisitas(base, hoy);
     return base.map(function (b) {
       const intentos = (intentosPorId && intentosPorId[b.id]) || [];
       const estado = estadoVisita(intentos);
@@ -203,6 +269,8 @@
       const fechaRealFinal = (u && u.fechaReal) ? u.fechaReal : (cerradaPorCruceOct ? cruceOct.fechaISO : '');
       const resultadoFinal = (u && u.resultado) ? u.resultado : (cerradaPorCruceOct ? cruceOct.resultado : '');
       const catVenc = cerradaFinal || !plazo ? 'cerrada' : (plazo < hoy ? 'vencida' : (mesDe(plazo) === mesDe(hoy) ? 'mes_actual' : 'otro_mes'));
+      const errInfo = mapaErr[b.id] || null;
+      const errTipos = errInfo ? errInfo.tipos : (b.revisarDuplicada ? ['duplicada_fecha'] : []);
       return Object.assign({}, b, {
         intentos: intentos,
         estado: estadoFinal,
@@ -215,7 +283,10 @@
         fechaAgendada: u && u.fechaAgendada ? u.fechaAgendada : '',
         fechaReal: fechaRealFinal,
         resultadoActual: resultadoFinal,
-        cruceOct: cruceOct
+        cruceOct: cruceOct,
+        revisarDuplicada: errTipos.length > 0,
+        errores: errTipos,
+        tareasRepetidasAnio: errInfo ? errInfo.tareasComunes : []
       });
     });
   }
@@ -527,7 +598,8 @@
 
   const API = {
     CONFIG, ESTADOS, aISO, aDMY, mesDe, hoyISO, sumarMeses, diffMeses, sinTildes, labelMes,
-    cohorte, esObra, esTecnica, esMayo2027OAdelante, filtrarCorteFuturo, categoriaVencimiento,
+    cohorte, esObra, esTecnica, subtareasNorm, detectarErroresVisitas,
+    esMayo2027OAdelante, filtrarCorteFuturo, categoriaVencimiento,
     plazoVisita, ultimoIntento, estadoVisita,
     cuentaObjetivo, estaCerrada, validarIntento, requiereAdjunto, esPDF,
     indexarCruceOctubre, armarVisitas, agendadasPorMes, cerradasPorMes,

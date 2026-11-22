@@ -22,10 +22,10 @@
   let partFiltro = 'all'; // 'all' | 'YYYY-MM'
   let ultimoCP = null;
   let geminiActivo = null; // null = sin verificar, true/false según backend
-  const F = { cohorte: '', plan: '', ambito: '', estado: '', mes: '', venc: '', cruceOct: '', q: '', sub: '', excluirMay27: true };
+  const F = { cohorte: '', plan: '', ambito: '', estado: '', mes: '', venc: '', cruceOct: '', errTipo: '', q: '', sub: '', excluirMay27: true };
 
   const TABS = [['tablero', 'Tablero'], ['todas', 'Todas'], ['agendadas', 'Agendadas'],
-    ['realizadas', 'Realizadas'], ['pendientes', 'Pendientes'], ['revisar', 'A revisar (duplicadas)']];
+    ['realizadas', 'Realizadas'], ['pendientes', 'Pendientes'], ['revisar', 'Errores / A revisar']];
 
   function recalcular() {
     VISITAS_TODAS = C.armarVisitas(D.visitas, INTENTOS, C.hoyISO(), D.historico);
@@ -59,6 +59,7 @@
       if (F.estado && v.estado !== F.estado) return false;
       if (F.mes && C.mesDe(v.fechaMax) !== F.mes) return false;
       if (F.venc && v.catVenc !== F.venc) return false;
+      if (vista === 'revisar' && F.errTipo && (!v.errores || v.errores.indexOf(F.errTipo) < 0)) return false;
       if (F.cruceOct === 'con' && !v.cruceOct) return false;
       if (F.cruceOct === 'Efectiva' && !(v.cruceOct && v.cruceOct.resultado === 'Efectiva')) return false;
       if (F.cruceOct === 'Fallida' && !(v.cruceOct && v.cruceOct.resultado === 'Fallida')) return false;
@@ -67,7 +68,14 @@
         if (h.indexOf(q) < 0) return false;
       }
       return true;
-    }).sort((a, b) => (a.plazo || '9').localeCompare(b.plazo || '9'));
+    }).sort((a, b) => {
+      if (vista === 'revisar') {
+        const ka = `${a.cuit}|${String(a.nroEstab).padStart(4, '0')}|${a.fechaMax || '9'}`;
+        const kb = `${b.cuit}|${String(b.nroEstab).padStart(4, '0')}|${b.fechaMax || '9'}`;
+        return ka.localeCompare(kb);
+      }
+      return (a.plazo || '9').localeCompare(b.plazo || '9');
+    });
   }
 
   const uniq = k => Array.from(new Set(D.visitas.map(v => v[k]).filter(Boolean))).sort();
@@ -385,18 +393,25 @@
         <option value="Fallida" ${F.cruceOct === 'Fallida' ? 'selected' : ''}>PDF Oct: Fallida</option>
       </select>
       ${vista === 'realizadas' ? `<select onchange="App.f('sub',this.value)"><option value="">Efectivas y fallidas</option><option value="Efectiva" ${F.sub === 'Efectiva' ? 'selected' : ''}>Solo efectivas</option><option value="Fallida" ${F.sub === 'Fallida' ? 'selected' : ''}>Solo fallidas</option></select>` : ''}
+      ${vista === 'revisar' ? `<select onchange="App.f('errTipo',this.value)"><option value="">Tipo de error: todos</option><option value="misma_tarea_anios" ${F.errTipo === 'misma_tarea_anios' ? 'selected' : ''}>Misma tarea año ant. y actual (${VISITAS.filter(v => v.errores && v.errores.indexOf('misma_tarea_anios') >= 0).length})</option><option value="duplicada_fecha" ${F.errTipo === 'duplicada_fecha' ? 'selected' : ''}>Duplicada otra fecha (${VISITAS.filter(v => v.errores && v.errores.indexOf('duplicada_fecha') >= 0).length})</option></select>` : ''}
       <button class="btn sec sm" onclick="App.exportar()">Exportar CSV</button>
       <span class="note">${total} visitas</span></div>`;
-    h += `<div style="overflow:auto;max-height:72vh"><table class="grid-op"><thead><tr><th>Cohorte</th><th>Etapa</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Localidad</th><th>Tareas</th><th>Fecha máx.</th><th>Agendada</th><th>Fecha real</th><th>Estado</th><th>Acción</th></tr></thead><tbody>`;
+    const colFechaHdr = vista === 'revisar' ? 'Fecha orig.' : 'Fecha máx.';
+    h += `<div style="overflow:auto;max-height:72vh"><table class="grid-op"><thead><tr><th>Cohorte</th><th>Etapa</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Localidad</th><th>Tareas</th><th>${colFechaHdr}</th><th>Agendada</th><th>Fecha real</th><th>Estado</th><th>Acción</th></tr></thead><tbody>`;
     sl.forEach(v => {
       const tareasTxt = v.tareas.split('//').join(' · ');
       const estabTxt = `${v.nroEstab} · ${v.establecimiento}`;
       const locTxt = `${v.localidad}, ${v.provincia}`;
       const cruceTag = v.cruceOct ? ` <a href="${esc(v.cruceOct.url)}" target="_blank" onclick="event.stopPropagation()" class="pill ${v.cruceOct.resultado === 'Efectiva' ? 'p-ok' : 'p-bad'}" title="PDF cargado en Octubre (${esc(v.cruceOct.fecha)} · ${esc(v.cruceOct.tarea)})">PDF Oct: ${v.cruceOct.resultado} ↗</a>` : '';
+      const esAnios = v.errores && v.errores.indexOf('misma_tarea_anios') >= 0;
+      const errTag = esAnios
+        ? `<span class="pill p-bad" title="Misma tarea repetida entre año anterior y actual: ${esc((v.tareasRepetidasAnio || []).join(', '))}">🔁 Año ant./act.</span> `
+        : (v.revisarDuplicada ? '<span class="pill p-warn" title="Misma tarea y establecimiento con fecha distinta">⚠ Duplicada</span> ' : '');
+      const fechaCelda = vista === 'revisar' ? C.aDMY(v.fechaMax) : (C.aDMY(v.plazo) + (v.vencida ? ' ⚠' : ''));
       h += `<tr data-id="${esc(v.id)}" onclick="App.abrir(this.dataset.id)"><td>${v.cohorte}</td><td>${esc(v.planificacion)}</td><td>${esc(v.cuit)}</td><td class="clip" style="max-width:190px" title="${esc(v.empleador)}">${esc(v.empleador)}</td>
         <td class="clip" style="max-width:140px" title="${esc(estabTxt)}">${esc(estabTxt)}</td><td class="clip" style="max-width:140px" title="${esc(locTxt)}">${esc(locTxt)}</td>
-        <td class="clip" style="max-width:220px" title="${esc(tareasTxt)}">${esc(tareasTxt)}${v.revisarDuplicada ? ' <span class="pill p-warn">revisar</span>' : ''}${cruceTag}</td>
-        <td class="${v.vencida ? 'venc' : ''}">${C.aDMY(v.plazo)}${v.vencida ? ' ⚠' : ''}</td><td>${C.aDMY(v.fechaAgendada)}</td><td>${C.aDMY(v.fechaReal)}</td><td>${pillEstado(v.estado)}</td>
+        <td class="clip" style="max-width:250px" title="${esc(tareasTxt)}">${errTag}${cruceTag ? cruceTag + ' ' : ''}${esc(tareasTxt)}</td>
+        <td class="${vista !== 'revisar' && v.vencida ? 'venc' : ''}">${fechaCelda}</td><td>${C.aDMY(v.fechaAgendada)}</td><td>${C.aDMY(v.fechaReal)}</td><td>${pillEstado(v.estado)}</td>
         <td><button class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📄 PDF</button></td></tr>`;
     });
     if (!sl.length) h += '<tr><td colspan="12" class="note" style="padding:20px">Sin resultados.</td></tr>';
@@ -465,6 +480,7 @@
     const motivoBase = MOTIVOS.indexOf((it.motivo || '').split(' - ')[0]) >= 0 ? (it.motivo || '').split(' - ')[0] : '';
     const detalle = (it.motivo || '').indexOf(' - ') > 0 ? it.motivo.split(' - ').slice(1).join(' - ') : (motivoBase ? '' : (it.motivo || ''));
     const cruceHtml = v.cruceOct ? `<div class="info-box"><strong>Cruce con PDF de Octubre (CUIT + Estab ${esc(v.nroEstab)}):</strong><br>${v.cruceOct.items.map(x => `• ${esc(x.fecha)} — <b>${esc(x.resultado)}</b> (${esc(x.tarea)}) · <a href="${esc(x.url)}" target="_blank">Abrir PDF en Drive ↗</a>`).join('<br>')}</div>` : '';
+    const errHtml = v.revisarDuplicada ? `<div class="err" style="display:block"><strong>Error / A revisar:</strong> ${v.errores && v.errores.indexOf('misma_tarea_anios') >= 0 ? `Misma tarea repetida entre año anterior y actual (${esc((v.tareasRepetidasAnio || []).join(', '))})` : 'Misma tarea y establecimiento con fecha máxima distinta'} · Fecha original planilla: <b>${C.aDMY(v.fechaMax)}</b></div>` : '';
 
     $('dvTitulo').textContent = v.empleador + ' · Estab ' + v.nroEstab;
     $('dvBody').innerHTML = `<div id="dvSplit"><div><div class="kv">
@@ -473,6 +489,7 @@
       ${dato('Cohorte / Etapa', v.cohorte + ' · ' + v.planificacion)}
       <b>Fecha máxima</b><span class="${v.vencida ? 'venc' : ''}">${C.aDMY(v.plazo)}${v.vencida ? ' (vencida)' : ''}</span>
       <b>Estado</b><span>${pillEstado(v.estado)}</span>${v.obsCS ? dato('Obs. CS', v.obsCS) : ''}${v.obsIAPSER ? dato('Obs. IAPSER', v.obsIAPSER) : ''}</div>
+      ${errHtml}
       ${cruceHtml}
       ${previos.length ? `<table class="hist"><thead><tr><th>#</th><th>Agendada</th><th>Real</th><th>Resultado</th><th>Motivo</th><th>PDF</th></tr></thead><tbody>${previos.map(p => `<tr style="cursor:default"><td>${p.n}</td><td>${C.aDMY(p.fechaAgendada)}</td><td>${C.aDMY(p.fechaReal)}</td><td>${esc(p.resultado)}</td><td>${esc(p.motivo)}</td><td>${p.adjunto ? `<a href="${esc(p.adjunto)}" target="_blank">ver</a>` : '–'}</td></tr>`).join('')}</tbody></table>` : ''}
       <fieldset><legend>Intento ${it.n} · Agenda</legend>

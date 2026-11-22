@@ -149,4 +149,14 @@ t('cumplimiento en plazo y participacion en los 3 universos (consolidado / emerg
   assert.strictEqual(cRes.vencidas, 49);
   assert.strictEqual(cEmer.mesesActivos.length, 2); // Sep 26, Oct 26
 });
+t('errores: misma tarea para CUIT + Estab entre año pasado (2025) y este año (2026)', () => {
+  const vs = C.armarVisitas(D.visitas, {}, '2026-11-22', D.historico);
+  const anios = vs.filter(v => v.errores && v.errores.indexOf('misma_tarea_anios') >= 0);
+  const todos = vs.filter(v => v.revisarDuplicada);
+  assert.strictEqual(anios.length, 8);   // 4 pares: Diaz Camposano, Ignacio Meschede, Celerity E2, Quinta Raiz
+  assert.strictEqual(todos.length, 14);  // 8 inter-anio + 6 duplicadas mismo anio (Garcia, Barbieri, Baires)
+  // Verificar que Quinta Raiz (que antes no se detectaba por tener tareas adicionales) ahora si entra
+  assert.ok(anios.some(v => v.cuit === '30719048265' && v.tareasRepetidasAnio.indexOf('visita tecnica') >= 0));
+  assert.ok(anios.some(v => v.cuit === '30530481545' && v.tareasRepetidasAnio.indexOf('capacitacion basica') >= 0));
+});
 console.log('\n' + ok + ' pruebas OK');
