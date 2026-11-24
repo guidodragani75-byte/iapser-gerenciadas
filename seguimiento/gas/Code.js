@@ -14,12 +14,22 @@
 var CFG = {
   SPREADSHEET_ID: '1x2w2zY5BmxWJ29hh6pNiy1qLXv22RFkOx5DidNOx8_E',
   HOJA: 'Seguimiento_Intentos',
+  HOJA_GENERAL: 'Detalle Visitas con Tareas CS (10-11-26)(General)',
+  HOJA_EMERGENTES: 'Visitas emergentes mensuales',
+  HOJA_BAJAS: 'Bajas_Historico',
+  CORTE_RESIDUAL: '2026-10-01',
   CARPETA_PRINCIPAL_ID: '1RDkZA4EIjPxdvBZqPCcgu5k6vnz6eAUq',
   PREFIJO_MES: 'IAPSER_Visitas_',
   MAX_PDF_BYTES: 15 * 1024 * 1024,
   GEMINI_MODEL: 'gemini-2.5-flash',
   ENCABEZADOS: ['ID Visita', 'Nro Intento', 'Fecha Agendada', 'Fecha Real', 'Resultado', 'Motivo',
-                'Reprograma', 'Adjunto Drive', 'Cargado por', 'Timestamp']
+                'Reprograma', 'Adjunto Drive', 'Cargado por', 'Timestamp'],
+  COLUMNAS_PADRON: [
+    'Cuit', 'Empleador', 'Contrato IAPART', 'Establecimiento', 'Localidad', 'Provincia', 'CP',
+    'Domicilio estab.', 'Responsable', 'Telefono', 'E-mail', 'Nro Estab IAPART', 'Nro Estab Intercambio',
+    'Programa', 'CantidadTrabajadoresCUIT', 'Preventor Asignado', 'Tareas', 'Fecha Programada',
+    'Fecha Vencimiento', 'Tarea Cargada', 'Fecha Carga', 'Observaciones CS', 'Observaciones IAPSER'
+  ]
 };
 
 function getGeminiKey_() {
@@ -59,19 +69,30 @@ function iso_(v) {
   return String(v).slice(0, 10);
 }
 
+function getPadronUpdatedAt_() {
+  try {
+    return (PropertiesService.getScriptProperties().getProperty('PADRON_UPDATED_AT') || '').trim();
+  } catch (e) {
+    return '';
+  }
+}
+
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'getState';
-  if (action === 'ping') return json_({ ok: true, ts: new Date().toISOString(), geminiConfigured: !!getGeminiKey_() });
-  if (action === 'getState') return json_({ ok: true, intentos: leerIntentos_(), geminiConfigured: !!getGeminiKey_() });
+  if (action === 'ping') return json_({ ok: true, ts: new Date().toISOString(), geminiConfigured: !!getGeminiKey_(), padronUpdatedAt: getPadronUpdatedAt_() });
+  if (action === 'getState') return json_({ ok: true, intentos: leerIntentos_(), geminiConfigured: !!getGeminiKey_(), padronUpdatedAt: getPadronUpdatedAt_() });
+  if (action === 'getPadron') return json_(leerPadron_());
   return json_({ ok: false, error: 'Acción no reconocida: ' + action });
 }
 
 function doPost(e) {
   try {
     var p = JSON.parse(e.postData.contents);
-    if (p.action === 'getState') return json_({ ok: true, intentos: leerIntentos_(), geminiConfigured: !!getGeminiKey_() });
+    if (p.action === 'getState') return json_({ ok: true, intentos: leerIntentos_(), geminiConfigured: !!getGeminiKey_(), padronUpdatedAt: getPadronUpdatedAt_() });
+    if (p.action === 'getPadron') return json_(leerPadron_());
     if (p.action === 'saveIntento') return json_(guardarIntento_(p));
     if (p.action === 'analyzePdf') return json_(analizarPdfGemini_(p));
+    if (p.action === 'syncPadron') return json_(sincronizarPadron_(p));
     return json_({ ok: false, error: 'Acción no reconocida: ' + p.action });
   } catch (err) {
     return json_({ ok: false, error: String(err && err.message || err) });
@@ -224,6 +245,417 @@ function guardarIntento_(p) {
     }
     sh.getRange(destino, 1, 1, fila.length).setValues([fila]);
     return { ok: true, adjunto: adjunto };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* ---------- SINCRONIZACIÓN Y LECTURA DE PADRÓN (HOJA GENERAL) ---------- */
+function sinTildes_(s) {
+  return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function fechaISO_(v, tz) {
+  if (v == null || v === '') return '';
+  if (v instanceof Date) return Utilities.formatDate(v, tz || 'America/Argentina/Buenos_Aires', 'yyyy-MM-dd');
+  var s = String(v).trim();
+  var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? m[0] : '';
+}
+
+function isoADate_(isoStr) {
+  var m = String(isoStr || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return '';
+  return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10), 12, 0, 0);
+}
+
+function ajustarFormulaFila_(formula, oldRow, newRow) {
+  if (!formula || String(formula).charAt(0) !== '=') return formula;
+  var re = new RegExp('(\\$?[A-Z]+)' + oldRow + '(?!\\d)', 'g');
+  return String(formula).replace(re, '$1' + newRow);
+}
+
+function esValorReal_(v) {
+  var s = String(v == null ? '' : v).trim();
+  return !!s && s.toUpperCase() !== 'NULL';
+}
+
+function leerPadron_() {
+  var ss = SpreadsheetApp.openById(CFG.SPREADSHEET_ID);
+  var tz = ss.getSpreadsheetTimeZone() || 'America/Argentina/Buenos_Aires';
+  var sh = ss.getSheetByName(CFG.HOJA_GENERAL);
+  if (!sh) return { ok: false, error: 'No se encontró la hoja ' + CFG.HOJA_GENERAL };
+  var lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
+  if (lastRow < 2) return { ok: true, generado: iso_(new Date()), ts: getPadronUpdatedAt_(), visitas: [] };
+
+  var data = sh.getRange(1, 1, lastRow, lastCol).getValues();
+  var hdr = data[0].map(function (h) { return String(h || '').trim(); });
+  var idx = {};
+  hdr.forEach(function (h, i) { if (h && !(h in idx)) idx[h] = i; });
+  function cel(r, col) {
+    var i = idx[col];
+    return (i != null && i < r.length && r[i] != null) ? String(r[i]).trim() : '';
+  }
+
+  // Cruce opcional con hoja de emergentes mensuales
+  var emergMap = {};
+  var shE = ss.getSheetByName(CFG.HOJA_EMERGENTES);
+  if (shE && shE.getLastRow() >= 2) {
+    var eData = shE.getRange(1, 1, shE.getLastRow(), shE.getLastColumn()).getValues();
+    var eIdx = {};
+    eData[0].forEach(function (h, i) { h = String(h || '').trim(); if (h && !(h in eIdx)) eIdx[h] = i; });
+    if ('Mes' in eIdx && 'Contrato IAPART' in eIdx && 'Nro Estab Intercambio' in eIdx && 'Tareas' in eIdx && 'Fecha Programada' in eIdx) {
+      for (var ei = 1; ei < eData.length; ei++) {
+        var er = eData[ei];
+        var ek = [String(er[eIdx['Contrato IAPART']] || '').trim(), String(er[eIdx['Nro Estab Intercambio']] || '').trim(),
+          sinTildes_(er[eIdx['Tareas']]).toLowerCase().trim(), fechaISO_(er[eIdx['Fecha Programada']])].join('|');
+        if (!(ek in emergMap)) emergMap[ek] = String(er[eIdx['Mes']] || '').trim();
+      }
+    }
+  }
+
+  var visitas = [], vistos = {};
+  for (var ri = 1; ri < data.length; ri++) {
+    var r = data[ri];
+    var cuit = cel(r, 'Cuit').replace(/[^\d]/g, '');
+    if (!cuit) continue;
+    var fecha = fechaISO_(idx['Fecha Programada'] != null ? r[idx['Fecha Programada']] : '', tz);
+    var nroEstab = cel(r, 'Nro Estab Intercambio');
+    var tareas = cel(r, 'Tareas');
+    var base = [cuit, nroEstab, sinTildes_(tareas).toLowerCase(), fecha].join('|');
+    var n = (vistos[base] || 0) + 1;
+    vistos[base] = n;
+    var esObra = /obra/i.test(sinTildes_(tareas));
+    if (n > 1 && !esObra) continue;
+    var vid = base + (n > 1 ? ('#' + n) : '');
+    var ek2 = [cel(r, 'Contrato IAPART'), nroEstab, sinTildes_(tareas).toLowerCase(), fecha].join('|');
+    visitas.push({
+      id: vid,
+      cuit: cuit,
+      empleador: cel(r, 'Empleador'),
+      contrato: cel(r, 'Contrato IAPART'),
+      establecimiento: cel(r, 'Establecimiento'),
+      localidad: cel(r, 'Localidad'),
+      provincia: cel(r, 'Provincia'),
+      domicilio: cel(r, 'Domicilio estab.'),
+      nroEstabIAPART: cel(r, 'Nro Estab IAPART'),
+      nroEstab: nroEstab,
+      programa: cel(r, 'Programa'),
+      trabajadores: cel(r, 'CantidadTrabajadoresCUIT'),
+      preventor: cel(r, 'Preventor Asignado'),
+      tareas: tareas,
+      esObra: esObra,
+      fechaMax: fecha,
+      planificacion: cel(r, 'Planificacion'),
+      ambito: cel(r, 'Ambito') || cel(r, 'Provincia'),
+      departamento: cel(r, 'Departamento'),
+      obsCS: cel(r, 'Observaciones CS'),
+      obsIAPSER: cel(r, 'Observaciones IAPSER'),
+      cohorte: (fecha && fecha < CFG.CORTE_RESIDUAL) ? 'Residual' : 'Emergente',
+      mesEmergente: emergMap[ek2] || '',
+      revisarDuplicada: false
+    });
+  }
+  var gen = Utilities.formatDate(new Date(), 'America/Argentina/Buenos_Aires', 'yyyy-MM-dd HH:mm');
+  return { ok: true, generado: gen, ts: getPadronUpdatedAt_() || new Date().toISOString(), visitas: visitas };
+}
+
+function mesEmergentePorDefecto_() {
+  var meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  var iso = Utilities.formatDate(new Date(), 'America/Argentina/Buenos_Aires', 'yyyy-MM-dd');
+  return meses[parseInt(iso.slice(5, 7), 10) - 1] + iso.slice(2, 4);
+}
+
+function agregarAltasAEmergentes_(ss, altasItems, mesEtiqueta, contactoPorCE, tz) {
+  if (!altasItems || !altasItems.length) return 0;
+  var shE = ss.getSheetByName(CFG.HOJA_EMERGENTES);
+  if (!shE) return 0;
+  var lastRow = shE.getLastRow();
+  var lastCol = shE.getLastColumn();
+  if (lastRow < 1 || lastCol < 2) return 0;
+  var hdrE = shE.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) { return String(h || '').trim(); });
+  var eIdx = {};
+  hdrE.forEach(function (h, i) { if (h && !(h in eIdx)) eIdx[h] = i; });
+  if (!('Mes' in eIdx) || !('Contrato IAPART' in eIdx) || !('Nro Estab Intercambio' in eIdx) || !('Tareas' in eIdx) || !('Fecha Programada' in eIdx)) {
+    return 0;
+  }
+
+  // Deduplicar contra filas ya presentes en Visitas emergentes mensuales
+  var existentes = {};
+  if (lastRow >= 2) {
+    var valsE = shE.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    for (var i = 0; i < valsE.length; i++) {
+      var r = valsE[i];
+      var k = [
+        String(r[eIdx['Contrato IAPART']] || '').trim(),
+        String(r[eIdx['Nro Estab Intercambio']] || '').trim(),
+        sinTildes_(r[eIdx['Tareas']]).toLowerCase().trim(),
+        fechaISO_(r[eIdx['Fecha Programada']], tz)
+      ].join('|');
+      existentes[k] = true;
+    }
+  }
+
+  var mesVal = String(mesEtiqueta || mesEmergentePorDefecto_()).trim();
+  var nuevasFilas = [];
+  for (var j = 0; j < altasItems.length; j++) {
+    var aw = altasItems[j].colsAW || [];
+    var fIso = fechaISO_(aw[17]);
+    var kNew = [
+      String(aw[2] || '').trim(),
+      String(aw[12] || '').trim(),
+      sinTildes_(aw[16]).toLowerCase().trim(),
+      fIso
+    ].join('|');
+    if (existentes[kNew]) continue;
+    existentes[kNew] = true;
+
+    var ce = String(aw[0] || '').replace(/[^\d]/g, '') + '|' + String(aw[12] || '').trim();
+    var ct = contactoPorCE[ce] || null;
+    var row = new Array(lastCol).fill('');
+    row[eIdx['Mes']] = mesVal;
+    for (var c = 1; c < CFG.COLUMNAS_PADRON.length; c++) {
+      var colName = CFG.COLUMNAS_PADRON[c];
+      var targetIdx = eIdx[colName];
+      if (targetIdx == null) continue;
+      if (colName === 'Fecha Programada') {
+        row[targetIdx] = fIso ? isoADate_(fIso) : '';
+      } else if (colName === 'Responsable' && ct && esValorReal_(ct.ag)) {
+        row[targetIdx] = ct.ag;
+      } else if (colName === 'Telefono' && ct && esValorReal_(ct.ah)) {
+        row[targetIdx] = ct.ah;
+      } else if (colName === 'E-mail' && ct && esValorReal_(ct.ai)) {
+        row[targetIdx] = ct.ai;
+      } else {
+        row[targetIdx] = aw[c] != null ? aw[c] : '';
+      }
+    }
+    nuevasFilas.push(row);
+  }
+
+  if (nuevasFilas.length) {
+    var startR = lastRow + 1;
+    // Formatear columna Mes como texto plano para evitar que 'nov26' se convierta en fecha 26/11/2026
+    shE.getRange(startR, eIdx['Mes'] + 1, nuevasFilas.length, 1).setNumberFormat('@');
+    shE.getRange(startR, 1, nuevasFilas.length, lastCol).setValues(nuevasFilas);
+  }
+  return nuevasFilas.length;
+}
+
+function sincronizarPadron_(p) {
+  var filas = p && p.filas;
+  if (!Array.isArray(filas) || !filas.length) throw new Error('No se recibieron filas para sincronizar');
+  var aplicarBajas = p.aplicarBajas !== false;
+  var lock = LockService.getScriptLock();
+  lock.waitLock(25000);
+  try {
+    var ss = SpreadsheetApp.openById(CFG.SPREADSHEET_ID);
+    var sh = ss.getSheetByName(CFG.HOJA_GENERAL);
+    if (!sh) throw new Error('No se encontró la hoja ' + CFG.HOJA_GENERAL);
+
+    var lastRow = sh.getLastRow();
+    var lastCol = Math.max(sh.getLastColumn(), CFG.COLUMNAS_PADRON.length);
+    var hdr = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) { return String(h || '').trim(); });
+    var idx = {};
+    hdr.forEach(function (h, i) { if (h && !(h in idx)) idx[h] = i; });
+    CFG.COLUMNAS_PADRON.forEach(function (c) {
+      if (!(c in idx)) throw new Error('Falta la columna "' + c + '" en ' + CFG.HOJA_GENERAL);
+    });
+
+    var tieneAG = lastCol >= 35 && hdr[32] === 'Responsable' && hdr[33] === 'Telefono' && hdr[34] === 'E-mail';
+    var colClave = (lastCol >= 32 && hdr[31] === 'Clave') ? 31 : -1;
+    var colAmbito = ('Ambito' in idx) ? idx['Ambito'] : -1;
+
+    var existVals = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, lastCol).getValues() : [];
+    var existForms = lastRow >= 2 ? sh.getRange(2, 1, lastRow - 1, lastCol).getFormulas() : [];
+
+    var existList = [];
+    var porId = {};
+    var porCET = {};
+    var contactoPorCE = {};
+    var vistosEx = {};
+
+    for (var i = 0; i < existVals.length; i++) {
+      var v = existVals[i], f = existForms[i];
+      var cuit = String(v[idx['Cuit']] || '').replace(/[^\d]/g, '');
+      if (!cuit) continue;
+      var estab = String(v[idx['Nro Estab Intercambio']] || '').trim();
+      var tareas = String(v[idx['Tareas']] || '').trim();
+      var fecha = fechaISO_(v[idx['Fecha Programada']], ss.getSpreadsheetTimeZone());
+      var base = [cuit, estab, sinTildes_(tareas).toLowerCase(), fecha].join('|');
+      var n = (vistosEx[base] || 0) + 1;
+      vistosEx[base] = n;
+      var vid = base + (n > 1 ? ('#' + n) : '');
+      var cet = [cuit, estab, sinTildes_(tareas).toLowerCase()].join('|');
+      var rec = { rowNum: i + 2, id: vid, cet: cet, vals: v, forms: f, matched: false };
+      existList.push(rec);
+      if (!(vid in porId)) porId[vid] = rec;
+      (porCET[cet] = porCET[cet] || []).push(rec);
+
+      // Guardar contactos enriquecidos AG..AJ por CUIT+Estab para reutilizar en altas nuevas
+      if (tieneAG) {
+        var ce = cuit + '|' + estab;
+        if (!(ce in contactoPorCE) && (esValorReal_(v[32]) || esValorReal_(v[33]) || esValorReal_(v[34]))) {
+          contactoPorCE[ce] = { ag: v[32], ah: v[33], ai: v[34], aj: lastCol > 35 ? v[35] : '' };
+        }
+      }
+    }
+
+    var outRows = [];
+    var altasItems = [];
+    var altas = 0, modificadas = 0;
+
+    function buildRow(item, prev, newRowNum) {
+      var row = new Array(lastCol).fill('');
+      if (prev) {
+        for (var c = 0; c < lastCol; c++) {
+          row[c] = prev.forms[c] ? ajustarFormulaFila_(prev.forms[c], prev.rowNum, newRowNum) : prev.vals[c];
+        }
+      }
+      var aw = item.colsAW || [];
+      for (var k = 0; k < CFG.COLUMNAS_PADRON.length; k++) {
+        var colName = CFG.COLUMNAS_PADRON[k];
+        var ci = idx[colName];
+        if (ci == null || ci >= lastCol) continue;
+        // Preservar fórmulas =AG/=AH/=AI en Responsable/Telefono/E-mail si la hoja tiene AG..AI
+        if (tieneAG && (colName === 'Responsable' || colName === 'Telefono' || colName === 'E-mail')) {
+          var agIdx = colName === 'Responsable' ? 32 : (colName === 'Telefono' ? 33 : 34);
+          var agLetra = colName === 'Responsable' ? 'AG' : (colName === 'Telefono' ? 'AH' : 'AI');
+          row[ci] = '=' + agLetra + newRowNum;
+          if (!esValorReal_(row[agIdx]) && esValorReal_(aw[k])) {
+            row[agIdx] = aw[k];
+          }
+        } else if (colName === 'Fecha Programada') {
+          var fIso = fechaISO_(aw[k]);
+          row[ci] = fIso ? isoADate_(fIso) : '';
+        } else {
+          row[ci] = aw[k] != null ? aw[k] : '';
+        }
+      }
+      if (!prev) {
+        if (colAmbito >= 0 && !row[colAmbito]) row[colAmbito] = aw[5] || '';
+        if (colClave >= 0) row[colClave] = '=A' + newRowNum + '&M' + newRowNum;
+        if (tieneAG) {
+          var ce = String(aw[0] || '').replace(/[^\d]/g, '') + '|' + String(aw[12] || '').trim();
+          var ct = contactoPorCE[ce];
+          if (ct) {
+            if (!esValorReal_(row[32])) row[32] = ct.ag;
+            if (!esValorReal_(row[33])) row[33] = ct.ah;
+            if (!esValorReal_(row[34])) row[34] = ct.ai;
+            if (lastCol > 35 && !esValorReal_(row[35])) row[35] = ct.aj;
+          }
+        }
+      } else if (colClave >= 0) {
+        row[colClave] = '=A' + newRowNum + '&M' + newRowNum;
+      }
+      return row;
+    }
+
+    function cambioAW_(prev, aw) {
+      for (var k = 0; k < CFG.COLUMNAS_PADRON.length; k++) {
+        var colName = CFG.COLUMNAS_PADRON[k];
+        if (colName === 'Responsable' || colName === 'Telefono' || colName === 'E-mail') continue;
+        var ci = idx[colName];
+        var oldVal = (colName === 'Fecha Programada') ? fechaISO_(prev.vals[ci], ss.getSpreadsheetTimeZone()) : String(prev.vals[ci] == null ? '' : prev.vals[ci]).trim();
+        var newVal = (colName === 'Fecha Programada') ? fechaISO_(aw[k]) : String(aw[k] == null ? '' : aw[k]).trim();
+        if (oldVal !== newVal) return true;
+      }
+      return false;
+    }
+
+    // 1. Emparejar por ID exacto primero, luego por CUIT|Estab|Tareas
+    var pendientes = [];
+    for (var j = 0; j < filas.length; j++) {
+      var it = filas[j];
+      var match = porId[it.id];
+      if (match && !match.matched) {
+        match.matched = true;
+        if (cambioAW_(match, it.colsAW)) modificadas++;
+        outRows.push(buildRow(it, match, outRows.length + 2));
+      } else {
+        pendientes.push(it);
+      }
+    }
+    for (var q = 0; q < pendientes.length; q++) {
+      var it2 = pendientes[q];
+      var lista = porCET[it2.cet] || [];
+      var match2 = null;
+      for (var m = 0; m < lista.length; m++) {
+        if (!lista[m].matched) { match2 = lista[m]; break; }
+      }
+      if (match2) {
+        match2.matched = true;
+        modificadas++;
+        outRows.push(buildRow(it2, match2, outRows.length + 2));
+      } else {
+        altas++;
+        altasItems.push(it2);
+        outRows.push(buildRow(it2, null, outRows.length + 2));
+      }
+    }
+
+    // 2. Bajas (filas existentes que ya no están en el Excel nuevo)
+    var bajasRows = [];
+    for (var bi = 0; bi < existList.length; bi++) {
+      if (existList[bi].matched) continue;
+      if (!aplicarBajas) {
+        var keep = new Array(lastCol).fill('');
+        var newR = outRows.length + 2;
+        for (var kc = 0; kc < lastCol; kc++) {
+          keep[kc] = existList[bi].forms[kc] ? ajustarFormulaFila_(existList[bi].forms[kc], existList[bi].rowNum, newR) : existList[bi].vals[kc];
+        }
+        outRows.push(keep);
+      } else {
+        bajasRows.push(existList[bi].vals);
+      }
+    }
+
+    // Respaldar bajas en Bajas_Historico antes de quitarlas de General
+    if (aplicarBajas && bajasRows.length) {
+      var shB = ss.getSheetByName(CFG.HOJA_BAJAS);
+      if (!shB) {
+        shB = ss.insertSheet(CFG.HOJA_BAJAS);
+        var hdrB = ['Fecha Baja', 'Usuario', 'Archivo'].concat(hdr);
+        shB.getRange(1, 1, 1, hdrB.length).setValues([hdrB]).setFontWeight('bold');
+        shB.setFrozenRows(1);
+      }
+      var tsStr = Utilities.formatDate(new Date(), 'America/Argentina/Buenos_Aires', 'yyyy-MM-dd HH:mm');
+      var usr = String(p.usuario || '');
+      var arch = String(p.archivo || '');
+      var toAppend = bajasRows.map(function (r) { return [tsStr, usr, arch].concat(r); });
+      shB.getRange(shB.getLastRow() + 1, 1, toAppend.length, toAppend[0].length).setValues(toAppend);
+    }
+
+    // Escribir filas actualizadas en la hoja General y limpiar sobrantes al final
+    if (outRows.length) {
+      sh.getRange(2, 1, outRows.length, lastCol).setValues(outRows);
+    }
+    var sobrantes = lastRow - (outRows.length + 1);
+    if (sobrantes > 0) {
+      sh.getRange(outRows.length + 2, 1, sobrantes, lastCol).clearContent();
+    }
+
+    // Alimentar "Visitas emergentes mensuales" con las altas de General para el mes en curso
+    var mesEmergente = String((p && p.mesEmergente) || mesEmergentePorDefecto_()).trim();
+    var emergentesAgregadas = 0;
+    if (p.registrarEmergentes !== false && altasItems.length) {
+      emergentesAgregadas = agregarAltasAEmergentes_(ss, altasItems, mesEmergente, contactoPorCE, ss.getSpreadsheetTimeZone());
+    }
+
+    var nowIso = new Date().toISOString();
+    PropertiesService.getScriptProperties().setProperty('PADRON_UPDATED_AT', nowIso);
+    return {
+      ok: true,
+      totalFinal: outRows.length,
+      altas: altas,
+      modificadas: modificadas,
+      bajas: bajasRows.length,
+      emergentesAgregadas: emergentesAgregadas,
+      mesEmergente: mesEmergente,
+      ts: nowIso
+    };
   } finally {
     lock.releaseLock();
   }

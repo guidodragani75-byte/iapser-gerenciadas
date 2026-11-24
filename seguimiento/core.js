@@ -18,11 +18,26 @@
       ETAPA2_FIN: '2027-04-30'           // fin Etapa 2
     },
     META_AGENDA_MES: 500,                // consolidado (100 emergentes + 400 residuales)
-    PLAZO_ETAPA: {                       // vencimiento por etapa (Urgente usa su fecha máxima)
+    PLAZO_ETAPA: {                       // meta de finalización por etapa (el vencimiento de cada visita se evalúa por Fecha máx. col. R)
       'Etapa 1': '2027-01-31',
       'Etapa 2': '2027-04-30'
     }
   };
+
+  const COLUMNAS_PADRON = [
+    'Cuit', 'Empleador', 'Contrato IAPART', 'Establecimiento', 'Localidad', 'Provincia', 'CP',
+    'Domicilio estab.', 'Responsable', 'Telefono', 'E-mail', 'Nro Estab IAPART', 'Nro Estab Intercambio',
+    'Programa', 'CantidadTrabajadoresCUIT', 'Preventor Asignado', 'Tareas', 'Fecha Programada',
+    'Fecha Vencimiento', 'Tarea Cargada', 'Fecha Carga', 'Observaciones CS', 'Observaciones IAPSER'
+  ];
+  const COLUMNAS_OBLIGATORIAS = [
+    'Cuit', 'Empleador', 'Contrato IAPART', 'Establecimiento', 'Localidad', 'Provincia',
+    'Nro Estab Intercambio', 'Tareas', 'Fecha Programada'
+  ];
+  const COLUMNAS_AUXILIARES = [
+    'Contacto', 'Ambito', 'Departamento', 'Planificacion', 'Concentracion', 'VIsitas en CP (>20)',
+    'Normativa', 'Clave', 'Observaciones'
+  ];
 
   const ESTADOS = {
     SIN_AGENDAR: 'Sin agendar',
@@ -36,11 +51,23 @@
 
   function pad(n) { return (n < 10 ? '0' : '') + n; }
 
-  /** 'dd/mm/yyyy' | 'yyyy-mm-dd' | ISO => 'yyyy-mm-dd' ('' si inválida) */
+  /** 'dd/mm/yyyy' | 'yyyy-mm-dd' | número serial Excel | Date => 'yyyy-mm-dd' ('' si inválida) */
   function aISO(s) {
-    if (!s) return '';
+    if (s == null || s === '') return '';
+    if (s instanceof Date && !isNaN(s.getTime())) {
+      return s.getFullYear() + '-' + pad(s.getMonth() + 1) + '-' + pad(s.getDate());
+    }
+    if (typeof s === 'number' && isFinite(s) && s > 20000 && s < 80000) {
+      const ms = Math.round((s - 25569) * 86400 * 1000);
+      const d = new Date(ms);
+      return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
+    }
     s = String(s).trim();
-    let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (/^\d{5}(\.\d+)?$/.test(s)) {
+      const num = parseFloat(s);
+      if (num > 20000 && num < 80000) return aISO(num);
+    }
+    let m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
     if (m) return m[3] + '-' + pad(+m[2]) + '-' + pad(+m[1]);
     m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (m) return m[1] + '-' + m[2] + '-' + m[3];
@@ -73,6 +100,52 @@
   function esTecnica(tareas) { return /visita tecnica/i.test(sinTildes(tareas)); }
   function subtareasNorm(tareas) {
     return String(tareas || '').split('//').map(function (x) { return sinTildes(x).toLowerCase().trim(); }).filter(Boolean);
+  }
+
+  /**
+   * Extrae las subtareas limpias de una fila (separadas por '//').
+   * Omite códigos numéricos puros de siniestros y agrupa 'INV. AT <nro>' bajo 'INV. AT'.
+   */
+  function subtareasLimpias(tareas) {
+    const out = [];
+    const vistos = {};
+    String(tareas || '').split('//').forEach(function (raw) {
+      let s = raw.trim();
+      if (!s || /^\d+$/.test(s)) return;
+      if (/^inv\.?\s*at\s+\d+/i.test(s)) s = 'INV. AT';
+      const k = sinTildes(s).toLowerCase();
+      if (!vistos[k]) {
+        vistos[k] = true;
+        out.push({ key: k, label: s });
+      }
+    });
+    return out;
+  }
+
+  /** Catálogo de tareas únicas con totales, cerradas, pendientes y vencidas (ordenado por cantidad desc). */
+  function catalogoTareas(visitas) {
+    const mapa = {};
+    (visitas || []).forEach(function (v) {
+      subtareasLimpias(v.tareas).forEach(function (t) {
+        let item = mapa[t.key];
+        if (!item) {
+          item = mapa[t.key] = { key: t.key, label: t.label, total: 0, cerradas: 0, pendientes: 0, vencidas: 0 };
+        }
+        item.total++;
+        if (v.cerrada) item.cerradas++; else item.pendientes++;
+        if (v.vencida) item.vencidas++;
+      });
+    });
+    return Object.values(mapa).sort(function (a, b) {
+      return (b.total - a.total) || a.label.localeCompare(b.label);
+    });
+  }
+
+  /** Verifica si una visita incluye la tarea seleccionada (comparación sin tildes ni mayúsculas). */
+  function coincideTarea(v, tareaFiltro) {
+    if (!tareaFiltro) return true;
+    const target = sinTildes(tareaFiltro).toLowerCase().trim();
+    return subtareasLimpias(v && v.tareas).some(function (t) { return t.key === target; });
   }
 
   /**
@@ -149,19 +222,16 @@
 
   function categoriaVencimiento(v, hoy) {
     hoy = hoy || hoyISO();
-    if (v.cerrada || !v.plazo) return 'cerrada';
-    if (v.plazo < hoy) return 'vencida';
-    if (mesDe(v.plazo) === mesDe(hoy)) return 'mes_actual';
+    const fMax = (v && (v.fechaMax || v.plazo)) || '';
+    if (v.cerrada || !fMax) return 'cerrada';
+    if (fMax < hoy) return 'vencida';
+    if (mesDe(fMax) === mesDe(hoy)) return 'mes_actual';
     return 'otro_mes';
   }
 
+  /** Fecha máxima de la visita = columna R de la planilla ('Fecha Programada' en origen, que es la fecha máxima). */
   function plazoVisita(v) {
-    const et = String(v.planificacion || '');
-    if (/urgente/i.test(et)) return v.fechaMax;
-    for (const k of Object.keys(CONFIG.PLAZO_ETAPA)) {
-      if (et.indexOf(k) === 0) return CONFIG.PLAZO_ETAPA[k];
-    }
-    return v.fechaMax;
+    return (v && v.fechaMax) || '';
   }
 
   function ultimoIntento(intentos) {
@@ -190,7 +260,7 @@
   function validarIntento(it, hoy) {
     const err = [];
     hoy = hoy || hoyISO();
-    if (it.fechaAgendada && !aISO(it.fechaAgendada)) err.push('Fecha agendada inválida');
+    if (it.fechaAgendada && !aISO(it.fechaAgendada)) err.push('Fecha programada inválida');
     if (it.resultado) {
       if (!['Efectiva', 'Fallida'].includes(it.resultado)) err.push('Resultado inválido');
       if (!it.fechaReal) err.push('Falta la fecha real de la visita');
@@ -502,6 +572,13 @@
     const y = ym.slice(2, 4), m = parseInt(ym.slice(5, 7), 10) - 1;
     return (MESES_CORTOS[m] || ym) + ' ' + y;
   }
+  /** Etiqueta corta de mes para 'Visitas emergentes mensuales' (ej: '2026-11-24' => 'nov26'). */
+  function mesEmergenteActual(hoy) {
+    const iso = hoy || hoyISO();
+    const m = parseInt(iso.slice(5, 7), 10) - 1;
+    const y = iso.slice(2, 4);
+    return (MESES_CORTOS[m] ? MESES_CORTOS[m].toLowerCase() : iso.slice(5, 7)) + y;
+  }
 
   /**
    * Indicadores "Cumplimiento en Plazo vs Vencidas" y "Participación Fallidas vs Efectivas"
@@ -596,14 +673,389 @@
     };
   }
 
+  /* ---------- VALIDADOR DE COLUMNAS Y ACTUALIZACIÓN DE PADRÓN ---------- */
+  function letraCol(i) {
+    let s = '', n = i + 1;
+    while (n > 0) {
+      const r = (n - 1) % 26;
+      s = String.fromCharCode(65 + r) + s;
+      n = Math.floor((n - 1) / 26);
+    }
+    return s;
+  }
+
+  function normHeader(s) {
+    return sinTildes(String(s == null ? '' : s)).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  function similitudTexto(a, b) {
+    const ta = normHeader(a).split(' ').filter(Boolean);
+    const tb = normHeader(b).split(' ').filter(Boolean);
+    if (!ta.length || !tb.length) return 0;
+    let hits = 0;
+    ta.forEach(function (w) {
+      if (tb.some(function (x) { return x === w || (w.length >= 4 && x.indexOf(w) >= 0) || (x.length >= 4 && w.indexOf(x) >= 0); })) hits++;
+    });
+    return hits / Math.max(ta.length, tb.length);
+  }
+
+  /**
+   * Valida encabezados de un Excel/CSV contra el esquema estándar A..W.
+   * Detecta: coincidencias exactas, cambios de tildes/mayúsculas, cambios de posición,
+   * columnas faltantes/renombradas (con sugerencias), columnas nuevas agregadas y encabezados duplicados.
+   */
+  function validarColumnasPadron(headers, mapeoManual) {
+    mapeoManual = mapeoManual || {};
+    const raw = (headers || []).map(function (h) { return String(h == null ? '' : h).trim(); });
+    const auxSet = {};
+    COLUMNAS_AUXILIARES.forEach(function (c) { auxSet[normHeader(c)] = c; });
+
+    // Detectar encabezados duplicados (ignorando celdas vacías al final)
+    const conteo = {};
+    const duplicadas = [];
+    raw.forEach(function (h, i) {
+      if (!h) return;
+      const k = normHeader(h);
+      if (conteo[k] != null) {
+        duplicadas.push({ nombre: h, letra: letraCol(i), primeraLetra: letraCol(conteo[k]), idx: i });
+      } else {
+        conteo[k] = i;
+      }
+    });
+
+    const usados = {};
+    const coincidencias = [];
+    const faltantes = [];
+    const indice = {};
+
+    // Paso 1: mapeo manual explícito
+    COLUMNAS_PADRON.forEach(function (esp, posEsp) {
+      const mIdx = mapeoManual[esp];
+      if (mIdx != null && mIdx !== '' && Number.isInteger(+mIdx) && +mIdx >= 0 && +mIdx < raw.length) {
+        const idx = +mIdx;
+        usados[idx] = esp;
+        indice[esp] = idx;
+        coincidencias.push({
+          esperada: esp, encontrada: raw[idx] || '(sin título)', idx: idx,
+          letra: letraCol(idx), letraEsperada: letraCol(posEsp),
+          estado: 'remapeada', cambioPosicion: idx !== posEsp
+        });
+      }
+    });
+
+    // Paso 2: coincidencia exacta o normalizada (primera aparición gana)
+    COLUMNAS_PADRON.forEach(function (esp, posEsp) {
+      if (esp in indice) return;
+      let idx = -1, estado = '';
+      for (let i = 0; i < raw.length; i++) {
+        if (usados[i]) continue;
+        if (raw[i] === esp) { idx = i; estado = 'exacta'; break; }
+      }
+      if (idx < 0) {
+        const ne = normHeader(esp);
+        for (let i = 0; i < raw.length; i++) {
+          if (usados[i]) continue;
+          if (raw[i] && normHeader(raw[i]) === ne) { idx = i; estado = 'formato'; break; }
+        }
+      }
+      if (idx >= 0) {
+        usados[idx] = esp;
+        indice[esp] = idx;
+        coincidencias.push({
+          esperada: esp, encontrada: raw[idx], idx: idx,
+          letra: letraCol(idx), letraEsperada: letraCol(posEsp),
+          estado: estado, cambioPosicion: idx !== posEsp
+        });
+      } else {
+        faltantes.push({
+          esperada: esp,
+          obligatoria: COLUMNAS_OBLIGATORIAS.indexOf(esp) >= 0,
+          posEsperada: posEsp,
+          letraEsperada: letraCol(posEsp),
+          sugerencias: []
+        });
+      }
+    });
+
+    // Columnas no usadas => agregadas / nuevas o posibles renombradas (excluyendo encabezados duplicados)
+    const dupIdxSet = {};
+    duplicadas.forEach(function (d) { dupIdxSet[d.idx] = true; });
+    const agregadas = [];
+    const indiceAux = {};
+    raw.forEach(function (h, i) {
+      if (usados[i] || !h || dupIdxSet[i]) return;
+      const nh = normHeader(h);
+      const auxNombre = auxSet[nh] || '';
+      if (auxNombre && !(auxNombre in indiceAux)) indiceAux[auxNombre] = i;
+      agregadas.push({
+        idx: i, letra: letraCol(i), nombre: h,
+        esAuxiliarConocida: !!auxNombre, auxiliarNombre: auxNombre
+      });
+    });
+
+    // Sugerir posibles renombramientos para cada faltante (misma columna A..W o texto similar)
+    faltantes.forEach(function (f) {
+      const sugs = [];
+      agregadas.forEach(function (ag) {
+        const sim = similitudTexto(f.esperada, ag.nombre);
+        const mismaPos = ag.idx === f.posEsperada;
+        if (mismaPos || sim >= 0.4) {
+          sugs.push({
+            idx: ag.idx, letra: ag.letra, nombre: ag.nombre,
+            score: (mismaPos ? 1 : 0) + sim,
+            motivo: mismaPos ? ('misma posición (' + ag.letra + ')') : 'nombre parecido'
+          });
+        }
+      });
+      sugs.sort(function (a, b) { return b.score - a.score; });
+      f.sugerencias = sugs;
+    });
+
+    const faltantesObligatorias = faltantes.filter(function (f) { return f.obligatoria; });
+    const nuevasDesconocidas = agregadas.filter(function (a) { return !a.esAuxiliarConocida; });
+    const cambiosFormato = coincidencias.filter(function (c) { return c.estado === 'formato'; });
+    const cambiosPosicion = coincidencias.filter(function (c) { return c.cambioPosicion; });
+
+    return {
+      ok: faltantesObligatorias.length === 0,
+      headers: raw,
+      coincidencias: coincidencias,
+      faltantes: faltantes,
+      faltantesObligatorias: faltantesObligatorias,
+      agregadas: agregadas,
+      nuevasDesconocidas: nuevasDesconocidas,
+      cambiosFormato: cambiosFormato,
+      cambiosPosicion: cambiosPosicion,
+      duplicadas: duplicadas,
+      indice: indice,
+      indiceAux: indiceAux
+    };
+  }
+
+  /** Convierte filas crudas (matriz 2D con encabezado en fila 0) en visitas normalizadas usando una validación OK. */
+  function parsearFilasPadron(rows, validacion, actuales) {
+    if (!rows || rows.length < 2 || !validacion || !validacion.ok) {
+      return { visitas: [], duplicadosOmitidos: [], filasSinFecha: 0, filasRaw: [] };
+    }
+    const idx = validacion.indice;
+    const idxAux = validacion.indiceAux || {};
+    function cel(r, col) {
+      const i = idx[col];
+      if (i == null || i >= r.length || r[i] == null) return '';
+      const v = r[i];
+      if (v instanceof Date) return aDMY(aISO(v));
+      return String(v).trim();
+    }
+    function celAux(r, col) {
+      const i = idxAux[col];
+      if (i == null || i >= r.length || r[i] == null) return '';
+      return String(r[i]).trim();
+    }
+    function normNum(v) {
+      const s = String(v == null ? '' : v).trim();
+      return /^\d+\.0+$/.test(s) ? s.replace(/\.0+$/, '') : s;
+    }
+
+    // Índices rápidos de las visitas actuales para heredar Planificación / Ámbito / Depto / mesEmergente
+    const prevPorId = {};
+    const prevPorCET = {};
+    (actuales || []).forEach(function (v) {
+      prevPorId[v.id] = v;
+      const k = [v.cuit, v.nroEstab, sinTildes(v.tareas).toLowerCase()].join('|');
+      if (!prevPorCET[k]) prevPorCET[k] = v;
+    });
+
+    const visitas = [];
+    const filasRaw = [];
+    const vistos = {};
+    const duplicadosOmitidos = [];
+    let filasSinFecha = 0;
+
+    for (let rIdx = 1; rIdx < rows.length; rIdx++) {
+      const r = rows[rIdx] || [];
+      const cuit = normNum(cel(r, 'Cuit')).replace(/[^\d]/g, '');
+      if (!cuit) continue;
+      const nroEstab = normNum(cel(r, 'Nro Estab Intercambio'));
+      const nroEstabIAPART = normNum(cel(r, 'Nro Estab IAPART'));
+      const contrato = normNum(cel(r, 'Contrato IAPART'));
+      const trabajadores = normNum(cel(r, 'CantidadTrabajadoresCUIT'));
+      const tareas = cel(r, 'Tareas');
+      const rawFecha = (idx['Fecha Programada'] != null && idx['Fecha Programada'] < r.length) ? r[idx['Fecha Programada']] : '';
+      const fecha = aISO(rawFecha);
+      if (!fecha) filasSinFecha++;
+
+      const base = [cuit, nroEstab, sinTildes(tareas).toLowerCase(), fecha].join('|');
+      const n = (vistos[base] || 0) + 1;
+      vistos[base] = n;
+      const obra = esObra(tareas);
+      if (n > 1 && !obra) {
+        duplicadosOmitidos.push({ fila: rIdx + 1, cuit: cuit, empleador: cel(r, 'Empleador'), nroEstab: nroEstab, tareas: tareas, fechaMax: fecha });
+        continue;
+      }
+      const vid = base + (n > 1 ? ('#' + n) : '');
+      const cet = [cuit, nroEstab, sinTildes(tareas).toLowerCase()].join('|');
+      const prev = prevPorId[vid] || prevPorCET[cet] || null;
+      const prov = cel(r, 'Provincia');
+
+      const vObj = {
+        id: vid,
+        cuit: cuit,
+        empleador: cel(r, 'Empleador'),
+        contrato: contrato,
+        establecimiento: cel(r, 'Establecimiento'),
+        localidad: cel(r, 'Localidad'),
+        provincia: prov,
+        cp: normNum(cel(r, 'CP')),
+        domicilio: cel(r, 'Domicilio estab.'),
+        responsable: cel(r, 'Responsable'),
+        telefono: cel(r, 'Telefono'),
+        email: cel(r, 'E-mail'),
+        nroEstabIAPART: nroEstabIAPART,
+        nroEstab: nroEstab,
+        programa: cel(r, 'Programa'),
+        trabajadores: trabajadores,
+        preventor: cel(r, 'Preventor Asignado'),
+        tareas: tareas,
+        esObra: obra,
+        fechaMax: fecha,
+        planificacion: celAux(r, 'Planificacion') || (prev ? prev.planificacion : ''),
+        ambito: celAux(r, 'Ambito') || (prev ? prev.ambito : prov),
+        departamento: celAux(r, 'Departamento') || (prev ? prev.departamento : ''),
+        obsCS: cel(r, 'Observaciones CS'),
+        obsIAPSER: cel(r, 'Observaciones IAPSER'),
+        cohorte: cohorte(fecha),
+        mesEmergente: prev ? (prev.mesEmergente || '') : '',
+        revisarDuplicada: false
+      };
+      visitas.push(vObj);
+
+      // Fila A..W normalizada para sincronizar con Google Sheets
+      filasRaw.push({
+        id: vid,
+        cet: cet,
+        colsAW: COLUMNAS_PADRON.map(function (col) {
+          if (col === 'Cuit') return cuit;
+          if (col === 'Contrato IAPART') return contrato;
+          if (col === 'CP') return vObj.cp;
+          if (col === 'Nro Estab IAPART') return nroEstabIAPART;
+          if (col === 'Nro Estab Intercambio') return nroEstab;
+          if (col === 'CantidadTrabajadoresCUIT') return trabajadores;
+          if (col === 'Fecha Programada') return fecha ? aDMY(fecha) : '';
+          return cel(r, col);
+        })
+      });
+    }
+
+    return { visitas: visitas, duplicadosOmitidos: duplicadosOmitidos, filasSinFecha: filasSinFecha, filasRaw: filasRaw };
+  }
+
+  /** Compara padrón actual vs nuevo y clasifica en sinCambios, modificadas, altas y bajas (detectando si tienen gestión). */
+  function compararPadron(actuales, nuevas, intentosPorId, cruceOctMapa) {
+    intentosPorId = intentosPorId || {};
+    cruceOctMapa = cruceOctMapa || {};
+    const CAMPOS_CMP = [
+      ['empleador', 'Empleador'],
+      ['contrato', 'Contrato'],
+      ['establecimiento', 'Establecimiento'],
+      ['localidad', 'Localidad'],
+      ['provincia', 'Provincia'],
+      ['domicilio', 'Domicilio'],
+      ['programa', 'Programa'],
+      ['trabajadores', 'Trabajadores'],
+      ['preventor', 'Preventor'],
+      ['tareas', 'Tareas'],
+      ['fechaMax', 'Fecha máx. (R)'],
+      ['obsCS', 'Obs. CS'],
+      ['obsIAPSER', 'Obs. IAPSER']
+    ];
+
+    function diffs(a, b) {
+      const out = [];
+      CAMPOS_CMP.forEach(function (par) {
+        const k = par[0], lbl = par[1];
+        const va = String(a[k] == null ? '' : a[k]).trim();
+        const vb = String(b[k] == null ? '' : b[k]).trim();
+        if (va !== vb) out.push({ campo: lbl, key: k, antes: va, despues: vb });
+      });
+      return out;
+    }
+
+    const mapAct = {};
+    (actuales || []).forEach(function (v) { mapAct[v.id] = v; });
+
+    const matchedAct = {};
+    const matchedNew = {};
+    const sinCambios = [];
+    const modificadas = [];
+
+    // 1. Emparejar por ID exacto
+    (nuevas || []).forEach(function (nv, ni) {
+      const av = mapAct[nv.id];
+      if (!av) return;
+      matchedAct[av.id] = true;
+      matchedNew[ni] = true;
+      const d = diffs(av, nv);
+      if (d.length) modificadas.push({ anterior: av, nueva: nv, cambios: d, cambioId: false });
+      else sinCambios.push(nv);
+    });
+
+    // 2. Emparejar remanentes 1-a-1 por CUIT|Estab|Tareas (detecta cuando cambió la Fecha máx. col. R)
+    const remActPorCET = {};
+    (actuales || []).forEach(function (av) {
+      if (matchedAct[av.id]) return;
+      const k = [av.cuit, av.nroEstab, sinTildes(av.tareas).toLowerCase()].join('|');
+      (remActPorCET[k] = remActPorCET[k] || []).push(av);
+    });
+
+    const altas = [];
+    (nuevas || []).forEach(function (nv, ni) {
+      if (matchedNew[ni]) return;
+      const k = [nv.cuit, nv.nroEstab, sinTildes(nv.tareas).toLowerCase()].join('|');
+      const cola = remActPorCET[k];
+      if (cola && cola.length) {
+        const av = cola.shift();
+        matchedAct[av.id] = true;
+        matchedNew[ni] = true;
+        modificadas.push({ anterior: av, nueva: nv, cambios: diffs(av, nv), cambioId: true });
+      } else {
+        altas.push(nv);
+      }
+    });
+
+    // 3. Remanentes de actuales => Bajas (verificando si ya tienen intentos o cruce PDF Oct)
+    const bajas = [];
+    (actuales || []).forEach(function (av) {
+      if (matchedAct[av.id]) return;
+      const ints = intentosPorId[av.id] || [];
+      const ceKey = String(av.cuit || '').trim() + '|' + String(av.nroEstab || '').trim();
+      const tieneOct = av.cohorte === 'Emergente' && !!(cruceOctMapa[ceKey] && cruceOctMapa[ceKey].length);
+      bajas.push({
+        visita: av,
+        tieneGestion: ints.length > 0 || tieneOct,
+        cantIntentos: ints.length,
+        tieneCruceOct: tieneOct
+      });
+    });
+
+    return {
+      sinCambios: sinCambios,
+      modificadas: modificadas,
+      altas: altas,
+      bajas: bajas,
+      bajasConGestion: bajas.filter(function (b) { return b.tieneGestion; })
+    };
+  }
+
   const API = {
-    CONFIG, ESTADOS, aISO, aDMY, mesDe, hoyISO, sumarMeses, diffMeses, sinTildes, labelMes,
-    cohorte, esObra, esTecnica, subtareasNorm, detectarErroresVisitas,
+    CONFIG, ESTADOS, COLUMNAS_PADRON, COLUMNAS_OBLIGATORIAS, COLUMNAS_AUXILIARES,
+    aISO, aDMY, mesDe, hoyISO, sumarMeses, diffMeses, sinTildes, labelMes, mesEmergenteActual, letraCol,
+    cohorte, esObra, esTecnica, subtareasNorm, subtareasLimpias, catalogoTareas, coincideTarea, detectarErroresVisitas,
     esMayo2027OAdelante, filtrarCorteFuturo, categoriaVencimiento,
     plazoVisita, ultimoIntento, estadoVisita,
     cuentaObjetivo, estaCerrada, validarIntento, requiereAdjunto, esPDF,
     indexarCruceOctubre, armarVisitas, agendadasPorMes, cerradasPorMes,
-    metaConsolidadaMes, tablero, cumplimientoYParticipacion
+    metaConsolidadaMes, tablero, cumplimientoYParticipacion,
+    validarColumnasPadron, parsearFilasPadron, compararPadron
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.SegCore = API;

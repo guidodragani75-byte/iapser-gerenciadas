@@ -48,6 +48,9 @@
   table.grid-op td.clip{overflow:hidden;text-overflow:ellipsis}
   table.grid-op .pill{font-size:10.5px;padding:1px 6px}
   table.grid-op .btn.sm{padding:2px 7px;font-size:11px;white-space:nowrap}
+  table.grid-op tr.is-venc{background:#FFF8F7}
+  table.grid-op tr.is-venc:hover{background:#FDECE9}
+  table.grid-op tr.is-venc td:first-child{box-shadow:inset 3px 0 0 var(--bad)}
   .pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11.5px;white-space:nowrap;border:1px solid}
   .p-sin{background:#F1F2F0;color:#5B6670;border-color:#D5D8D3}
   .p-ag{background:#E6F1F4;color:#0F4C5C;border-color:#B7D5DD}
@@ -58,6 +61,8 @@
   .venc{color:var(--bad);font-weight:600}
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:10px;margin-bottom:16px}
   .card{background:#fff;border:1px solid var(--line);padding:12px 14px;border-radius:4px}
+  .card.click{cursor:pointer;transition:box-shadow .15s,border-color .15s}
+  .card.click:hover{box-shadow:0 2px 8px rgba(0,0,0,.07);border-color:var(--teal)}
   .card .k{font-size:11.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.3px}
   .card .v{font-size:25px;font-weight:700;color:var(--teal);margin-top:2px}
   .card .s{font-size:12px;color:var(--mut);margin-top:2px}
@@ -116,6 +121,19 @@
   .bitem-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
   .bitem.ok{border-left:4px solid var(--ok)}
   .bitem.bad{border-left:4px solid var(--bad)}
+  .val-box{border:1px solid var(--line);border-radius:4px;padding:10px 12px;margin:10px 0;background:#fff}
+  .val-box.ok{border-left:4px solid var(--ok);background:#F5FBF7}
+  .val-box.warn{border-left:4px solid var(--warn);background:#FFFDF5}
+  .val-box.bad{border-left:4px solid var(--bad);background:#FFF6F5}
+  .chip-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .diff-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 8px}
+  .diff-tabs button{border:1px solid var(--line);background:#fff;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:12px;color:var(--ink)}
+  .diff-tabs button.on{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600}
+  .diff-tbl{font-size:12px;margin-top:4px}
+  .diff-tbl td,.diff-tbl th{padding:4px 7px}
+  .opt-row{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:10px 0;padding:8px 10px;background:#F5F6F3;border:1px solid var(--line);border-radius:4px;font-size:12.5px}
+  .opt-row label{display:inline-flex;align-items:center;gap:6px;margin:0;color:var(--ink);cursor:pointer}
+  .opt-row input[type=checkbox]{width:auto;margin:0}
 </style>
 </head>
 <body>
@@ -123,6 +141,7 @@
   <h1>IAPSER ART · Seguimiento de Visitas</h1>
   <span id="sync">…</span>
   <span class="sp"></span>
+  <button onclick="App.abrirPadron()">📥 Actualizar Padrón (.xlsx)</button>
   <button class="primary-hdr" id="btnMasivaHdr" onclick="App.abrirMasiva()">⬆ Subida Masiva (OCR / IA)</button>
   <a href="../index.html">← Plataforma anterior</a>
   <button onclick="App.abrirConfig()">Configurar</button>
@@ -163,6 +182,31 @@
   </div>
 </dialog>
 
+<dialog id="dlgPadron" class="wide">
+  <div class="mh">
+    <div><strong>Actualizar Padrón desde Excel / CSV</strong><div style="font-size:11.5px;color:#cbd5e1">Validador automático de columnas (A..W) · Detecta columnas nuevas, renombradas o faltantes · Vista previa de altas, bajas y modificaciones</div></div>
+    <button class="btn sec sm" onclick="dlgPadron.close()">✕</button>
+  </div>
+  <div class="mb">
+    <div class="dropzone" id="dropPadron" onclick="document.getElementById('inPadron').click()">
+      <strong style="font-size:15px;color:var(--teal)">Arrastrá el archivo .XLSX o .CSV de SharePoint acá o hacé clic para elegirlo</strong>
+      <div class="note" style="margin-top:4px">Se valida el esquema de columnas antes de tocar nada. Preserva tus intentos/PDFs y las columnas enriquecidas (X..AJ) de Google Sheets.</div>
+    </div>
+    <input type="file" id="inPadron" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" style="display:none" onchange="App.cargarArchivoPadron(this.files[0]); this.value=''">
+    <div id="padronHojaWrap" style="display:none;margin-top:10px" class="opt-row"></div>
+    <div id="padronContenido"></div>
+    <div id="padronStatus" class="err"></div>
+  </div>
+  <div class="mf">
+    <span class="note" id="padronResumen" style="margin-right:auto">Subí un archivo .xlsx o .csv para iniciar la validación</span>
+    <button class="btn sec sm" id="btnPadronRestaurar" style="display:none" onclick="App.restaurarPadronBase()">Volver al padrón base</button>
+    <button class="btn sec" id="btnPadronDiffCsv" style="display:none" onclick="App.descargarDiffCSV()">Exportar diff CSV</button>
+    <button class="btn sec" id="btnPadronDatosJs" style="display:none" onclick="App.descargarDatosJS()">Descargar datos.js</button>
+    <button class="btn sec" onclick="dlgPadron.close()">Cerrar</button>
+    <button class="btn" id="btnAplicarPadron" onclick="App.aplicarPadron()" disabled>Confirmar y Actualizar Padrón</button>
+  </div>
+</dialog>
+
 <dialog id="dlgCfg"><div class="mh"><strong>Configuración</strong><button class="btn sec sm" onclick="dlgCfg.close()">✕</button></div>
   <div class="mb">
     <label>URL de la Web App (Apps Script, termina en /exec)</label><input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec">
@@ -172,6 +216,7 @@
   <div class="mf"><button class="btn" onclick="App.guardarConfig()">Guardar</button></div></dialog>
 
 <script src="../chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="core.js"></script>

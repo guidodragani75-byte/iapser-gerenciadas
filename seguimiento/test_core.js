@@ -144,10 +144,39 @@ t('cumplimiento en plazo y participacion en los 3 universos (consolidado / emerg
   assert.strictEqual(cCons.efectivas, cEmer.efectivas + cRes.efectivas);
   assert.strictEqual(cCons.fallidas, cEmer.fallidas + cRes.fallidas);
   assert.strictEqual(cCons.totalCerradas, 268);
-  assert.strictEqual(cCons.vencidas, 106);
-  assert.strictEqual(cEmer.vencidas, 57);
-  assert.strictEqual(cRes.vencidas, 49);
+  assert.strictEqual(cCons.vencidas, 1765);
+  assert.strictEqual(cEmer.vencidas, 424);
+  assert.strictEqual(cRes.vencidas, 1341);
   assert.strictEqual(cEmer.mesesActivos.length, 2); // Sep 26, Oct 26
+});
+t('vencidas estrictamente por columna R (fechaMax), incluso en Etapa 1 y Etapa 2', () => {
+  const vs = C.armarVisitas([
+    { id: 'a', cohorte: 'Emergente', planificacion: 'Etapa 1', fechaMax: '2026-10-06', tareas: 'Visita Tecnica' },
+    { id: 'b', cohorte: 'Residual',  planificacion: 'Etapa 2', fechaMax: '2026-03-05', tareas: 'Visita Tecnica' },
+    { id: 'c', cohorte: 'Emergente', planificacion: 'Etapa 2', fechaMax: '2026-12-10', tareas: 'Visita de Obra' }
+  ], {}, '2026-11-24', []);
+  assert.strictEqual(vs[0].plazo, '2026-10-06');
+  assert.strictEqual(vs[0].vencida, true);
+  assert.strictEqual(vs[1].plazo, '2026-03-05');
+  assert.strictEqual(vs[1].vencida, true);
+  assert.strictEqual(vs[2].plazo, '2026-12-10');
+  assert.strictEqual(vs[2].vencida, false);
+  assert.strictEqual(vs[2].catVenc, 'otro_mes');
+});
+t('filtros por tarea: subtareasLimpias, catalogoTareas y coincideTarea', () => {
+  const vs = C.armarVisitas(D.visitas, {}, '2026-11-24', D.historico);
+  const cat = C.catalogoTareas(vs);
+  assert.ok(cat.length >= 15 && cat.length <= 25);
+  // Sin códigos numéricos sueltos de siniestros
+  assert.ok(cat.every(t => !/^\d+$/.test(t.label)));
+  // Coincidencia insensible a tildes y mayúsculas sobre subtareas combinadas con '//'
+  assert.strictEqual(vs.filter(v => C.coincideTarea(v, 'capacitacion basica')).length, 594);
+  assert.strictEqual(vs.filter(v => C.coincideTarea(v, 'Visita de Obra')).length, 139);
+  // INV. AT agrupa las 8 filas estándar + 1 fila 'INV. AT 00163302//00163304...'
+  assert.strictEqual(vs.filter(v => C.coincideTarea(v, 'INV. AT')).length, 9);
+  const vt = cat.find(t => t.key === 'visita tecnica');
+  assert.strictEqual(vt.total, 1554);
+  assert.strictEqual(vt.cerradas + vt.pendientes, vt.total);
 });
 t('errores: misma tarea para CUIT + Estab entre año pasado (2025) y este año (2026)', () => {
   const vs = C.armarVisitas(D.visitas, {}, '2026-11-22', D.historico);
@@ -158,5 +187,69 @@ t('errores: misma tarea para CUIT + Estab entre año pasado (2025) y este año (
   // Verificar que Quinta Raiz (que antes no se detectaba por tener tareas adicionales) ahora si entra
   assert.ok(anios.some(v => v.cuit === '30719048265' && v.tareasRepetidasAnio.indexOf('visita tecnica') >= 0));
   assert.ok(anios.some(v => v.cuit === '30530481545' && v.tareasRepetidasAnio.indexOf('capacitacion basica') >= 0));
+});
+t('validador de columnas: esquema exacto, columnas agregadas, renombradas, remapeo manual y duplicadas', () => {
+  // 1. Esquema exacto A..W
+  const vOk = C.validarColumnasPadron(C.COLUMNAS_PADRON);
+  assert.strictEqual(vOk.ok, true);
+  assert.strictEqual(vOk.coincidencias.length, 23);
+  assert.strictEqual(vOk.faltantes.length, 0);
+  assert.strictEqual(vOk.agregadas.length, 0);
+
+  // 2. Columnas nuevas agregadas + auxiliar conocida + cambio de tildes
+  const hdrs2 = C.COLUMNAS_PADRON.slice();
+  hdrs2[9] = 'Teléfono'; // cambio de formato/tilde
+  hdrs2.push('Planificacion', 'Prioridad Nueva', 'Cuit'); // auxiliar, nueva, duplicada
+  const v2 = C.validarColumnasPadron(hdrs2);
+  assert.strictEqual(v2.ok, true);
+  assert.strictEqual(v2.cambiosFormato.length, 1);
+  assert.strictEqual(v2.agregadas.length, 2); // Planificacion + Prioridad Nueva (Cuit duplicada queda como agregada/duplicada)
+  assert.strictEqual(v2.nuevasDesconocidas.length, 1);
+  assert.strictEqual(v2.nuevasDesconocidas[0].nombre, 'Prioridad Nueva');
+  assert.strictEqual(v2.duplicadas.length, 1);
+
+  // 3. Columna obligatoria renombrada (Fecha Programada -> Fecha Maxima en col. R) bloquea hasta remapear
+  const hdrs3 = C.COLUMNAS_PADRON.slice();
+  hdrs3[17] = 'Fecha Maxima';
+  const v3 = C.validarColumnasPadron(hdrs3);
+  assert.strictEqual(v3.ok, false);
+  assert.strictEqual(v3.faltantesObligatorias.length, 1);
+  assert.strictEqual(v3.faltantesObligatorias[0].esperada, 'Fecha Programada');
+  assert.strictEqual(v3.faltantesObligatorias[0].sugerencias[0].idx, 17);
+  // Al remapear manualmente la columna 17 -> OK
+  const v3Map = C.validarColumnasPadron(hdrs3, { 'Fecha Programada': 17 });
+  assert.strictEqual(v3Map.ok, true);
+  assert.strictEqual(v3Map.indice['Fecha Programada'], 17);
+});
+t('parsearFilasPadron + compararPadron: fechas seriales Excel, altas, bajas con gestion y modificadas', () => {
+  const actuales = [
+    { id: '20111111111|1|visita tecnica|2026-10-06', cuit: '20111111111', empleador: 'EMPRESA A', contrato: '100', establecimiento: 'Central', localidad: 'CABA', provincia: 'CABA', domicilio: 'Av 1', nroEstabIAPART: '1', nroEstab: '1', programa: 'P', trabajadores: '10', preventor: 'Prev', tareas: 'Visita Tecnica', fechaMax: '2026-10-06', planificacion: 'Etapa 1', ambito: 'CABA', departamento: '', obsCS: '', obsIAPSER: '', cohorte: 'Emergente' },
+    { id: '20222222222|1|visita de obra|2026-11-10', cuit: '20222222222', empleador: 'EMPRESA B', contrato: '200', establecimiento: 'Obra 1', localidad: 'Rosario', provincia: 'Santa Fe', domicilio: 'Calle 2', nroEstabIAPART: '1', nroEstab: '1', programa: 'P', trabajadores: '5', preventor: 'Prev', tareas: 'Visita de Obra', fechaMax: '2026-11-10', planificacion: 'Etapa 2', ambito: 'Santa Fe', departamento: '', obsCS: '', obsIAPSER: '', cohorte: 'Emergente' },
+    { id: '20333333333|2|capacitacion basica|2026-09-01', cuit: '20333333333', empleador: 'EMPRESA BAJA', contrato: '300', establecimiento: 'Suc 2', localidad: 'Parana', provincia: 'Entre Rios', domicilio: 'Calle 3', nroEstabIAPART: '2', nroEstab: '2', programa: 'P', trabajadores: '3', preventor: 'Prev', tareas: 'CAPACITACIÓN BASICA', fechaMax: '2026-09-01', planificacion: 'Etapa 1', ambito: 'Entre Rios', departamento: '', obsCS: '', obsIAPSER: '', cohorte: 'Residual' }
+  ];
+  const rows = [
+    C.COLUMNAS_PADRON,
+    // Sin cambios (fecha como número serial Excel: 46301 = 2026-10-06)
+    ['20111111111', 'EMPRESA A', '100', 'Central', 'CABA', 'CABA', '1000', 'Av 1', 'NULL', 'NULL', 'NULL', '1', '1', 'P', '10', 'Prev', 'Visita Tecnica', 46301, '', '', '', '', ''],
+    // Modificada (cambió fecha máxima 10/11/2026 -> 25/11/2026, debe heredar Etapa 2)
+    ['20222222222', 'EMPRESA B', '200', 'Obra 1', 'Rosario', 'Santa Fe', '2000', 'Calle 2', 'NULL', 'NULL', 'NULL', '1', '1', 'P', '5', 'Prev', 'Visita de Obra', '25/11/2026', '', '', '', '', ''],
+    // Alta nueva
+    ['20444444444', 'EMPRESA NUEVA', '400', 'Planta', 'Cordoba', 'Cordoba', '5000', 'Ruta 9', 'NULL', 'NULL', 'NULL', '1', '1', 'P', '20', 'Prev', 'Verosimilitud RGRL', '15/12/2026', '', '', '', '', '']
+  ];
+  const val = C.validarColumnasPadron(rows[0]);
+  const parsed = C.parsearFilasPadron(rows, val, actuales);
+  assert.strictEqual(parsed.visitas.length, 3);
+  assert.strictEqual(parsed.visitas[0].fechaMax, '2026-10-06');
+  assert.strictEqual(parsed.visitas[1].planificacion, 'Etapa 2');
+  const ints = { '20333333333|2|capacitacion basica|2026-09-01': [{ n: 1, fechaAgendada: '2026-11-20' }] };
+  const diff = C.compararPadron(actuales, parsed.visitas, ints, {});
+  assert.strictEqual(diff.sinCambios.length, 1);
+  assert.strictEqual(diff.modificadas.length, 1);
+  assert.strictEqual(diff.modificadas[0].cambioId, true);
+  assert.strictEqual(diff.altas.length, 1);
+  assert.strictEqual(diff.bajas.length, 1);
+  assert.strictEqual(diff.bajasConGestion.length, 1);
+  assert.strictEqual(C.mesEmergenteActual('2026-11-24'), 'nov26');
+  assert.strictEqual(C.mesEmergenteActual('2027-01-05'), 'ene27');
 });
 console.log('\n' + ok + ' pruebas OK');
