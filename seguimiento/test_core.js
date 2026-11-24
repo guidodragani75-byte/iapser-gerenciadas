@@ -252,4 +252,29 @@ t('parsearFilasPadron + compararPadron: fechas seriales Excel, altas, bajas con 
   assert.strictEqual(C.mesEmergenteActual('2026-11-24'), 'nov26');
   assert.strictEqual(C.mesEmergenteActual('2027-01-05'), 'ene27');
 });
+t('logistica: etiquetas dinamicas, normalizacion de ambito y agrupacion por ambito/depto', () => {
+  const vs = C.armarVisitas(D.visitas, {}, '2026-11-24', D.historico).filter(v => !v.cerrada);
+  const res = C.resumenEtiquetas(vs, '2026-11-24');
+  const get = id => res.find(x => x.id === id).count;
+  assert.strictEqual(get('etapa1_all'), 1369);
+  assert.strictEqual(get('venc_prioritarias'), 108);
+  assert.strictEqual(get('at_ep_venc'), 16);
+  assert.strictEqual(get('pese_363_venc'), 26);
+  assert.strictEqual(get('obras_venc'), 59);
+  assert.strictEqual(C.filtrarPorEtiqueta(vs, 'obras_venc', '2026-11-24').length, 59);
+  // Normalizacion de Ambito unifica MISIONES + Misiones y preserva GBA
+  assert.strictEqual(C.normAmbito('MISIONES'), 'Misiones');
+  assert.strictEqual(C.normAmbito('GBA'), 'GBA');
+  const geo = C.agruparLogistica(vs);
+  // Sin duplicados de Misiones ni San Juan ni Santa Fe
+  const misiones = geo.ambitos.filter(a => /misiones/i.test(a.ambito));
+  assert.strictEqual(misiones.length, 1);
+  assert.strictEqual(misiones[0].total, 152); // 144 + 8
+  // Suma de ambitos = total pendientes
+  assert.strictEqual(geo.ambitos.reduce((s, a) => s + a.total, 0), vs.length);
+  assert.strictEqual(geo.zonas.reduce((s, z) => s + z.total, 0), vs.length);
+  // GBA usa departamento (ej. Vicente López)
+  const gbaZonas = geo.zonas.filter(z => z.ambKey === 'gba');
+  assert.ok(gbaZonas.some(z => z.zona === 'Vicente López' && z.esDepto));
+});
 console.log('\n' + ok + ' pruebas OK');

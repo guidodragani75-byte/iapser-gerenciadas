@@ -98,6 +98,148 @@
 
   function esObra(tareas) { return /obra/i.test(sinTildes(tareas)); }
   function esTecnica(tareas) { return /visita tecnica/i.test(sinTildes(tareas)); }
+  function esATEP(tareas) { return /(inv\.?\s*at|seg\.?\s*at|inv\.?\s*ep|seg\.?\s*ep)/i.test(sinTildes(tareas)); }
+  function esPese363(tareas) { return /(pese|363|prs)/i.test(sinTildes(tareas)); }
+  function esRgrlVerosim(tareas) { return /(verosimilitud|seg incumplimientos rgrl)/i.test(sinTildes(tareas)); }
+  function esCapacitacion(tareas) { return /capacitaci/i.test(sinTildes(tareas)); }
+  function esUrgente(v) { return /urgente/i.test(String(v && v.planificacion || '')); }
+  function esEtapa1(v) { return /^etapa\s*1/i.test(String(v && v.planificacion || '')); }
+
+  /** Normaliza Ámbito unificando variantes de mayúsculas (ej. 'MISIONES' -> 'Misiones', conserva 'GBA'). */
+  function normAmbito(s) {
+    const raw = String(s == null ? '' : s).trim().replace(/\s+/g, ' ');
+    if (!raw) return '(Sin ámbito)';
+    if (/^gba$/i.test(raw)) return 'GBA';
+    if (/^caba$/i.test(raw)) return 'CABA';
+    if (raw === raw.toUpperCase() && raw.length > 3) {
+      return raw.toLowerCase().replace(/(^|\s|\.)([a-záéíóúñ])/g, function (_, p1, p2) { return p1 + p2.toUpperCase(); });
+    }
+    return raw;
+  }
+
+  /** Sub-zona logística: Departamento (en GBA) o Localidad (en provincias). */
+  function zonaVisita(v) {
+    const z = String((v && (v.departamento || v.localidad)) || '').trim().replace(/\s+/g, ' ');
+    if (!z) return '(Sin localidad)';
+    if (z === z.toUpperCase() && z.length > 3) {
+      return z.toLowerCase().replace(/(^|\s|\.)([a-záéíóúñ])/g, function (_, p1, p2) { return p1 + p2.toUpperCase(); });
+    }
+    return z;
+  }
+
+  const ETIQUETAS_LOGISTICA = [
+    // Prioridad y etapas
+    { id: 'etapa1_all',        grupo: 'prioridad', tono: 'teal', label: 'Etapa 1 + Urgente',             fn: function (v) { return !v.cerrada && esEtapa1(v); } },
+    { id: 'venc_prioritarias', grupo: 'prioridad', tono: 'bad',  label: 'Vencidas prioritarias (Urgente)', fn: function (v) { return v.vencida && esUrgente(v); } },
+    { id: 'urgentes_todas',    grupo: 'prioridad', tono: 'warn', label: 'Etapa 1 - Urgente (todas)',     fn: function (v) { return !v.cerrada && esUrgente(v); } },
+    { id: 'vencidas_todas',    grupo: 'prioridad', tono: 'bad',  label: 'Todas las vencidas (col. R)',   fn: function (v) { return v.vencida; } },
+    { id: 'sin_programar',     grupo: 'prioridad', tono: 'sin',  label: 'Sin programar',                 fn: function (v) { return v.estado === ESTADOS.SIN_AGENDAR || v.estado === ESTADOS.FALLIDA_REPROGRAMAR; } },
+    { id: 'vence_mes',         grupo: 'prioridad', tono: 'warn', label: 'Vencen mes actual',             fn: function (v) { return v.catVenc === 'mes_actual'; } },
+    { id: 'vence_prox',        grupo: 'prioridad', tono: 'ag',   label: 'Vencen mes próximo',            fn: function (v, hoy) { return !v.cerrada && mesDe(v.fechaMax) === sumarMeses(mesDe(hoy || hoyISO()), 1); } },
+    // Críticas vencidas por tipo de tarea (col. R)
+    { id: 'at_ep_venc',        grupo: 'tareas',    tono: 'bad',  label: 'AT / EP vencidas',              fn: function (v) { return v.vencida && esATEP(v.tareas); } },
+    { id: 'pese_363_venc',     grupo: 'tareas',    tono: 'bad',  label: 'PESE / 363 / PRS vencidas',     fn: function (v) { return v.vencida && esPese363(v.tareas); } },
+    { id: 'obras_venc',        grupo: 'tareas',    tono: 'bad',  label: 'Obras vencidas',                fn: function (v) { return v.vencida && esObra(v.tareas); } },
+    { id: 'rgrl_venc',         grupo: 'tareas',    tono: 'warn', label: 'Verosim. / RGRL vencidas',      fn: function (v) { return v.vencida && esRgrlVerosim(v.tareas); } },
+    { id: 'cap_venc',          grupo: 'tareas',    tono: 'warn', label: 'Capacitación vencidas',         fn: function (v) { return v.vencida && esCapacitacion(v.tareas); } },
+    { id: 'tec_venc',          grupo: 'tareas',    tono: 'ag',   label: 'Visita Técnica vencidas',       fn: function (v) { return v.vencida && esTecnica(v.tareas); } }
+  ];
+
+  function resumenEtiquetas(visitas, hoy) {
+    hoy = hoy || hoyISO();
+    const arr = visitas || [];
+    return ETIQUETAS_LOGISTICA.map(function (et) {
+      let n = 0;
+      arr.forEach(function (v) { if (et.fn(v, hoy)) n++; });
+      return { id: et.id, grupo: et.grupo, tono: et.tono, label: et.label, count: n };
+    });
+  }
+
+  function filtrarPorEtiqueta(visitas, etiquetaId, hoy) {
+    hoy = hoy || hoyISO();
+    const arr = visitas || [];
+    if (!etiquetaId) return arr;
+    const et = ETIQUETAS_LOGISTICA.find(function (x) { return x.id === etiquetaId; });
+    if (!et) return arr;
+    return arr.filter(function (v) { return et.fn(v, hoy); });
+  }
+
+  /**
+   * Agrupa visitas por Ámbito (normalizado) y por Ámbito + Departamento/Localidad
+   * con métricas logísticas (total, establecimientos únicos, vencidas, urgentes, críticas y agenda).
+   */
+  function agruparLogistica(visitas) {
+    const mapAmb = {};
+    const mapZona = {};
+    function init(o, extra) {
+      return Object.assign({
+        total: 0, vencidas: 0, urgentes: 0, etapa1: 0,
+        atEp: 0, pese363: 0, obras: 0,
+        sinProgramar: 0, programadas: 0, cerradas: 0,
+        _estabs: {}
+      }, extra || {});
+    }
+    function sumar(acc, v) {
+      acc.total++;
+      if (v.vencida) acc.vencidas++;
+      if (!v.cerrada && esUrgente(v)) acc.urgentes++;
+      if (!v.cerrada && esEtapa1(v)) acc.etapa1++;
+      if (!v.cerrada && esATEP(v.tareas)) acc.atEp++;
+      if (!v.cerrada && esPese363(v.tareas)) acc.pese363++;
+      if (!v.cerrada && esObra(v.tareas)) acc.obras++;
+      if (v.cerrada) acc.cerradas++;
+      else if (v.estado === ESTADOS.AGENDADA) acc.programadas++;
+      else acc.sinProgramar++;
+      const ce = String(v.cuit || '').trim() + '|' + String(v.nroEstab || '').trim();
+      acc._estabs[ce] = true;
+    }
+
+    (visitas || []).forEach(function (v) {
+      const amb = normAmbito(v.ambito || v.provincia);
+      const ambKey = sinTildes(amb).toLowerCase();
+      if (!mapAmb[ambKey]) mapAmb[ambKey] = init(null, { key: ambKey, ambito: amb });
+      sumar(mapAmb[ambKey], v);
+
+      const zona = zonaVisita(v);
+      const zonaKey = ambKey + '|' + sinTildes(zona).toLowerCase();
+      if (!mapZona[zonaKey]) {
+        mapZona[zonaKey] = init(null, {
+          key: zonaKey, ambKey: ambKey, ambito: amb, zona: zona,
+          esDepto: !!v.departamento
+        });
+      }
+      sumar(mapZona[zonaKey], v);
+    });
+
+    function cerrarLista(mapa) {
+      return Object.values(mapa).map(function (x) {
+        const estabUnicos = Object.keys(x._estabs).length;
+        const out = Object.assign({}, x, { estabUnicos: estabUnicos });
+        delete out._estabs;
+        return out;
+      }).sort(function (a, b) {
+        return (b.total - a.total) || (b.urgentes - a.urgentes) || (b.vencidas - a.vencidas) || a.ambito.localeCompare(b.ambito);
+      });
+    }
+
+    return {
+      ambitos: cerrarLista(mapAmb),
+      zonas: cerrarLista(mapZona)
+    };
+  }
+
+  /** Puntuación de prioridad logística (menor = más urgente de atender). */
+  function prioridadLogistica(v) {
+    if (v.vencida && esATEP(v.tareas)) return 1;
+    if (v.vencida && esPese363(v.tareas)) return 2;
+    if (v.vencida && esUrgente(v)) return 3;
+    if (v.vencida && esObra(v.tareas)) return 4;
+    if (v.vencida && esEtapa1(v)) return 5;
+    if (v.vencida) return 6;
+    if (!v.cerrada && esUrgente(v)) return 7;
+    if (!v.cerrada && esEtapa1(v)) return 8;
+    return 9;
+  }
   function subtareasNorm(tareas) {
     return String(tareas || '').split('//').map(function (x) { return sinTildes(x).toLowerCase().trim(); }).filter(Boolean);
   }
@@ -1047,9 +1189,11 @@
   }
 
   const API = {
-    CONFIG, ESTADOS, COLUMNAS_PADRON, COLUMNAS_OBLIGATORIAS, COLUMNAS_AUXILIARES,
+    CONFIG, ESTADOS, COLUMNAS_PADRON, COLUMNAS_OBLIGATORIAS, COLUMNAS_AUXILIARES, ETIQUETAS_LOGISTICA,
     aISO, aDMY, mesDe, hoyISO, sumarMeses, diffMeses, sinTildes, labelMes, mesEmergenteActual, letraCol,
-    cohorte, esObra, esTecnica, subtareasNorm, subtareasLimpias, catalogoTareas, coincideTarea, detectarErroresVisitas,
+    cohorte, esObra, esTecnica, esATEP, esPese363, esRgrlVerosim, esCapacitacion, esUrgente, esEtapa1,
+    normAmbito, zonaVisita, resumenEtiquetas, filtrarPorEtiqueta, agruparLogistica, prioridadLogistica,
+    subtareasNorm, subtareasLimpias, catalogoTareas, coincideTarea, detectarErroresVisitas,
     esMayo2027OAdelante, filtrarCorteFuturo, categoriaVencimiento,
     plazoVisita, ultimoIntento, estadoVisita,
     cuentaObjetivo, estaCerrada, validarIntento, requiereAdjunto, esPDF,

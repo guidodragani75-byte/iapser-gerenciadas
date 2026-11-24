@@ -24,8 +24,9 @@
   let ultimoCP = null;
   let geminiActivo = null; // null = sin verificar, true/false según backend
   const F = { cohorte: '', plan: '', ambito: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '', q: '', sub: '', excluirMay27: true };
+  const LOG = { etiqueta: '', ambito: '', zona: '', soloPendientes: true, orden: 'prioridad', q: '', verTodasZonas: false, pagina: 1 };
 
-  const TABS = [['tablero', 'Tablero'], ['todas', 'Todas'], ['agendadas', 'Programadas'],
+  const TABS = [['tablero', 'Tablero'], ['logistica', '🧭 Logística'], ['todas', 'Todas'], ['agendadas', 'Programadas'],
     ['realizadas', 'Realizadas'], ['pendientes', 'Pendientes'], ['revisar', 'Errores / A revisar']];
 
   function baseVisitas() {
@@ -60,7 +61,7 @@
       }
       if (F.cohorte && v.cohorte !== F.cohorte) return false;
       if (F.plan && v.planificacion !== F.plan) return false;
-      if (F.ambito && v.ambito !== F.ambito) return false;
+      if (F.ambito && C.normAmbito(v.ambito || v.provincia) !== F.ambito) return false;
       if (F.estado && v.estado !== F.estado) return false;
       if (F.mes && C.mesDe(v.fechaMax) !== F.mes) return false;
       if (F.venc && v.catVenc !== F.venc) return false;
@@ -84,7 +85,7 @@
     });
   }
 
-  const uniq = k => Array.from(new Set(baseVisitas().map(v => v[k]).filter(Boolean))).sort();
+  const uniq = k => Array.from(new Set(baseVisitas().map(v => k === 'ambito' ? C.normAmbito(v.ambito || v.provincia) : v[k]).filter(Boolean))).sort();
   const opts = (arr, sel, all) => `<option value="">${all}</option>` + arr.map(x => `<option ${x === sel ? 'selected' : ''}>${esc(x)}</option>`).join('');
   const pct = (a, b) => b ? Math.round(a * 100 / b) + '%' : '–';
   const pct1 = x => (Math.round(x * 1000) / 10).toLocaleString('es-AR') + '%';
@@ -93,7 +94,7 @@
   function renderTabs() {
     const excluidas = VISITAS_TODAS.length - C.filtrarCorteFuturo(VISITAS_TODAS, true).length;
     $('tabs').innerHTML = TABS.map(([k, n]) => {
-      const c = k === 'tablero' ? '' : `<span class="badge">${VISITAS.filter(enVista[k]).length}</span>`;
+      const c = (k === 'tablero' || k === 'logistica') ? '' : `<span class="badge">${VISITAS.filter(enVista[k]).length}</span>`;
       return `<button class="${k === vista ? 'on' : ''}" onclick="App.ir('${k}')">${n}${c}</button>`;
     }).join('') + `<label class="cut-toggle" title="Predeterminado: excluye visitas con fecha desde Mayo 2027 inclusive en adelante"><input type="checkbox" ${F.excluirMay27 ? 'checked' : ''} onchange="App.toggleMay27(this.checked)"> Excluir ≥ May-2027${excluidas ? ` (${excluidas})` : ''}</label>`;
   }
@@ -438,9 +439,197 @@
     $('main').innerHTML = h;
   }
 
+  /* ---------- LOGÍSTICA Y ETIQUETAS DINÁMICAS ---------- */
+  function filtrarLogisticaLista() {
+    const hoy = C.hoyISO();
+    const q = C.sinTildes(LOG.q).toLowerCase().trim();
+    const base = LOG.soloPendientes ? VISITAS.filter(v => !v.cerrada) : VISITAS;
+    const porEt = C.filtrarPorEtiqueta(base, LOG.etiqueta, hoy);
+    const out = porEt.filter(v => {
+      const ambKey = C.sinTildes(C.normAmbito(v.ambito || v.provincia)).toLowerCase();
+      if (LOG.ambito && ambKey !== LOG.ambito) return false;
+      const zonaKey = ambKey + '|' + C.sinTildes(C.zonaVisita(v)).toLowerCase();
+      if (LOG.zona && zonaKey !== LOG.zona) return false;
+      if (q) {
+        const h = C.sinTildes([v.cuit, v.empleador, v.establecimiento, v.domicilio, v.localidad, v.departamento, v.ambito, v.tareas, v.cp].join(' ')).toLowerCase();
+        if (h.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+    return out.sort((a, b) => {
+      if (LOG.orden === 'zona_cp') {
+        const ka = [C.normAmbito(a.ambito || a.provincia), C.zonaVisita(a), String(a.cp || '').padStart(5, '0'), a.domicilio || '', a.cuit].join('|');
+        const kb = [C.normAmbito(b.ambito || b.provincia), C.zonaVisita(b), String(b.cp || '').padStart(5, '0'), b.domicilio || '', b.cuit].join('|');
+        return ka.localeCompare(kb);
+      }
+      if (LOG.orden === 'fecha') {
+        return (a.fechaMax || '9').localeCompare(b.fechaMax || '9') || C.zonaVisita(a).localeCompare(C.zonaVisita(b));
+      }
+      return (C.prioridadLogistica(a) - C.prioridadLogistica(b)) || (a.fechaMax || '9').localeCompare(b.fechaMax || '9') || C.zonaVisita(a).localeCompare(C.zonaVisita(b));
+    });
+  }
+
+  function renderLogistica() {
+    destruirCharts();
+    const hoy = C.hoyISO();
+    const base = LOG.soloPendientes ? VISITAS.filter(v => !v.cerrada) : VISITAS;
+
+    // 1. Etiquetas dinámicas (se actualizan según Ámbito/Zona si hay uno elegido para dar cruce bidireccional)
+    const baseGeo = base.filter(v => {
+      const ambKey = C.sinTildes(C.normAmbito(v.ambito || v.provincia)).toLowerCase();
+      if (LOG.ambito && ambKey !== LOG.ambito) return false;
+      const zonaKey = ambKey + '|' + C.sinTildes(C.zonaVisita(v)).toLowerCase();
+      if (LOG.zona && zonaKey !== LOG.zona) return false;
+      return true;
+    });
+    const tags = C.resumenEtiquetas(baseGeo, hoy);
+    const tagsPrio = tags.filter(t => t.grupo === 'prioridad');
+    const tagsTareas = tags.filter(t => t.grupo === 'tareas');
+
+    // 2. Agrupación geográfica (filtrada por la etiqueta activa)
+    const baseEt = C.filtrarPorEtiqueta(base, LOG.etiqueta, hoy);
+    const geo = C.agruparLogistica(baseEt);
+    const zonasVisibles = LOG.ambito ? geo.zonas.filter(z => z.ambKey === LOG.ambito) : geo.zonas;
+    const limiteZonas = (LOG.ambito || LOG.verTodasZonas) ? zonasVisibles.length : Math.min(25, zonasVisibles.length);
+    const ambSelObj = LOG.ambito ? geo.ambitos.find(a => a.key === LOG.ambito) : null;
+    const zonaSelObj = LOG.zona ? geo.zonas.find(z => z.key === LOG.zona) : null;
+    const etSelObj = LOG.etiqueta ? tags.find(t => t.id === LOG.etiqueta) : null;
+
+    // 3. Lista operativa de ruta
+    const ruta = filtrarLogisticaLista();
+    const pags = Math.max(1, Math.ceil(ruta.length / PAGE));
+    if (LOG.pagina > pags) LOG.pagina = pags;
+    const sl = ruta.slice((LOG.pagina - 1) * PAGE, LOG.pagina * PAGE);
+    const estabSet = new Set(ruta.map(v => `${v.cuit}|${v.nroEstab}`));
+    const nVencRuta = ruta.filter(v => v.vencida).length;
+    const nUrgRuta = ruta.filter(v => !v.cerrada && C.esUrgente(v)).length;
+    const nProgRuta = ruta.filter(v => v.estado === E.AGENDADA).length;
+    const haySel = !!(LOG.etiqueta || LOG.ambito || LOG.zona || LOG.q);
+
+    const btnTag = t => `<button class="tag-btn t-${t.tono}${LOG.etiqueta === t.id ? ' on' : ''}${t.count === 0 ? ' zero' : ''}" onclick="App.logTag('${t.id}')">${esc(t.label)} <span class="cnt">${t.count.toLocaleString('es-AR')}</span></button>`;
+
+    let h = `<div class="tag-panel">
+      <div class="tag-row"><span class="tag-lbl">Prioridad y etapa</span>${tagsPrio.map(btnTag).join('')}</div>
+      <div class="tag-row"><span class="tag-lbl">Críticas vencidas (R)</span>${tagsTareas.map(btnTag).join('')}</div>
+    </div>`;
+
+    h += `<div class="log-split">
+      <div class="log-box">
+        <div class="log-box-head">
+          <h3>Por Ámbito (${geo.ambitos.length}) ${etSelObj ? `<span class="pill p-ag">${esc(etSelObj.label)}</span>` : ''}</h3>
+          ${LOG.ambito ? `<button class="btn sec sm" onclick="App.logAmbito('')">Ver todos los ámbitos</button>` : '<span class="note">Clic para enfocar zona</span>'}
+        </div>
+        <div class="amb-grid">
+          ${geo.ambitos.length ? geo.ambitos.map(a => `<button class="amb-card${LOG.ambito === a.key ? ' on' : ''}" onclick="App.logAmbito('${esc(a.key)}')">
+            <div class="an" title="${esc(a.ambito)}">${esc(a.ambito)}</div>
+            <div class="av">${a.total.toLocaleString('es-AR')}</div>
+            <div class="as"><span class="${a.vencidas ? 'venc' : ''}">${a.vencidas} venc.</span>${a.urgentes ? `<span><b>${a.urgentes}</b> urg.</span>` : ''}<span>${a.estabUnicos} estab.</span></div>
+          </button>`).join('') : '<span class="note">Sin visitas para esta etiqueta.</span>'}
+        </div>
+      </div>
+      <div class="log-box">
+        <div class="log-box-head">
+          <h3>${ambSelObj ? `Departamentos / Localidades en ${esc(ambSelObj.ambito)} (${zonasVisibles.length})` : `Concentración por Departamento / Localidad (Top ${limiteZonas} de ${zonasVisibles.length})`}</h3>
+          <div style="display:flex;gap:6px;align-items:center">
+            ${LOG.zona ? `<button class="btn sec sm" onclick="App.logZona('')">Quitar localidad</button>` : ''}
+            ${!LOG.ambito && zonasVisibles.length > 25 ? `<button class="btn sec sm" onclick="App.logToggleZonas()">${LOG.verTodasZonas ? 'Ver Top 25' : 'Ver todas (' + zonasVisibles.length + ')'}</button>` : ''}
+          </div>
+        </div>
+        <div style="max-height:310px;overflow:auto">
+          <table class="grid-op"><thead><tr>${LOG.ambito ? '' : '<th>Ámbito</th>'}<th>Depto / Localidad</th><th>Visitas</th><th>Estab.</th><th>Venc. (R)</th><th>Urg.</th><th>AT/EP</th><th>PESE/363</th><th>Obras</th><th>Sin prog.</th></tr></thead><tbody>
+          ${zonasVisibles.length ? zonasVisibles.slice(0, limiteZonas).map(z => `<tr class="${LOG.zona === z.key ? 'zona-on' : ''}" onclick="App.logZona('${esc(z.key)}')">
+            ${LOG.ambito ? '' : `<td>${esc(z.ambito)}</td>`}
+            <td><b>${esc(z.zona)}</b></td><td><b>${z.total}</b></td><td>${z.estabUnicos}</td>
+            <td class="${z.vencidas ? 'venc' : ''}">${z.vencidas}</td>
+            <td>${z.urgentes || '–'}</td>
+            <td class="${z.atEp ? 'venc' : ''}">${z.atEp || '–'}</td>
+            <td class="${z.pese363 ? 'venc' : ''}">${z.pese363 || '–'}</td>
+            <td>${z.obras || '–'}</td>
+            <td>${z.sinProgramar}</td>
+          </tr>`).join('') : '<tr><td colspan="10" class="note">Sin zonas con visitas para el filtro activo.</td></tr>'}
+          </tbody></table>
+        </div>
+      </div>
+    </div>`;
+
+    // Barra de resumen + controles de hoja de ruta
+    const focoPartes = [];
+    if (etSelObj) focoPartes.push(`Etiqueta: <b>${esc(etSelObj.label)}</b>`);
+    if (ambSelObj) focoPartes.push(`Ámbito: <b>${esc(ambSelObj.ambito)}</b>`);
+    if (zonaSelObj) focoPartes.push(`Zona: <b>${esc(zonaSelObj.zona)}</b>`);
+
+    h += `<div class="route-bar">
+      <span>${focoPartes.length ? focoPartes.join(' · ') : '<b>Todo el país</b>'}</span>
+      <span>· <b>${ruta.length.toLocaleString('es-AR')}</b> visitas (<b>${estabSet.size.toLocaleString('es-AR')}</b> estab. únicos)</span>
+      <span>· <b class="${nVencRuta ? 'venc' : ''}">${nVencRuta.toLocaleString('es-AR')}</b> venc. · <b>${nUrgRuta}</b> urg. · <b>${nProgRuta}</b> prog.</span>
+      <span style="flex:1"></span>
+      <label style="display:inline-flex;align-items:center;gap:5px;margin:0;cursor:pointer;font-size:12px"><input type="checkbox" ${LOG.soloPendientes ? 'checked' : ''} onchange="App.logOpt('soloPendientes',this.checked)"> Solo pendientes</label>
+      <select style="padding:4px 7px;font-size:12px;border:1px solid var(--line);border-radius:3px" onchange="App.logOpt('orden',this.value)" title="Orden de la hoja de ruta">
+        <option value="prioridad" ${LOG.orden === 'prioridad' ? 'selected' : ''}>Orden: Prioridad crítica</option>
+        <option value="zona_cp" ${LOG.orden === 'zona_cp' ? 'selected' : ''}>Orden: Zona + CP + Domicilio (ruta)</option>
+        <option value="fecha" ${LOG.orden === 'fecha' ? 'selected' : ''}>Orden: Fecha máx. (col. R)</option>
+      </select>
+      <input type="search" id="logSearch" placeholder="Filtrar domicilio, empleador, CP…" value="${esc(LOG.q)}" style="padding:4px 8px;font-size:12px;border:1px solid var(--line);border-radius:3px;min-width:190px" oninput="App.logBuscar(this.value)">
+      ${haySel ? '<button class="btn sec sm" onclick="App.logLimpiar()">Limpiar</button>' : ''}
+      <button class="btn sm" onclick="App.exportarRutaCSV()">⬇ Exportar Hoja de Ruta</button>
+    </div>`;
+
+    h += `<div style="overflow:auto;max-height:58vh"><table class="grid-op"><thead><tr>
+      <th>Ámbito</th><th>Depto / Localidad</th><th>Domicilio</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Etapa</th><th>Tareas</th>
+      <th title="Fecha máxima según Columna R de la planilla">Fecha máx. (R)</th><th title="Fecha programada cargada por el preventor">F. programada</th><th>Estado</th><th>Acción</th>
+    </tr></thead><tbody>`;
+    sl.forEach(v => {
+      const tareasTxt = v.tareas.split('//').join(' · ');
+      const ambTxt = C.normAmbito(v.ambito || v.provincia);
+      const zonaTxt = C.zonaVisita(v);
+      const fechaCelda = C.aDMY(v.fechaMax) + (v.vencida ? ' <span class="pill p-bad">Vencida</span>' : '');
+      h += `<tr class="${v.vencida ? 'is-venc' : ''}" data-id="${esc(v.id)}" onclick="App.abrir(this.dataset.id)">
+        <td>${esc(ambTxt)}</td>
+        <td class="clip" style="max-width:130px" title="${esc(zonaTxt)}">${esc(zonaTxt)}</td>
+        <td class="clip" style="max-width:170px" title="${esc(v.domicilio)}">${esc(v.domicilio)}</td>
+        <td>${esc(v.cuit)}</td>
+        <td class="clip" style="max-width:175px" title="${esc(v.empleador)}">${esc(v.empleador)}</td>
+        <td>${esc(v.nroEstab)}</td>
+        <td>${esc(v.planificacion)}</td>
+        <td class="clip" style="max-width:220px" title="${esc(tareasTxt)}">${esc(tareasTxt)}</td>
+        <td class="${v.vencida ? 'venc' : ''}">${fechaCelda}</td>
+        <td>${C.aDMY(v.fechaAgendada)}</td>
+        <td>${pillEstado(v.estado)}</td>
+        <td><button class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📅 Programar</button></td>
+      </tr>`;
+    });
+    if (!sl.length) h += '<tr><td colspan="12" class="note" style="padding:20px">Sin visitas para esta selección.</td></tr>';
+    h += `</tbody></table></div><div class="pager"><button onclick="App.logPag(-1)">‹</button> Página ${LOG.pagina} de ${pags} <button onclick="App.logPag(1)">›</button></div>`;
+    $('main').innerHTML = h;
+  }
+
+  function exportarRutaCSV() {
+    const lista = filtrarLogisticaLista();
+    const cols = [
+      ['ambitoNorm', 'Ambito'], ['zonaNorm', 'Depto / Localidad'], ['cp', 'CP'], ['domicilio', 'Domicilio'],
+      ['cuit', 'CUIT'], ['empleador', 'Empleador'], ['nroEstab', 'Estab (M)'], ['establecimiento', 'Establecimiento'],
+      ['planificacion', 'Etapa'], ['tareas', 'Tareas'], ['fechaMax', 'Fecha Maxima (Col R)'], ['vencida', 'Vencida'],
+      ['fechaAgendada', 'Fecha Programada (Preventor)'], ['estado', 'Estado'], ['obsCS', 'Obs CS'], ['obsIAPSER', 'Obs IAPSER']
+    ];
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const csv = '\ufeff' + cols.map(c => q(c[1])).join(',') + '\n' + lista.map(v => cols.map(([k]) => {
+      if (k === 'ambitoNorm') return q(C.normAmbito(v.ambito || v.provincia));
+      if (k === 'zonaNorm') return q(C.zonaVisita(v));
+      if (k === 'vencida') return q(v.vencida ? 'Si' : 'No');
+      if (k === 'fechaMax' || k === 'fechaAgendada') return q(C.aDMY(v[k]));
+      return q(v[k]);
+    }).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'hoja_de_ruta_' + (LOG.etiqueta || 'general') + '_' + C.hoyISO() + '.csv';
+    a.click();
+  }
+
   function render() {
     renderTabs();
-    if (vista === 'tablero') renderTablero(); else renderLista();
+    if (vista === 'tablero') renderTablero();
+    else if (vista === 'logistica') renderLogistica();
+    else renderLista();
     const pend = COLA.length;
     const baseTxt = PADRON_LOCAL && PADRON_LOCAL.generado
       ? ('Padrón actualizado: ' + PADRON_LOCAL.generado + ' (' + baseVisitas().length + ' visitas)')
@@ -1344,6 +1533,15 @@
     limpiarFiltros,
     f(k, val, keep) { F[k] = val; pagina = 1; if (keep) { renderLista(); const i = document.querySelector('input[type=search]'); if (i) { i.focus(); i.setSelectionRange(val.length, val.length); } } else render(); },
     pag(d) { pagina = Math.max(1, pagina + d); renderLista(); },
+    logTag(id) { LOG.etiqueta = (LOG.etiqueta === id) ? '' : id; LOG.pagina = 1; renderLogistica(); },
+    logAmbito(k) { LOG.ambito = (LOG.ambito === k) ? '' : k; LOG.zona = ''; LOG.pagina = 1; renderLogistica(); },
+    logZona(k) { LOG.zona = (LOG.zona === k) ? '' : k; if (LOG.zona && !LOG.ambito) LOG.ambito = LOG.zona.split('|')[0]; LOG.pagina = 1; renderLogistica(); },
+    logToggleZonas() { LOG.verTodasZonas = !LOG.verTodasZonas; renderLogistica(); },
+    logOpt(k, val) { LOG[k] = val; LOG.pagina = 1; renderLogistica(); },
+    logBuscar(val) { LOG.q = val; LOG.pagina = 1; renderLogistica(); const i = $('logSearch'); if (i) { i.focus(); i.setSelectionRange(val.length, val.length); } },
+    logPag(d) { LOG.pagina = Math.max(1, LOG.pagina + d); renderLogistica(); },
+    logLimpiar() { Object.assign(LOG, { etiqueta: '', ambito: '', zona: '', q: '', pagina: 1 }); renderLogistica(); },
+    exportarRutaCSV,
     abrir, guardar, toggleRes, analizarPdfIndividual,
     abrirMasiva, agregarArchivosMasiva, updLote, quitarLote, limpiarMasiva, confirmarLote, verPdfLote,
     abrirPadron, cargarArchivoPadron, cambiarHojaPadron, remapearColumnaPadron, setPadronOpt, aplicarPadron, descargarDiffCSV, descargarDatosJS, restaurarPadronBase,
