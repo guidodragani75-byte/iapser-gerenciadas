@@ -21,6 +21,7 @@
   let PADRON_LOCAL = load(LS_PADRON, null);
   let VISITAS_TODAS = [];
   let VISITAS = [];
+  let HIST_VISITAS = [];
   let vista = 'resumen', subTab = 'consolidado', pagina = 1;
   let verTodosAmbitosResumen = false, verTodasTareasResumen = false;
   let chMain = null, chSec = null, chPlazo = null, chPart = null;
@@ -49,9 +50,72 @@
     return (PADRON_LOCAL && Array.isArray(PADRON_LOCAL.visitas) && PADRON_LOCAL.visitas.length) ? PADRON_LOCAL.visitas : (D.visitas || []);
   }
 
+  function armarHistoricoVisitas(padron, historico) {
+    const porCE = {}, porLoc = {}, porC = {};
+    (padron || []).forEach(v => {
+      const a = C.normAmbito(v.ambito || v.provincia);
+      porCE[String(v.cuit || '').trim() + '|' + String(v.nroEstab || '').trim()] = v;
+      if (v.localidad) porLoc[C.sinTildes(v.localidad).toLowerCase().trim()] = a;
+      const c = String(v.cuit || '').trim();
+      if (c) {
+        porC[c] = porC[c] || new Set();
+        if (a && a !== '(Sin ámbito)') porC[c].add(a);
+      }
+    });
+    return (historico || []).map((h, idx) => {
+      const cuit = String(h.cuit || '').trim();
+      const nroEstab = String(h.nroEstabIntercambio || h.nroEstab || '').trim();
+      const match = porCE[cuit + '|' + nroEstab] || null;
+      let amb = match ? C.normAmbito(match.ambito || match.provincia) : '';
+      if (!amb && h.localidad) amb = porLoc[C.sinTildes(h.localidad).toLowerCase().trim()] || '';
+      if (!amb && porC[cuit] && porC[cuit].size === 1) amb = Array.from(porC[cuit])[0];
+      const tieneDoc = /^https?:\/\//i.test(String(h.documentoAdjunto || '').trim());
+      const esEf = h.resultadoVisita === 'Efectiva';
+      const estado = esEf
+        ? (tieneDoc ? E.EFECTIVA : E.EFECTIVA_SIN_DOC)
+        : (tieneDoc ? E.FALLIDA_CERRADA : E.FALLIDA_SIN_DOC);
+      const fReal = C.aISO(h.fechaRealizada);
+      return {
+        id: 'hist|' + (h.rowId != null ? h.rowId : idx),
+        esHistorico: true,
+        tieneEtapaPadron: !!match,
+        origenPlan: h.origenPlan || 'Ciclo Sep–Oct',
+        observacionesHist: h.observaciones || '',
+        adjuntoHist: tieneDoc ? String(h.documentoAdjunto).trim() : '',
+        cuit: cuit,
+        empleador: h.empleador || (match ? match.empleador : ''),
+        contrato: h.contrato || (match ? match.contrato : ''),
+        establecimiento: h.establecimiento || (match ? match.establecimiento : ''),
+        localidad: h.localidad || (match ? match.localidad : ''),
+        provincia: amb || '',
+        ambito: amb || '',
+        departamento: match ? match.departamento : '',
+        domicilio: match ? match.domicilio : '',
+        cp: match ? match.cp : '',
+        nroEstab: nroEstab,
+        tareas: h.tarea || 'Visita',
+        fechaMax: match ? match.fechaMax : '',
+        planificacion: match ? match.planificacion : (h.origenPlan || 'Ciclo Sep–Oct'),
+        cohorte: 'Emergente',
+        estado: estado,
+        cerrada: tieneDoc,
+        cuentaObjetivo: tieneDoc,
+        cerradaPorCruceOct: false,
+        vencida: false,
+        catVenc: 'cerrada',
+        fechaAgendada: '',
+        fechaReal: fReal,
+        resultadoActual: esEf ? 'Efectiva' : 'Fallida',
+        intentos: []
+      };
+    });
+  }
+
   function recalcular() {
-    VISITAS_TODAS = C.armarVisitas(baseVisitas(), INTENTOS, C.hoyISO(), D.historico);
+    const base = baseVisitas();
+    VISITAS_TODAS = C.armarVisitas(base, INTENTOS, C.hoyISO(), D.historico);
     VISITAS = C.filtrarCorteFuturo(VISITAS_TODAS, F.excluirMay27);
+    HIST_VISITAS = armarHistoricoVisitas(base, D.historico);
   }
 
   function etapaClave(v) {
@@ -75,14 +139,20 @@
 
   function pasaGlobal(v, ignorarAmbito) {
     if (F.cohorte && v.cohorte !== F.cohorte) return false;
-    if (F.etapas.length < 3 && F.etapas.indexOf(etapaClave(v)) < 0) return false;
-    if (!ignorarAmbito && F.ambito && C.normAmbito(v.ambito || v.provincia) !== F.ambito) return false;
+    if (F.etapas.length < 3) {
+      if (v.esHistorico && !v.tieneEtapaPadron) return false;
+      if (F.etapas.indexOf(etapaClave(v)) < 0) return false;
+    }
+    if (!ignorarAmbito && F.ambito) {
+      const ambV = v.esHistorico ? v.ambito : C.normAmbito(v.ambito || v.provincia);
+      if (ambV !== F.ambito) return false;
+    }
     if (F.q) {
       const q = C.sinTildes(F.q).toLowerCase().trim();
       if (q) {
         const h = C.sinTildes([
           v.cuit, v.empleador, v.contrato, v.establecimiento, v.localidad,
-          v.departamento, v.provincia, v.ambito, v.domicilio, v.tareas, v.nroEstab, v.cp
+          v.departamento, v.provincia, v.ambito, v.domicilio, v.tareas, v.nroEstab, v.cp, v.observacionesHist
         ].join(' ')).toLowerCase();
         if (h.indexOf(q) < 0) return false;
       }
@@ -94,11 +164,18 @@
     return VISITAS.filter(v => pasaGlobal(v, ignorarAmbito));
   }
 
+  /** Todas las realizadas sin doble conteo: nuevas cargadas en el padrón (!cerradaPorCruceOct) + histórico Sep–Oct. */
+  function realizadasUnificadas(ignorarAmbito) {
+    const nuevas = VISITAS.filter(v => !v.cerradaPorCruceOct && esRealizada(v) && pasaGlobal(v, ignorarAmbito));
+    const hist = HIST_VISITAS.filter(v => pasaGlobal(v, ignorarAmbito));
+    return nuevas.concat(hist);
+  }
+
   function hayFiltroGlobal(ignorarCohorte) {
     return !!((!ignorarCohorte && F.cohorte) || F.etapas.length < 3 || F.ambito || (F.q && F.q.trim()));
   }
 
-  function contarEstados(rows) {
+  function contarEstados(rows, rowsRealizadasExtra) {
     const s = { sin: 0, sinV: 0, reprog: 0, ag: 0, agV: 0, ef: 0, fa: 0, sd: 0 };
     (rows || []).forEach(v => {
       if (esSinAgendar(v)) {
@@ -106,17 +183,23 @@
         if (v.estado === E.FALLIDA_REPROGRAMAR) s.reprog++;
       } else if (esAgendada(v)) {
         if (v.vencida) s.agV++; else s.ag++;
-      } else if (v.estado === E.EFECTIVA) {
-        s.ef++;
-      } else if (v.estado === E.FALLIDA_CERRADA) {
-        s.fa++;
-      } else if (esSinDoc(v)) {
-        s.sd++;
+      } else if (!rowsRealizadasExtra) {
+        if (v.estado === E.EFECTIVA) s.ef++;
+        else if (v.estado === E.FALLIDA_CERRADA) s.fa++;
+        else if (esSinDoc(v)) s.sd++;
       }
     });
+    if (rowsRealizadasExtra) {
+      rowsRealizadasExtra.forEach(v => {
+        if (v.estado === E.EFECTIVA) s.ef++;
+        else if (v.estado === E.FALLIDA_CERRADA) s.fa++;
+        else if (esSinDoc(v)) s.sd++;
+      });
+    }
     s.S = s.sin + s.sinV;
     s.A = s.ag + s.agV;
-    s.Re = s.ef + s.fa + s.sd;
+    s.Re = s.ef + s.fa; // Cerradas con PDF (único número oficial de Realizadas)
+    s.ReTodas = s.ef + s.fa + s.sd;
     s.T = s.S + s.A + s.Re;
     s.V = (rows || []).filter(v => v.vencida).length;
     return s;
@@ -155,6 +238,14 @@
   }
 
   function pasaSubfiltro(v) {
+    if (vista === 'realizadas' && !F.etiqueta) {
+      if (!F.sub) return v.cuentaObjetivo; // Por defecto muestra las cerradas c/PDF (ej. 268)
+      if (F.sub === 'ef' || F.sub === 'Efectiva') return v.estado === E.EFECTIVA;
+      if (F.sub === 'fa' || F.sub === 'Fallida') return v.estado === E.FALLIDA_CERRADA;
+      if (F.sub === 'sd') return esSinDoc(v);
+      if (F.sub === 'all') return true;
+      return true;
+    }
     if (!F.sub) return true;
     if (vista === 'sin_agendar') {
       if (F.sub === 'venc') return v.vencida;
@@ -163,10 +254,6 @@
     } else if (vista === 'agendadas') {
       if (F.sub === 'venc') return v.vencida;
       if (F.sub === 'plazo') return !v.vencida;
-    } else if (vista === 'realizadas') {
-      if (F.sub === 'ef' || F.sub === 'Efectiva') return v.estado === E.EFECTIVA;
-      if (F.sub === 'fa' || F.sub === 'Fallida') return v.estado === E.FALLIDA_CERRADA;
-      if (F.sub === 'sd') return esSinDoc(v);
     } else if (vista === 'vencidas') {
       if (F.sub === 'sin') return esSinAgendar(v);
       if (F.sub === 'ag') return esAgendada(v);
@@ -176,6 +263,9 @@
   }
 
   function baseListaSinSub() {
+    if (vista === 'realizadas' && !F.etiqueta) {
+      return realizadasUnificadas(false);
+    }
     let arr = baseGlobal(false);
     if (F.etiqueta) {
       arr = C.filtrarPorEtiqueta(arr, F.etiqueta, C.hoyISO());
@@ -189,7 +279,7 @@
     return baseListaSinSub().filter(v => {
       if (!pasaSubfiltro(v)) return false;
       if (F.estado && v.estado !== F.estado) return false;
-      if (F.mes && C.mesDe(v.fechaMax) !== F.mes) return false;
+      if (F.mes && C.mesDe(v.fechaMax || v.fechaReal) !== F.mes) return false;
       if (F.venc && v.catVenc !== F.venc) return false;
       if (F.tarea && !C.coincideTarea(v, F.tarea)) return false;
       if (vista === 'revisar' && F.errTipo && (!v.errores || v.errores.indexOf(F.errTipo) < 0)) return false;
@@ -198,6 +288,9 @@
       if (F.cruceOct === 'Fallida' && !(v.cruceOct && v.cruceOct.resultado === 'Fallida')) return false;
       return true;
     }).sort((a, b) => {
+      if (vista === 'realizadas') {
+        return (b.fechaReal || '').localeCompare(a.fechaReal || '') || String(a.empleador || '').localeCompare(String(b.empleador || ''));
+      }
       if (vista === 'revisar') {
         const ka = `${a.cuit}|${String(a.nroEstab).padStart(4, '0')}|${a.fechaMax || '9'}`;
         const kb = `${b.cuit}|${String(b.nroEstab).padStart(4, '0')}|${b.fechaMax || '9'}`;
@@ -216,7 +309,8 @@
   /* ---------- NAVEGACIÓN LATERAL Y BARRA DE FILTROS GLOBAL ---------- */
   function renderRail() {
     const rows = baseGlobal(false);
-    const s = contarEstados(rows);
+    const reals = realizadasUnificadas(false);
+    const s = contarEstados(rows, reals);
     const nRev = rows.filter(v => v.revisarDuplicada).length;
     const excluidas = VISITAS_TODAS.length - C.filtrarCorteFuturo(VISITAS_TODAS, true).length;
     const item = (k, ico, lbl, cnt, alerta) =>
@@ -233,7 +327,7 @@
       ${item('agendadas', '📅', 'Agendadas', s.A)}
       ${item('realizadas', '✅', 'Realizadas', s.Re)}
       ${item('vencidas', '⚠', 'Vencidas (col. R)', s.V, true)}
-      ${item('todas', '🗂', 'Todas las visitas', s.T)}
+      ${item('todas', '🗂', 'Padrón vigente', rows.length)}
       <div class="grp">Control</div>
       ${item('revisar', '🔎', 'Errores / A revisar', nRev, nRev > 0)}
       <button type="button" class="nav" onclick="App.abrirConfig()"><span>⚙</span><span>Configurar</span></button>
@@ -311,10 +405,9 @@
     destruirCharts();
     const hoy = C.hoyISO();
     const rows = baseGlobal(false);
-    const s = contarEstados(rows);
+    const reals = realizadasUnificadas(false);
+    const s = contarEstados(rows, reals);
     const sinSubfiltros = !F.ambito && F.etapas.length === 3 && !(F.q && F.q.trim());
-    const incluyeEmerg = F.cohorte !== 'Residual';
-    const TGlobal = sinSubfiltros ? C.tablero(VISITAS, D.historico, hoy) : null;
 
     const stackSeg = list => list.map(([v, c, l]) => v ? `<div style="flex:${v};background:${c}" title="${esc(l)}: ${fmt(v)}"></div>` : '').join('');
     const miniSeg = list => list.map(([v, c]) => v ? `<i style="flex:${v};background:${c}"></i>` : '').join('');
@@ -335,7 +428,7 @@
     }
 
     /* Bloque 1: Estado de las visitas */
-    h += `<div class="sec-t">1 · Estado de las visitas en el padrón</div>
+    h += `<div class="sec-t">1 · Estado de las visitas</div>
     <div class="panel" style="margin-bottom:14px">
       <div class="stack">${s.T ? stackSeg([
         [s.sinV, COL.sinV, 'Sin agendar · vencidas (col. R)'],
@@ -343,13 +436,12 @@
         [s.agV, COL.agV, 'Agendadas · vencidas (col. R)'],
         [s.ag, COL.ag, 'Agendadas · en término'],
         [s.ef, COL.ef, 'Efectivas c/PDF'],
-        [s.fa, COL.fa, 'Fallidas c/PDF'],
-        [s.sd, COL.sd, 'Resultado sin PDF']
+        [s.fa, COL.fa, 'Fallidas c/PDF']
       ]) : ''}</div>
       <div class="stack-l">
         <span>○ Sin agendar: <b>${fmt(s.S)}</b> (${pct(s.S, s.T)})</span>
         <span>📅 Agendadas: <b>${fmt(s.A)}</b> (${pct(s.A, s.T)})</span>
-        <span>✅ Realizadas: <b>${fmt(s.Re)}</b> (${pct(s.Re, s.T)})</span>
+        <span>✅ Realizadas c/PDF: <b>${fmt(s.Re)}</b> (${pct(s.Re, s.T)})</span>
       </div>
     </div>
     <div class="three">
@@ -375,15 +467,14 @@
       </div>
 
       <div class="sc re" onclick="App.ir('realizadas')">
-        <h4>Realizadas <span>Ver lista →</span></h4>
+        <h4>Realizadas c/PDF <span>Ver lista →</span></h4>
         <div class="big">${fmt(s.Re)} <small>${pct(s.Re, s.T)}</small></div>
-        <div class="mini">${miniSeg([[s.ef, COL.ef], [s.fa, COL.fa], [s.sd, COL.sd]])}</div>
+        <div class="mini">${miniSeg([[s.ef, COL.ef], [s.fa, COL.fa]])}</div>
         <div class="ls">
           <div class="clickable" onclick="event.stopPropagation();App.irLista('realizadas',{sub:'ef'})"><i style="background:${COL.ef}"></i>Efectivas c/PDF<b>${fmt(s.ef)}</b></div>
           <div class="clickable" onclick="event.stopPropagation();App.irLista('realizadas',{sub:'fa'})"><i style="background:${COL.fa}"></i>Fallidas c/PDF<b>${fmt(s.fa)}</b></div>
-          ${s.sd ? `<div class="clickable bad" onclick="event.stopPropagation();App.irLista('realizadas',{sub:'sd'})"><i style="background:${COL.sd}"></i>Resultado sin PDF<b>${fmt(s.sd)}</b></div>` : ''}
         </div>
-        ${TGlobal && incluyeEmerg && TGlobal.consolidado.historico.conDocumento ? `<div class="card-foot">Objetivo ciclo Emergentes (incl. histórico Sep–Oct): <b>${fmt(TGlobal.emergentes.realizadas)}</b> c/PDF (${TGlobal.emergentes.efectivas} ef · ${TGlobal.emergentes.fallidas} fa) — incluye los cruces Oct del padrón.</div>` : ''}
+        ${s.sd ? `<div class="card-foot">📎 Hay <b>${fmt(s.sd)}</b> cargada(s) sin PDF que no suman al objetivo · <button type="button" class="clear-lnk" onclick="event.stopPropagation();App.irLista('realizadas',{sub:'sd'})">ver sin PDF →</button></div>` : ''}
       </div>
     </div>`;
 
@@ -443,9 +534,9 @@
     /* Bloque 3: Tareas y calidad de cumplimiento */
     const tareas = C.catalogoTareas(rows);
     const limTar = verTodasTareasResumen ? tareas.length : Math.min(10, tareas.length);
-    const scopeCP = F.cohorte === 'Emergente' ? 'emergentes' : (F.cohorte === 'Residual' ? 'residuales' : 'consolidado');
-    const cp = C.cumplimientoYParticipacion(rows, sinSubfiltros ? D.historico : [], scopeCP, hoy);
-    const totCerr = cp.efectivas + cp.fallidas;
+    const totCerr = s.ef + s.fa;
+    const enTermino = totCerr;
+    const pctEnTerm = (enTermino + s.V) ? (enTermino / (enTermino + s.V)) : 0;
 
     h += `<div class="sec-t">3 · Tareas y calidad de cumplimiento</div>
     <div class="two w">
@@ -468,19 +559,17 @@
       <div class="panel" style="display:flex;flex-direction:column">
         <h3><span>Cumplimiento en plazo y efectividad</span><a onclick="App.ir('metas')">Metas y evolución →</a></h3>
         <div class="donut-wrap" style="margin:6px 0">
-          ${svgDonut([[cp.efectivas, COL.ef], [cp.fallidas, COL.fa]], totCerr ? pct(cp.efectivas, totCerr) : '–', 'efectivas')}
+          ${svgDonut([[s.ef, COL.ef], [s.fa, COL.fa]], totCerr ? pct(s.ef, totCerr) : '–', 'efectivas')}
           <div class="ls" style="flex:1;min-width:190px">
-            <div><i style="background:${COL.ef}"></i>Efectivas cerradas c/PDF<b>${fmt(cp.efectivas)}</b></div>
-            <div><i style="background:${COL.fa}"></i>Fallidas cerradas c/PDF<b>${fmt(cp.fallidas)}</b></div>
-            <div style="margin-top:8px"><i style="background:${COL.ag}"></i>Ejecutadas en término<b>${fmt(cp.enTermino)}</b></div>
-            <div class="${cp.vencidas ? 'bad' : ''}"><i style="background:${COL.agV}"></i>Vencidas fuera de plazo<b>${fmt(cp.vencidas)}</b></div>
-            <div><span class="note">% en término</span><b>${pct1(cp.pctEnTermino)}</b></div>
+            <div><i style="background:${COL.ef}"></i>Efectivas cerradas c/PDF<b>${fmt(s.ef)}</b></div>
+            <div><i style="background:${COL.fa}"></i>Fallidas cerradas c/PDF<b>${fmt(s.fa)}</b></div>
+            <div style="margin-top:8px"><i style="background:${COL.ag}"></i>Ejecutadas en término<b>${fmt(enTermino)}</b></div>
+            <div class="${s.V ? 'bad' : ''}"><i style="background:${COL.agV}"></i>Vencidas fuera de plazo<b>${fmt(s.V)}</b></div>
+            <div><span class="note">% en término</span><b>${pct1(pctEnTerm)}</b></div>
           </div>
         </div>
         <div class="card-foot">
-          ${sinSubfiltros
-            ? `Solo cuenta para el objetivo lo cerrado <b>con PDF</b>. Ver curvas mensuales y metas en <button type="button" class="clear-lnk" onclick="App.ir('metas')">Metas y evolución →</button>`
-            : `Calculado sobre las <b>${fmt(s.T)}</b> visitas filtradas (el histórico Sep–Oct no posee desglose por ámbito/etapa).`}
+          Solo cuenta para el objetivo lo cerrado <b>con PDF</b>. Ver curvas mensuales y metas en <button type="button" class="clear-lnk" onclick="App.ir('metas')">Metas y evolución →</button>
         </div>
       </div>
     </div>`;
@@ -957,15 +1046,25 @@
   const META_VISTA = {
     sin_agendar: ['Sin agendar', 'Visitas sin fecha programada o fallidas pendientes de reprogramar.'],
     agendadas: ['Agendadas', 'Visitas con fecha programada por preventor, aún sin resultado cargado.'],
-    realizadas: ['Realizadas', 'Visitas con resultado cargado. Cuentan para el objetivo solo cuando tienen PDF adjunto.'],
+    realizadas: ['Realizadas', 'Todas las visitas realizadas (ciclo vigente + Sep–Oct sin doble conteo). Solo suman al objetivo las que tienen PDF.'],
     vencidas: ['Vencidas (col. R)', 'Visitas abiertas cuya fecha máxima (columna R) ya fue superada.'],
-    todas: ['Todas las visitas', 'Padrón completo de visitas con todos los filtros operativos.'],
+    todas: ['Padrón vigente', 'Planilla operativa vigente completa con todos los filtros.'],
     pendientes: ['Pendientes', 'Visitas aún no cerradas con documento PDF.'],
     revisar: ['Errores / A revisar', 'Posibles duplicadas por fecha o tareas repetidas entre año anterior y actual.']
   };
 
   function subtabsVistaHTML(baseRows) {
     if (F.etiqueta) return '';
+    if (vista === 'realizadas') {
+      const c = contarEstados([], baseRows);
+      const defs = [
+        ['', `Con PDF (${fmt(c.Re)})`],
+        ['ef', `Efectivas c/PDF (${fmt(c.ef)})`],
+        ['fa', `Fallidas c/PDF (${fmt(c.fa)})`]
+      ];
+      if (c.sd) defs.push(['sd', `Sin PDF (${fmt(c.sd)})`], ['all', `Todas (${fmt(c.ReTodas)})`]);
+      return `<div class="seg">${defs.map(([k, l]) => `<button type="button" class="${F.sub === k ? 'on' : ''}" onclick="App.f('sub','${k}')">${l}</button>`).join('')}</div>`;
+    }
     const c = contarEstados(baseRows);
     let defs = null;
     if (vista === 'sin_agendar') {
@@ -973,9 +1072,6 @@
       if (c.reprog) defs.push(['reprog', `A reprogramar (${fmt(c.reprog)})`]);
     } else if (vista === 'agendadas') {
       defs = [['', `Todas (${fmt(c.A)})`], ['venc', `Vencidas (${fmt(c.agV)})`], ['plazo', `En término (${fmt(c.ag)})`]];
-    } else if (vista === 'realizadas') {
-      defs = [['', `Todas (${fmt(c.Re)})`], ['ef', `Efectivas c/PDF (${fmt(c.ef)})`], ['fa', `Fallidas c/PDF (${fmt(c.fa)})`]];
-      if (c.sd) defs.push(['sd', `Sin PDF (${fmt(c.sd)})`]);
     } else if (vista === 'vencidas') {
       const nSdV = baseRows.filter(v => esSinDoc(v) && v.vencida).length;
       defs = [['', `Todas (${fmt(c.V)})`], ['sin', `Sin agendar (${fmt(c.sinV)})`], ['ag', `Agendadas (${fmt(c.agV)})`]];
@@ -1051,26 +1147,27 @@
 
     sl.forEach(v => {
       const tareasTxt = C.formatearTareas(v.tareas);
-      const estabTxt = `${v.nroEstab} · ${v.establecimiento}`;
-      const ambTxt = C.normAmbito(v.ambito || v.provincia);
-      const locTxt = `${ambTxt} / ${C.zonaVisita(v)}`;
+      const estabTxt = v.establecimiento ? `${v.nroEstab || '–'} · ${v.establecimiento}` : (v.nroEstab || '–');
+      const ambTxt = v.esHistorico ? (v.ambito || '–') : C.normAmbito(v.ambito || v.provincia);
+      const zonaTxt = v.esHistorico ? (v.localidad ? C.zonaVisita(v) : '') : C.zonaVisita(v);
+      const locTxt = zonaTxt ? `${ambTxt} / ${zonaTxt}` : ambTxt;
       const cruceTag = v.cruceOct ? ` <a href="${esc(v.cruceOct.url)}" target="_blank" onclick="event.stopPropagation()" class="pill ${v.cruceOct.resultado === 'Efectiva' ? 'p-ok' : 'p-bad'}" title="PDF cargado en Octubre (${esc(v.cruceOct.fecha)} · ${esc(v.cruceOct.tarea)})">PDF Oct: ${v.cruceOct.resultado} ↗</a>` : '';
       const esAnios = v.errores && v.errores.indexOf('misma_tarea_anios') >= 0;
       const errTag = esAnios
         ? `<span class="pill p-bad" title="Misma tarea repetida entre año anterior y actual: ${esc((v.tareasRepetidasAnio || []).join(', '))}">🔁 Año ant./act.</span> `
         : (v.revisarDuplicada ? '<span class="pill p-warn" title="Misma tarea y establecimiento con fecha distinta">⚠ Duplicada</span> ' : '');
-      const fechaCelda = C.aDMY(v.fechaMax) + (v.vencida ? ' <span class="pill p-bad">Vencida</span>' : '');
+      const fechaCelda = (v.fechaMax ? C.aDMY(v.fechaMax) : '–') + (v.vencida ? ' <span class="pill p-bad">Vencida</span>' : '');
       h += `<tr class="${v.vencida ? 'is-venc' : ''}" data-id="${esc(v.id)}" onclick="App.abrir(this.dataset.id)">
         <td class="${v.cohorte === 'Emergente' ? 'tE' : 'tR'}">${v.cohorte}</td>
         <td>${esc(v.planificacion)}</td>
         <td>${esc(v.cuit)}</td>
-        <td class="clip" style="max-width:185px" title="${esc(v.empleador)}"><b>${esc(v.empleador)}</b></td>
+        <td class="clip" style="max-width:185px" title="${esc(v.empleador)}">${esc(v.empleador)}</td>
         <td class="clip" style="max-width:135px" title="${esc(estabTxt)}">${esc(estabTxt)}</td>
-        <td class="clip" style="max-width:150px" title="${esc(locTxt)}">${esc(ambTxt)} <span class="note">/ ${esc(C.zonaVisita(v))}</span></td>
+        <td class="clip" style="max-width:150px" title="${esc(locTxt)}">${esc(ambTxt)}${zonaTxt ? ` <span class="note">/ ${esc(zonaTxt)}</span>` : ''}</td>
         <td class="clip" style="max-width:240px" title="${esc(tareasTxt)}">${errTag}${cruceTag ? cruceTag + ' ' : ''}${esc(tareasTxt)}</td>
         <td class="${v.vencida ? 'venc' : ''}">${fechaCelda}</td>
-        <td>${C.aDMY(v.fechaAgendada)}</td>
-        <td>${C.aDMY(v.fechaReal)}</td>
+        <td>${C.aDMY(v.fechaAgendada) || '–'}</td>
+        <td>${C.aDMY(v.fechaReal) || '–'}</td>
         <td>${pillEstado(v.estado, v.vencida)}</td>
         <td><button type="button" class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📄 PDF</button></td>
       </tr>`;
@@ -1142,6 +1239,31 @@
   }
 
   function abrir(id) {
+    if (String(id || '').indexOf('hist|') === 0) {
+      const vh = HIST_VISITAS.find(x => x.id === id);
+      if (!vh) return;
+      if (blobUrlIndividual) { URL.revokeObjectURL(blobUrlIndividual); blobUrlIndividual = ''; }
+      editando = null;
+      const datoH = (k, val) => `<b>${k}</b><span>${esc(val) || '–'}</span>`;
+      $('dvTitulo').textContent = (vh.empleador || 'Visita') + (vh.nroEstab ? ' · Estab ' + vh.nroEstab : '');
+      $('dvBody').innerHTML = `<div id="dvSplit"><div><div class="kv">
+        ${datoH('CUIT / Contrato', vh.cuit + (vh.contrato ? ' / ' + vh.contrato : ''))}
+        ${datoH('Establecimiento', [vh.establecimiento, vh.domicilio].filter(Boolean).join(' — '))}
+        ${datoH('Localidad / Ámbito', [vh.localidad, vh.ambito].filter(Boolean).join(', '))}
+        ${datoH('Tareas', C.formatearTareas(vh.tareas))}
+        ${datoH('Origen', 'Emergente · ' + vh.origenPlan)}
+        ${datoH('Fecha realizada', C.aDMY(vh.fechaReal))}
+        <b>Estado</b><span>${pillEstado(vh.estado, false)}</span>
+        ${vh.observacionesHist ? datoH('Observaciones', vh.observacionesHist) : ''}
+        <b>Documento</b><span>${vh.adjuntoHist ? `<a href="${esc(vh.adjuntoHist)}" target="_blank">Abrir PDF en Google Drive ↗</a>` : 'Sin documento adjunto'}</span>
+      </div></div>
+      <div class="pdf-pane" id="dvPreview" style="display:none"></div></div>`;
+      $('dvFoot').innerHTML = `${vh.adjuntoHist ? `<a class="btn sec" href="${esc(vh.adjuntoHist)}" target="_blank">Abrir PDF aparte ↗</a>` : ''}<button type="button" class="btn" onclick="dlgVisita.close()">Cerrar</button>`;
+      const prevH = vh.adjuntoHist ? drivePreviewUrl(vh.adjuntoHist) : '';
+      mostrarPreviewIndividual(prevH, `PDF (${C.aDMY(vh.fechaReal)} · ${vh.resultadoActual})`, vh.adjuntoHist);
+      $('dlgVisita').showModal();
+      return;
+    }
     const v = VISITAS.find(x => x.id === id);
     if (!v) return;
     if (blobUrlIndividual) { URL.revokeObjectURL(blobUrlIndividual); blobUrlIndividual = ''; }
