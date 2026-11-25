@@ -454,7 +454,7 @@
         <div class="tw" style="border:0">
           <table><thead><tr><th>Tarea</th><th class="num">Total</th><th class="num">Cerradas c/PDF</th><th class="num">Pendientes</th><th class="num">Vencidas (R)</th></tr></thead><tbody>
           ${tareas.length ? tareas.slice(0, limTar).map(t => `<tr data-tarea="${esc(t.key)}" onclick="App.verTarea(this.dataset.tarea)">
-            <td><b>${esc(t.label)}</b></td>
+            <td>${esc(t.label)}</td>
             <td class="num">${fmt(t.total)}</td>
             <td class="num">${fmt(t.cerradas)}</td>
             <td class="num">${fmt(t.pendientes)}</td>
@@ -907,7 +907,7 @@
       <th title="Fecha máxima según Columna R de la planilla">Fecha máx. (R)</th><th title="Fecha programada cargada por el preventor">F. programada</th><th>Estado</th><th>Acción</th>
     </tr></thead><tbody>`;
     sl.forEach(v => {
-      const tareasTxt = v.tareas.split('//').join(' · ');
+      const tareasTxt = C.formatearTareas(v.tareas);
       const ambTxt = C.normAmbito(v.ambito || v.provincia);
       const zonaTxt = C.zonaVisita(v);
       const fechaCelda = C.aDMY(v.fechaMax) + (v.vencida ? ' <span class="pill p-bad">Vencida</span>' : '');
@@ -1050,7 +1050,7 @@
     </tr></thead><tbody>`;
 
     sl.forEach(v => {
-      const tareasTxt = v.tareas.split('//').join(' · ');
+      const tareasTxt = C.formatearTareas(v.tareas);
       const estabTxt = `${v.nroEstab} · ${v.establecimiento}`;
       const ambTxt = C.normAmbito(v.ambito || v.provincia);
       const locTxt = `${ambTxt} / ${C.zonaVisita(v)}`;
@@ -1157,7 +1157,7 @@
     $('dvTitulo').textContent = v.empleador + ' · Estab ' + v.nroEstab;
     $('dvBody').innerHTML = `<div id="dvSplit"><div><div class="kv">
       ${dato('CUIT / Contrato', v.cuit + ' / ' + v.contrato)}${dato('Establecimiento', v.establecimiento + ' — ' + v.domicilio)}
-      ${dato('Localidad', v.localidad + ', ' + v.provincia)}${dato('Tareas', v.tareas.split('//').join(' · '))}
+      ${dato('Localidad', v.localidad + ', ' + v.provincia)}${dato('Tareas', C.formatearTareas(v.tareas))}
       ${dato('Cohorte / Etapa', v.cohorte + ' · ' + v.planificacion)}
       <b>Fecha máxima (col. R)</b><span class="${v.vencida ? 'venc' : ''}">${C.aDMY(v.fechaMax)}${v.vencida ? ' <span class="pill p-bad">Vencida</span>' : ''}</span>
       <b>Estado</b><span>${pillEstado(v.estado, v.vencida)}</span>${v.obsCS ? dato('Obs. CS', v.obsCS) : ''}${v.obsIAPSER ? dato('Obs. IAPSER', v.obsIAPSER) : ''}</div>
@@ -1377,7 +1377,7 @@
         return `<div class="bitem bad"><div class="bitem-head"><strong>${esc(it.nombre)}</strong><div>${badge} <button type="button" class="btn sec sm" onclick="App.quitarLote('${it.uid}')">✕</button></div></div></div>`;
       }
       const opciones = buscarOpcionesVisita(it.filtro, it.cuit);
-      const selVisita = opciones.map(v => `<option value="${esc(v.id)}" ${v.id === it.visitaId ? 'selected' : ''}>${esc(v.cuit)} · ${esc(v.empleador)} · Estab ${esc(v.nroEstab)} (${esc(v.cohorte)} · ${esc(v.tareas.slice(0, 35))})</option>`).join('');
+      const selVisita = opciones.map(v => `<option value="${esc(v.id)}" ${v.id === it.visitaId ? 'selected' : ''}>${esc(v.cuit)} · ${esc(v.empleador)} · Estab ${esc(v.nroEstab)} (${esc(v.cohorte)} · ${esc(C.formatearTareas(v.tareas).slice(0, 38))})</option>`).join('');
       const cls = (it.status === 'subido' ? 'ok' : (it.error ? 'bad' : '')) + (it.uid === previewUid ? ' active' : '');
       const dis = (it.status === 'subiendo' || it.status === 'subido') ? 'disabled' : '';
       return `<div class="bitem ${cls}" data-uid="${it.uid}">
@@ -1758,7 +1758,7 @@
       h += '<div style="max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px">';
       if (dt === 'altas') {
         h += `<table class="diff-tbl"><thead><tr><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Localidad</th><th>Tareas</th><th>Fecha máx. (R)</th></tr></thead><tbody>` +
-          (diff.altas.length ? diff.altas.slice(0, 100).map(v => `<tr style="cursor:default"><td>${esc(v.cuit)}</td><td>${esc(v.empleador)}</td><td>${esc(v.nroEstab)}</td><td>${esc(v.localidad)}</td><td>${esc(v.tareas.split('//').join(' · '))}</td><td>${C.aDMY(v.fechaMax)}</td></tr>`).join('') : '<tr><td colspan="6" class="note">Sin altas nuevas.</td></tr>') +
+          (diff.altas.length ? diff.altas.slice(0, 100).map(v => `<tr style="cursor:default"><td>${esc(v.cuit)}</td><td>${esc(v.empleador)}</td><td>${esc(v.nroEstab)}</td><td>${esc(v.localidad)}</td><td>${esc(C.formatearTareas(v.tareas))}</td><td>${C.aDMY(v.fechaMax)}</td></tr>`).join('') : '<tr><td colspan="6" class="note">Sin altas nuevas.</td></tr>') +
           '</tbody></table>';
       } else if (dt === 'modificadas') {
         h += `<table class="diff-tbl"><thead><tr><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Cambios detectados</th></tr></thead><tbody>` +
@@ -1766,7 +1766,7 @@
           '</tbody></table>';
       } else if (dt === 'bajas') {
         h += `<table class="diff-tbl"><thead><tr><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Tareas</th><th>Fecha máx. (R)</th><th>Gestión</th></tr></thead><tbody>` +
-          (diff.bajas.length ? diff.bajas.slice(0, 100).map(b => `<tr style="cursor:default"><td>${esc(b.visita.cuit)}</td><td>${esc(b.visita.empleador)}</td><td>${esc(b.visita.nroEstab)}</td><td>${esc(b.visita.tareas.split('//').join(' · '))}</td><td>${C.aDMY(b.visita.fechaMax)}</td><td>${b.tieneGestion ? `<span class="pill p-bad">⚠ ${b.cantIntentos ? b.cantIntentos + ' intento(s)' : 'PDF Oct'}</span>` : '<span class="pill p-sin">Sin gestión</span>'}</td></tr>`).join('') : '<tr><td colspan="6" class="note">Sin bajas.</td></tr>') +
+          (diff.bajas.length ? diff.bajas.slice(0, 100).map(b => `<tr style="cursor:default"><td>${esc(b.visita.cuit)}</td><td>${esc(b.visita.empleador)}</td><td>${esc(b.visita.nroEstab)}</td><td>${esc(C.formatearTareas(b.visita.tareas))}</td><td>${C.aDMY(b.visita.fechaMax)}</td><td>${b.tieneGestion ? `<span class="pill p-bad">⚠ ${b.cantIntentos ? b.cantIntentos + ' intento(s)' : 'PDF Oct'}</span>` : '<span class="pill p-sin">Sin gestión</span>'}</td></tr>`).join('') : '<tr><td colspan="6" class="note">Sin bajas.</td></tr>') +
           '</tbody></table>';
       } else {
         h += `<table class="diff-tbl"><thead><tr><th>Fila Excel</th><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Tareas</th><th>Fecha máx.</th></tr></thead><tbody>` +

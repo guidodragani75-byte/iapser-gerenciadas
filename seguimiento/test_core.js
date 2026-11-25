@@ -167,8 +167,8 @@ t('filtros por tarea: subtareasLimpias, catalogoTareas y coincideTarea', () => {
   const vs = C.armarVisitas(D.visitas, {}, '2026-11-24', D.historico);
   const cat = C.catalogoTareas(vs);
   assert.ok(cat.length >= 15 && cat.length <= 25);
-  // Sin códigos numéricos sueltos de siniestros
-  assert.ok(cat.every(t => !/^\d+$/.test(t.label)));
+  // Sin códigos numéricos sueltos de siniestros y en formato oración (Mayúscula luego minúscula)
+  assert.ok(cat.every(t => !/^\d+$/.test(t.label) && t.label === C.formatoOracion(t.label)));
   // Coincidencia insensible a tildes y mayúsculas sobre subtareas combinadas con '//'
   assert.strictEqual(vs.filter(v => C.coincideTarea(v, 'capacitacion basica')).length, 594);
   assert.strictEqual(vs.filter(v => C.coincideTarea(v, 'Visita de Obra')).length, 139);

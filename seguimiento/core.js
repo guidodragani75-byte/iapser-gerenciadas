@@ -92,6 +92,19 @@
     return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   }
 
+  /** Formato oración: primera letra en mayúscula y el resto en minúscula. */
+  function formatoOracion(s) {
+    const str = String(s == null ? '' : s).trim().replace(/\s+/g, ' ');
+    if (!str) return '';
+    const low = str.toLowerCase();
+    return low.charAt(0).toUpperCase() + low.slice(1);
+  }
+
+  /** Formatea una cadena de tareas separadas por '//' en formato oración unidas por ' · '. */
+  function formatearTareas(tareas) {
+    return String(tareas || '').split('//').map(formatoOracion).filter(Boolean).join(' · ');
+  }
+
   function cohorte(fechaMaxISO) {
     return fechaMaxISO && fechaMaxISO < CONFIG.CORTE_RESIDUAL ? 'Residual' : 'Emergente';
   }
@@ -258,7 +271,7 @@
       const k = sinTildes(s).toLowerCase();
       if (!vistos[k]) {
         vistos[k] = true;
-        out.push({ key: k, label: s });
+        out.push({ key: k, label: formatoOracion(s) });
       }
     });
     return out;
@@ -1190,7 +1203,7 @@
 
   const API = {
     CONFIG, ESTADOS, COLUMNAS_PADRON, COLUMNAS_OBLIGATORIAS, COLUMNAS_AUXILIARES, ETIQUETAS_LOGISTICA,
-    aISO, aDMY, mesDe, hoyISO, sumarMeses, diffMeses, sinTildes, labelMes, mesEmergenteActual, letraCol,
+    aISO, aDMY, mesDe, hoyISO, sumarMeses, diffMeses, sinTildes, formatoOracion, formatearTareas, labelMes, mesEmergenteActual, letraCol,
     cohorte, esObra, esTecnica, esATEP, esPese363, esRgrlVerosim, esCapacitacion, esUrgente, esEtapa1,
     normAmbito, zonaVisita, resumenEtiquetas, filtrarPorEtiqueta, agruparLogistica, prioridadLogistica,
     subtareasNorm, subtareasLimpias, catalogoTareas, coincideTarea, detectarErroresVisitas,
