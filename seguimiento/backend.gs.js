@@ -779,7 +779,9 @@ function guardarMovimientosABM_(ss, movimientos) {
     ];
   });
   var startR = sh.getLastRow() + 1;
+  sh.getRange(startR, 2, rows.length, 1).setNumberFormat('@'); // Fecha ABM literal (evita desfase horario de la hoja)
   sh.getRange(startR, 6, rows.length, 3).setNumberFormat('@'); // CUIT, Empleador, Estab (M) como texto
+  sh.getRange(startR, 15, rows.length, 2).setNumberFormat('@'); // Fecha Max Antes / Despues como texto ISO
   sh.getRange(startR, 1, rows.length, CFG.ENCABEZADOS_ABM.length).setValues(rows);
   return rows.length;
 }
@@ -790,6 +792,7 @@ function leerHistorialABM_() {
   if (!sh || sh.getLastRow() < 2) {
     return { ok: true, abmUpdatedAt: getAbmUpdatedAt_(), movimientos: [] };
   }
+  var tzSheet = ss.getSpreadsheetTimeZone();
   var lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
   var data = sh.getRange(1, 1, lastRow, lastCol).getValues();
   var hdr = data[0].map(function (h) { return String(h || '').trim(); });
@@ -807,7 +810,7 @@ function leerHistorialABM_() {
     if (!cuit && !tipo) continue;
     var fAbmRaw = idx['Fecha ABM'] != null ? r[idx['Fecha ABM']] : '';
     var fAbm = fAbmRaw instanceof Date
-      ? Utilities.formatDate(fAbmRaw, 'America/Argentina/Buenos_Aires', 'yyyy-MM-dd HH:mm')
+      ? Utilities.formatDate(fAbmRaw, tzSheet, 'yyyy-MM-dd HH:mm')
       : String(fAbmRaw || '').trim();
     out.push({
       loteId: cel(r, 'ID Lote'),

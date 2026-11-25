@@ -25,6 +25,7 @@
   let VISITAS_TODAS = [];
   let VISITAS = [];
   let HIST_VISITAS = [];
+  let BAJAS_DISCONTINUADAS = [];
   let vista = 'resumen', subTab = 'consolidado', pagina = 1;
   let verTodosAmbitosResumen = false, verTodasTareasResumen = false;
   let chMain = null, chSec = null, chPlazo = null, chPart = null;
@@ -46,13 +47,14 @@
     cruceOct: '',
     obsFiltro: '',          // '' | 'riesgo' | 'alto' | 'medio' | 'con_obs'
     errTipo: '',
+    abmModo: '',            // '' | 'con_bajas' | 'solo_bajas' | 'novedades' (en Padrón vigente)
     excluirMay27: true
   };
   const LOG = { etiqueta: '', zona: '', soloPendientes: true, orden: 'prioridad', q: '', verTodasZonas: false, pagina: 1 };
   const ABM_F = { lote: '', tipo: '', ambito: '', q: '', pagina: 1 };
 
   function claveMovABM(m) {
-    return [m.loteId || '', m.fechaABM || '', m.tipo || '', m.cuit || '', m.nroEstab || '', m.tareasAntes || '', m.tareasDespues || '', m.fechaMaxAntes || '', m.fechaMaxDespues || ''].join('|');
+    return [m.loteId || m.fechaABM || '', m.tipo || '', m.cuit || '', m.nroEstab || '', m.tareasAntes || '', m.tareasDespues || '', m.fechaMaxAntes || '', m.fechaMaxDespues || '', m.detalle || ''].join('|');
   }
 
   function movimientosABMUnificados() {
@@ -148,9 +150,100 @@
     });
   }
 
+  function enriquecerConABM() {
+    const todos = movimientosABMUnificados();
+    BAJAS_DISCONTINUADAS = [];
+    if (!todos.length) return;
+
+    const ultimoLoteKey = todos[0].loteId || todos[0].fechaABM || '';
+    const delUltimo = todos.filter(m => (m.loteId || m.fechaABM || '') === ultimoLoteKey && m.tipo !== 'BAJA');
+
+    // Indexar novedades del último lote por clave exacta (CUIT|Estab|TareasFormateadas|FechaMax) y por CUIT|Estab en no-obras únicas
+    const porExacta = {};
+    const porCE = {};
+    delUltimo.forEach(m => {
+      const kEx = [m.cuit || '', m.nroEstab || '', C.sinTildes(m.tareasDespues || '').toLowerCase(), m.fechaMaxDespues || ''].join('|');
+      (porExacta[kEx] = porExacta[kEx] || []).push(m);
+      const ce = (m.cuit || '') + '|' + (m.nroEstab || '');
+      if (!porCE[ce]) porCE[ce] = m;
+    });
+
+    const conteoNoObraCE = {};
+    VISITAS_TODAS.forEach(v => {
+      if (!v.esObra) {
+        const ce = v.cuit + '|' + v.nroEstab;
+        conteoNoObraCE[ce] = (conteoNoObraCE[ce] || 0) + 1;
+      }
+    });
+
+    const activasSet = {};
+    VISITAS_TODAS.forEach(v => {
+      const tFmt = C.sinTildes(C.formatearTareas(v.tareas)).toLowerCase();
+      const kEx = [v.cuit || '', v.nroEstab || '', tFmt, v.fechaMax || ''].join('|');
+      activasSet[kEx] = true;
+      let hit = null;
+      const cands = porExacta[kEx];
+      if (cands && cands.length) {
+        if (cands.length === 1) {
+          hit = cands[0];
+        } else {
+          // Si hay varias obras el mismo día en el mismo estab, desempatar por el valor nuevo en Obs. IAPSER / Domicilio
+          const idxMatch = cands.findIndex(m => v.obsIAPSER && String(m.detalle || '').indexOf(v.obsIAPSER) >= 0);
+          hit = idxMatch >= 0 ? cands.splice(idxMatch, 1)[0] : cands.shift();
+        }
+      } else if (!v.esObra && conteoNoObraCE[v.cuit + '|' + v.nroEstab] === 1) {
+        hit = porCE[v.cuit + '|' + v.nroEstab] || null;
+      }
+      v.ultimoABM = hit;
+    });
+
+    // Construir filas discontinuadas (Bajas registradas que ya no están en el padrón activo)
+    const bajasVistas = {};
+    todos.forEach((m, idx) => {
+      if (m.tipo !== 'BAJA') return;
+      const kBaja = [m.cuit || '', m.nroEstab || '', C.sinTildes(m.tareasAntes || '').toLowerCase(), m.fechaMaxAntes || ''].join('|');
+      if (activasSet[kBaja] || bajasVistas[kBaja]) return;
+      bajasVistas[kBaja] = true;
+      BAJAS_DISCONTINUADAS.push({
+        id: 'baja|' + idx,
+        esBajaABM: true,
+        tieneEtapaPadron: true,
+        cohorte: C.cohorte(m.fechaMaxAntes),
+        planificacion: 'Discontinuada',
+        cuit: m.cuit || '',
+        empleador: m.empleador || '',
+        contrato: '',
+        nroEstab: m.nroEstab || '',
+        establecimiento: '',
+        ambito: m.ambito || '',
+        provincia: m.ambito || '',
+        localidad: m.localidad || '',
+        departamento: '',
+        domicilio: '',
+        cp: '',
+        tareas: m.tareasAntes || 'Visita',
+        fechaMax: m.fechaMaxAntes || '',
+        fechaAgendada: '',
+        fechaReal: '',
+        estado: 'Discontinuada',
+        cerrada: true,
+        cuentaObjetivo: false,
+        cerradaPorCruceOct: false,
+        vencida: false,
+        catVenc: 'cerrada',
+        intentos: [],
+        partesObs: [{ fuente: 'Baja ABM (' + (m.fechaABM || '') + ')', texto: (m.detalle || 'Dada de baja del padrón') + (m.teniaGestion && m.teniaGestion !== 'No' ? ' · Gestión previa: ' + m.teniaGestion : '') }],
+        textoObs: '',
+        riesgoFallida: null,
+        ultimoABM: m
+      });
+    });
+  }
+
   function recalcular() {
     const base = baseVisitas();
     VISITAS_TODAS = C.armarVisitas(base, INTENTOS, C.hoyISO(), D.historico);
+    enriquecerConABM();
     VISITAS = C.filtrarCorteFuturo(VISITAS_TODAS, F.excluirMay27);
     HIST_VISITAS = armarHistoricoVisitas(base, D.historico);
   }
@@ -185,12 +278,12 @@
 
   function pasaGlobal(v, ignorarAmbito, ignorarObs) {
     if (F.cohorte && v.cohorte !== F.cohorte) return false;
-    if (F.etapas.length < 3) {
+    if (F.etapas.length < 3 && !v.esBajaABM) {
       if (v.esHistorico && !v.tieneEtapaPadron) return false;
       if (F.etapas.indexOf(etapaClave(v)) < 0) return false;
     }
     if (!ignorarAmbito && F.ambito) {
-      const ambV = v.esHistorico ? v.ambito : C.normAmbito(v.ambito || v.provincia);
+      const ambV = (v.esHistorico || v.esBajaABM) ? v.ambito : C.normAmbito(v.ambito || v.provincia);
       if (ambV !== F.ambito) return false;
     }
     if (!ignorarObs && !pasaFiltroObs(v)) return false;
@@ -284,6 +377,9 @@
     if (s === E.EFECTIVA_SIN_DOC || s === E.FALLIDA_SIN_DOC) {
       return `<span class="pill p-warn">📎 ${esc(s)}</span>`;
     }
+    if (s === 'Discontinuada') {
+      return '<span class="pill p-sin" style="text-decoration:line-through">✖ Discontinuada (Baja ABM)</span>';
+    }
     return `<span class="pill p-sin">${esc(s)}</span>`;
   }
 
@@ -322,6 +418,11 @@
     let arr = baseGlobal(false);
     if (F.etiqueta) {
       arr = C.filtrarPorEtiqueta(arr, F.etiqueta, C.hoyISO());
+    } else if (vista === 'todas') {
+      const bajasFilt = BAJAS_DISCONTINUADAS.filter(b => pasaGlobal(b, false));
+      if (F.abmModo === 'solo_bajas') return bajasFilt;
+      if (F.abmModo === 'con_bajas') return arr.concat(bajasFilt);
+      if (F.abmModo === 'novedades') return arr.filter(v => !!v.ultimoABM);
     } else if (enVista[vista]) {
       arr = arr.filter(enVista[vista]);
     }
@@ -1198,7 +1299,9 @@
 
     const etObj = F.etiqueta ? C.ETIQUETAS_LOGISTICA.find(x => x.id === F.etiqueta) : null;
     const [tit, desc] = etObj ? [etObj.label, 'Prioridad crítica seleccionada desde Resumen.'] : (META_VISTA[vista] || ['Visitas', '']);
-    const hayFiltrosLocales = !!(F.sub || F.etiqueta || F.tarea || F.venc || F.mes || F.estado || F.cruceOct || F.errTipo);
+    const hayFiltrosLocales = !!(F.sub || F.etiqueta || F.tarea || F.venc || F.mes || F.estado || F.cruceOct || F.errTipo || F.abmModo);
+    const nBajasDisp = vista === 'todas' ? BAJAS_DISCONTINUADAS.filter(b => pasaGlobal(b, false)).length : 0;
+    const nNovDisp = vista === 'todas' ? baseGlobal(false).filter(v => !!v.ultimoABM).length : 0;
 
     let h = `<div class="page-head"><div><h1>${esc(tit)}</h1><div class="sub">${esc(desc)}</div></div></div>`;
     h += barraFiltrosGlobalHTML(total);
@@ -1212,6 +1315,12 @@
 
     h += `<div class="filters">
       ${subtabsVistaHTML(baseVista)}
+      ${(vista === 'todas' && (nBajasDisp || nNovDisp || F.abmModo)) ? `<select class="${F.abmModo ? 'act' : ''}" onchange="App.f('abmModo',this.value)" title="Cómo ver novedades y bajas del padrón en esta vista">
+        <option value="" ${F.abmModo === '' ? 'selected' : ''}>ABM: solo padrón vigente (oculta ${nBajasDisp} baja(s))</option>
+        <option value="con_bajas" ${F.abmModo === 'con_bajas' ? 'selected' : ''}>Incluir discontinuadas (+${nBajasDisp} baja(s))</option>
+        <option value="solo_bajas" ${F.abmModo === 'solo_bajas' ? 'selected' : ''}>Solo discontinuadas / bajas (${nBajasDisp})</option>
+        <option value="novedades" ${F.abmModo === 'novedades' ? 'selected' : ''}>Con cambios en último ABM (${nNovDisp})</option>
+      </select>` : ''}
       <select class="${F.tarea ? 'act' : ''}" onchange="App.f('tarea',this.value)" title="Filtrar por tarea (columna Q)">
         <option value="">Tarea: todas</option>
         ${tareaOpts}
@@ -1247,29 +1356,34 @@
     sl.forEach(v => {
       const tareasTxt = C.formatearTareas(v.tareas);
       const estabTxt = v.establecimiento ? `${v.nroEstab || '–'} · ${v.establecimiento}` : (v.nroEstab || '–');
-      const ambTxt = v.esHistorico ? (v.ambito || '–') : C.normAmbito(v.ambito || v.provincia);
-      const zonaTxt = v.esHistorico ? (v.localidad ? C.zonaVisita(v) : '') : C.zonaVisita(v);
+      const ambTxt = (v.esHistorico || v.esBajaABM) ? (v.ambito || '–') : C.normAmbito(v.ambito || v.provincia);
+      const zonaTxt = (v.esHistorico || v.esBajaABM) ? (v.localidad ? C.zonaVisita(v) : '') : C.zonaVisita(v);
       const locTxt = zonaTxt ? `${ambTxt} / ${zonaTxt}` : ambTxt;
       const cruceTag = v.cruceOct ? ` <a href="${esc(v.cruceOct.url)}" target="_blank" onclick="event.stopPropagation()" class="pill ${v.cruceOct.resultado === 'Efectiva' ? 'p-ok' : 'p-bad'}" title="PDF cargado en Octubre (${esc(v.cruceOct.fecha)} · ${esc(v.cruceOct.tarea)})">PDF Oct: ${v.cruceOct.resultado} ↗</a>` : '';
       const esAnios = v.errores && v.errores.indexOf('misma_tarea_anios') >= 0;
       const errTag = esAnios
         ? `<span class="pill p-bad" title="Misma tarea repetida entre año anterior y actual: ${esc((v.tareasRepetidasAnio || []).join(', '))}">🔁 Año ant./act.</span> `
         : (v.revisarDuplicada ? '<span class="pill p-warn" title="Misma tarea y establecimiento con fecha distinta">⚠ Duplicada</span> ' : '');
+      const abmTag = (!v.esBajaABM && v.ultimoABM) ? badgeNovedadABM(v.ultimoABM) + ' ' : '';
       const fechaCelda = (v.fechaMax ? C.aDMY(v.fechaMax) : '–') + (v.vencida ? ' <span class="pill p-bad">Vencida</span>' : '');
-      h += `<tr class="${v.vencida ? 'is-venc' : ''}" data-id="${esc(v.id)}" onclick="App.abrir(this.dataset.id)">
+      const rowCls = v.esBajaABM ? 'is-baja' : (v.vencida ? 'is-venc' : '');
+      const btnAccion = v.esBajaABM
+        ? `<button type="button" class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📋 Ver baja</button>`
+        : `<button type="button" class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📄 PDF</button>`;
+      h += `<tr class="${rowCls}" data-id="${esc(v.id)}" onclick="App.abrir(this.dataset.id)">
         <td class="${v.cohorte === 'Emergente' ? 'tE' : 'tR'}">${v.cohorte}</td>
         <td>${esc(v.planificacion)}</td>
         <td>${esc(v.cuit)}</td>
         <td class="clip${v.textoObs ? ' obs-trig' : ''}" ${v.textoObs ? `data-obs-id="${esc(v.id)}"` : `title="${esc(v.empleador)}"`} style="max-width:180px">${esc(v.empleador)}</td>
         <td class="clip" style="max-width:130px" title="${esc(estabTxt)}">${esc(estabTxt)}</td>
         <td class="clip" style="max-width:145px" title="${esc(locTxt)}">${esc(ambTxt)}${zonaTxt ? ` <span class="note">/ ${esc(zonaTxt)}</span>` : ''}</td>
-        <td class="clip" style="max-width:225px" title="${esc(tareasTxt)}">${errTag}${cruceTag ? cruceTag + ' ' : ''}${esc(tareasTxt)}</td>
-        <td>${badgeObsHTML(v)}</td>
+        <td class="clip" style="max-width:240px" title="${esc(tareasTxt)}">${abmTag}${errTag}${cruceTag ? cruceTag + ' ' : ''}${esc(tareasTxt)}</td>
+        <td>${v.esBajaABM ? `<span class="note">Baja ${esc((v.ultimoABM && v.ultimoABM.fechaABM || '').slice(0, 10))}</span>` : badgeObsHTML(v)}</td>
         <td class="${v.vencida ? 'venc' : ''}">${fechaCelda}</td>
         <td>${C.aDMY(v.fechaAgendada) || '–'}</td>
         <td>${C.aDMY(v.fechaReal) || '–'}</td>
         <td>${pillEstado(v.estado, v.vencida)}</td>
-        <td><button type="button" class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📄 PDF</button></td>
+        <td>${btnAccion}</td>
       </tr>`;
     });
     if (!sl.length) h += '<tr><td colspan="13" class="note" style="padding:24px;text-align:center">Sin visitas para los filtros actuales.</td></tr>';
@@ -1340,6 +1454,28 @@
   }
 
   function abrir(id) {
+    if (String(id || '').indexOf('baja|') === 0) {
+      const vb = BAJAS_DISCONTINUADAS.find(x => x.id === id);
+      if (!vb) return;
+      if (blobUrlIndividual) { URL.revokeObjectURL(blobUrlIndividual); blobUrlIndividual = ''; }
+      editando = null;
+      const m = vb.ultimoABM || {};
+      const datoB = (k, val) => `<b>${k}</b><span>${esc(val) || '–'}</span>`;
+      $('dvTitulo').textContent = (vb.empleador || 'Visita discontinuada') + (vb.nroEstab ? ' · Estab ' + vb.nroEstab : '');
+      $('dvBody').innerHTML = `<div class="val-box bad" style="margin-top:0"><strong>✖ Visita discontinuada (Baja del padrón)</strong><div class="note" style="margin-top:3px">Dejó de venir en el listado del <b>${esc(m.fechaABM || '–')}</b>. No suma a pendientes ni a vencidas operativas.</div></div>
+      <div class="kv">
+        ${datoB('CUIT / Estab. (M)', vb.cuit + ' · Estab ' + (vb.nroEstab || '–'))}
+        ${datoB('Localidad / Ámbito', [vb.localidad, vb.ambito].filter(Boolean).join(', '))}
+        ${datoB('Tareas que tenía', vb.tareas)}
+        ${datoB('Fecha máx. anterior (col. R)', C.aDMY(vb.fechaMax))}
+        ${datoB('Fecha de baja ABM', m.fechaABM || '–')}
+        ${datoB('Gestión previa al momento de baja', m.teniaGestion || 'No')}
+        <b>Estado</b><span>${pillEstado('Discontinuada', false)}</span>
+      </div>`;
+      $('dvFoot').innerHTML = `<button type="button" class="btn sec" onclick="dlgVisita.close(); App.ir('abm')">📋 Ver en Historial ABM →</button><button type="button" class="btn" onclick="dlgVisita.close()">Cerrar</button>`;
+      $('dlgVisita').showModal();
+      return;
+    }
     if (String(id || '').indexOf('hist|') === 0) {
       const vh = HIST_VISITAS.find(x => x.id === id);
       if (!vh) return;
@@ -1375,6 +1511,7 @@
     const motivoBase = MOTIVOS.indexOf((it.motivo || '').split(' - ')[0]) >= 0 ? (it.motivo || '').split(' - ')[0] : '';
     const detalle = (it.motivo || '').indexOf(' - ') > 0 ? it.motivo.split(' - ').slice(1).join(' - ') : (motivoBase ? '' : (it.motivo || ''));
     const cruceHtml = v.cruceOct ? `<div class="info-box"><strong>Cruce con PDF de Octubre (CUIT + Estab ${esc(v.nroEstab)}):</strong><br>${v.cruceOct.items.map(x => `• ${esc(x.fecha)} — <b>${esc(x.resultado)}</b> (${esc(x.tarea)}) · <a href="${esc(x.url)}" target="_blank">Abrir PDF en Drive ↗</a>`).join('<br>')}</div>` : '';
+    const abmHtml = v.ultimoABM ? `<div class="info-box" style="background:#F5F3FF;border-color:#DDD6FE;color:#4C1D95"><strong>Novedad ABM (${esc(v.ultimoABM.fechaABM)}):</strong> ${pillTipoABM(v.ultimoABM)}<div style="margin-top:4px">${celdaDetalleABM(v.ultimoABM)}</div></div>` : '';
     const errHtml = v.revisarDuplicada ? `<div class="err" style="display:block"><strong>Error / A revisar:</strong> ${v.errores && v.errores.indexOf('misma_tarea_anios') >= 0 ? `Misma tarea repetida entre año anterior y actual (${esc((v.tareasRepetidasAnio || []).join(', '))})` : 'Misma tarea y establecimiento con fecha máxima distinta'} · Fecha original planilla: <b>${C.aDMY(v.fechaMax)}</b></div>` : '';
     const riesgoHtml = v.riesgoFallida ? `<div class="val-box ${v.riesgoFallida.nivel === 'alto' ? 'bad' : 'warn'}"><strong>⚠ Potencialmente fallida (${esc(v.riesgoFallida.motivo)}):</strong> revisá las observaciones antes de asignar o enviar al preventor.</div>` : '';
     const contactoTxt = [v.responsable, v.telefono, v.email].filter(Boolean).join(' · ');
@@ -1387,6 +1524,7 @@
       ${contactoTxt ? dato('Contacto', contactoTxt) : ''}
       <b>Fecha máxima (col. R)</b><span class="${v.vencida ? 'venc' : ''}">${C.aDMY(v.fechaMax)}${v.vencida ? ' <span class="pill p-bad">Vencida</span>' : ''}</span>
       <b>Estado</b><span>${pillEstado(v.estado, v.vencida)}</span>${v.obsCS ? dato('Obs. CS', v.obsCS) : ''}${v.obsIAPSER ? dato('Obs. IAPSER', v.obsIAPSER) : ''}${v.obs ? dato('Observaciones', v.obs) : ''}</div>
+      ${abmHtml}
       ${riesgoHtml}
       ${errHtml}
       ${cruceHtml}
@@ -2089,12 +2227,48 @@
     a.click();
   }
 
-  function pillTipoABM(tipo) {
+  function parsearCambiosDetalleABM(detalle) {
+    const out = [];
+    String(detalle || '').split(' | ').forEach(seg => {
+      const s = seg.trim();
+      if (!s) return;
+      const m = s.match(/^([^:]+):\s*(.*?)\s*→\s*(.*)$/);
+      if (m) out.push({ campo: m[1].trim(), antes: m[2].trim(), despues: m[3].trim() });
+    });
+    return out;
+  }
+
+  function esValorVacioABM(val) {
+    const s = String(val == null ? '' : val).trim();
+    return !s || s === '–' || s === '-' || /^null$/i.test(s);
+  }
+
+  function pillTipoABM(mOrTipo) {
+    const esObj = mOrTipo && typeof mOrTipo === 'object';
+    const tipo = esObj ? mOrTipo.tipo : mOrTipo;
     if (tipo === 'ALTA') return '<span class="pill p-ok">✔ Alta</span>';
     if (tipo === 'BAJA') return '<span class="pill p-bad">✖ Baja</span>';
     if (tipo === 'CAMBIO_TAREA') return '<span class="pill p-chg">⇄ Cambio de tareas</span>';
     if (tipo === 'CAMBIO_PLAZO') return '<span class="pill p-ag">📅 Cambio de plazo</span>';
+    if (esObj) {
+      const pares = parsearCambiosDetalleABM(mOrTipo.detalle);
+      if (pares.length) {
+        const campos = Array.from(new Set(pares.map(p => p.campo)));
+        return `<span class="pill p-warn">✎ ${esc(campos.join(' + '))}</span>`;
+      }
+    }
     return '<span class="pill p-warn">✎ Modificación</span>';
+  }
+
+  function badgeNovedadABM(m) {
+    if (!m) return '';
+    const tip = `ABM ${m.fechaABM || ''} · ${m.detalle || m.tipo}`;
+    if (m.tipo === 'ALTA') return `<span class="pill p-ok" title="${esc(tip)}">✔ Alta ABM</span>`;
+    if (m.tipo === 'CAMBIO_TAREA') return `<span class="pill p-chg" title="${esc(tip)}">⇄ Tareas ABM</span>`;
+    if (m.tipo === 'CAMBIO_PLAZO') return `<span class="pill p-ag" title="${esc(tip)}">📅 Plazo ABM</span>`;
+    const pares = parsearCambiosDetalleABM(m.detalle);
+    const lbl = pares.length ? pares.map(p => p.campo).slice(0, 2).join('+') : 'Modif.';
+    return `<span class="pill p-warn" title="${esc(tip)}">✎ ${esc(lbl)}</span>`;
   }
 
   function celdaDetalleABM(m) {
@@ -2103,9 +2277,24 @@
       const dels = (m.tareasQuitadas || '').split(' · ').filter(Boolean).map(t => `<span class="diff-del">− ${esc(t)}</span>`).join('');
       return `${adds}${dels}<div class="note">Quedó: ${esc(m.tareasDespues || '–')}</div>`;
     }
-    if (m.tipo === 'ALTA') return esc(m.tareasDespues || m.detalle || '–');
-    if (m.tipo === 'BAJA') return `<span style="color:var(--mut)">${esc(m.tareasAntes || '–')}</span>`;
-    return `${esc(m.detalle || '')}${m.tareasDespues ? `<div class="note">${esc(m.tareasDespues)}</div>` : ''}`;
+    if (m.tipo === 'ALTA') return `<span class="diff-add">+ ${esc(m.tareasDespues || m.detalle || '–')}</span>`;
+    if (m.tipo === 'BAJA') return `<span class="diff-del">− ${esc(m.tareasAntes || '–')}</span>`;
+    const pares = parsearCambiosDetalleABM(m.detalle);
+    if (pares.length) {
+      const htmlPares = pares.map(p => {
+        const vacioA = esValorVacioABM(p.antes);
+        const vacioB = esValorVacioABM(p.despues);
+        if (vacioA && !vacioB) {
+          return `<div><b>${esc(p.campo)}:</b> <span class="diff-add">+ ${esc(p.despues)}</span> <span class="note">(agregado)</span></div>`;
+        }
+        if (!vacioA && vacioB) {
+          return `<div><b>${esc(p.campo)}:</b> <span class="diff-del">− ${esc(p.antes)}</span> <span class="note">(quitado)</span></div>`;
+        }
+        return `<div><b>${esc(p.campo)}:</b> <span class="diff-del">− ${esc(p.antes)}</span> <span class="diff-add">+ ${esc(p.despues)}</span></div>`;
+      }).join('');
+      return `${htmlPares}${m.tareasDespues ? `<div class="note">Tarea: ${esc(m.tareasDespues)}</div>` : ''}`;
+    }
+    return `${esc(m.detalle || '')}${m.tareasDespues ? `<div class="note">Tarea: ${esc(m.tareasDespues)}</div>` : ''}`;
   }
 
   function celdaPlazoABM(m) {
@@ -2119,10 +2308,10 @@
     const lote = ULTIMO_LOTE_ABM;
     if (!lote || !$('abmPopBody')) return;
     const r = lote.resumen;
-    $('abmPopTitulo').textContent = `Novedades del Padrón Registradas · ${lote.fechaABM}`;
-    $('abmPopSub').textContent = `Archivo: ${lote.archivo || 'Padrón'} ${lote.usuario ? '· Cargado por: ' + lote.usuario : ''}`;
-
     const movs = lote.movimientos || [];
+    $('abmPopTitulo').textContent = `Novedades del Padrón Registradas · ${lote.fechaABM}`;
+    $('abmPopSub').textContent = `Fecha de ABM: ${lote.fechaABM} · ${movs.length} movimiento(s) guardados`;
+
     const filtrados = movs.filter(m => {
       if (abmPopTab === 'altas') return m.tipo === 'ALTA';
       if (abmPopTab === 'bajas') return m.tipo === 'BAJA';
@@ -2135,7 +2324,7 @@
       <div class="card ok"><div class="k">Altas registradas</div><div class="v" style="color:var(--ok)">+${fmt(r.altas)}</div><div class="s">nuevas visitas incorporadas</div></div>
       <div class="card bad"><div class="k">Bajas registradas</div><div class="v" style="color:var(--bad)">-${fmt(r.bajas)}</div><div class="s">${r.bajasConGestion ? `<span class="venc">${r.bajasConGestion} tenían gestión</span>` : 'sin gestión previa'}</div></div>
       <div class="card warn"><div class="k">Cambios de tareas</div><div class="v" style="color:#5B21B6">${fmt(r.cambiosTareas)}</div><div class="s">actualizadas manteniendo historial</div></div>
-      <div class="card"><div class="k">Otros cambios</div><div class="v">${fmt(r.otrasModificadas)}</div><div class="s">plazos (col. R) o datos</div></div>
+      <div class="card"><div class="k">Otros cambios</div><div class="v">${fmt(r.otrasModificadas)}</div><div class="s">plazos (col. R) u observaciones</div></div>
     </div>`;
 
     h += `<div class="diff-tabs">
@@ -2147,12 +2336,12 @@
     </div>`;
 
     h += `<div style="max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:8px"><table class="diff-tbl"><thead><tr>
-      <th>Tipo</th><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Ámbito</th><th>Tareas / Detalle</th><th>Fecha máx. (R)</th><th>Gestión</th>
+      <th>Cambio</th><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Ámbito</th><th>Detalle del cambio (antes → ahora)</th><th>Fecha máx. (R)</th><th>Gestión</th>
     </tr></thead><tbody>`;
     if (filtrados.length) {
       filtrados.slice(0, 150).forEach(m => {
         h += `<tr style="cursor:default">
-          <td>${pillTipoABM(m.tipo)}</td>
+          <td>${pillTipoABM(m)}</td>
           <td>${esc(m.cuit)}</td>
           <td>${esc(m.empleador)}</td>
           <td>${esc(m.nroEstab)}</td>
@@ -2332,7 +2521,7 @@
       </div>
       <select class="${ABM_F.lote ? 'act' : ''}" onchange="App.abmFiltro('lote',this.value)">
         <option value="">Fecha ABM / Corte: todos (${lotes.length})</option>
-        ${lotes.map(l => `<option value="${esc(l.key)}" ${ABM_F.lote === l.key ? 'selected' : ''}>${esc(l.fechaABM)} · ${esc(l.archivo)} (${l.count})</option>`).join('')}
+        ${lotes.map(l => `<option value="${esc(l.key)}" ${ABM_F.lote === l.key ? 'selected' : ''}>${esc(l.fechaABM)} (${l.count} mov.)</option>`).join('')}
       </select>
       <select class="${ABM_F.ambito ? 'act' : ''}" onchange="App.abmFiltro('ambito',this.value)">
         <option value="">Ámbito: todos</option>
@@ -2344,27 +2533,25 @@
     </div>`;
 
     h += `<div class="tw"><div style="overflow:auto;max-height:66vh"><table class="grid-op"><thead><tr>
-      <th>Fecha ABM</th><th>Tipo</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Ámbito / Localidad</th><th>Tareas / Cambios detectados</th><th>Fecha máx. (R)</th><th>Gestión previa</th><th>Archivo / Usuario</th>
+      <th>Fecha ABM</th><th>Cambio</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Ámbito / Localidad</th><th>Detalle del cambio (antes → ahora)</th><th>Fecha máx. (R)</th><th>Gestión previa</th>
     </tr></thead><tbody>`;
 
     if (sl.length) {
       sl.forEach(m => {
-        const archUsr = [m.archivo, m.usuario].filter(Boolean).join(' · ');
         h += `<tr style="cursor:default">
           <td><b>${esc(m.fechaABM || '–')}</b></td>
-          <td>${pillTipoABM(m.tipo)}</td>
+          <td>${pillTipoABM(m)}</td>
           <td>${esc(m.cuit)}</td>
-          <td class="clip" style="max-width:185px" title="${esc(m.empleador)}">${esc(m.empleador)}</td>
+          <td class="clip" style="max-width:195px" title="${esc(m.empleador)}">${esc(m.empleador)}</td>
           <td>${esc(m.nroEstab)}</td>
-          <td class="clip" style="max-width:150px" title="${esc(m.ambito + ' / ' + m.localidad)}">${esc(m.ambito)} <span class="note">/ ${esc(m.localidad)}</span></td>
-          <td style="white-space:normal;min-width:250px;max-width:360px">${celdaDetalleABM(m)}</td>
+          <td class="clip" style="max-width:155px" title="${esc(m.ambito + ' / ' + m.localidad)}">${esc(m.ambito)} <span class="note">/ ${esc(m.localidad)}</span></td>
+          <td style="white-space:normal;min-width:270px;max-width:420px">${celdaDetalleABM(m)}</td>
           <td>${celdaPlazoABM(m)}</td>
           <td>${m.teniaGestion && m.teniaGestion !== 'No' ? `<span class="pill p-warn">${esc(m.teniaGestion)}</span>` : '<span class="note">No</span>'}</td>
-          <td class="clip note" style="max-width:165px" title="${esc(archUsr)}">${esc(archUsr || '–')}</td>
         </tr>`;
       });
     } else {
-      h += `<tr><td colspan="10" class="note" style="padding:28px;text-align:center">${todos.length ? 'Sin movimientos para los filtros seleccionados.' : 'Todavía no hay movimientos ABM registrados. Al subir un listado nuevo desde "📥 Padrón", las altas, bajas y cambios de tareas quedarán guardados acá con su Fecha de ABM.'}</td></tr>`;
+      h += `<tr><td colspan="9" class="note" style="padding:28px;text-align:center">${todos.length ? 'Sin movimientos para los filtros seleccionados.' : 'Todavía no hay movimientos ABM registrados. Al subir un listado nuevo desde "📥 Padrón", las altas, bajas y cambios de tareas quedarán guardados acá con su Fecha de ABM.'}</td></tr>`;
     }
     h += `</tbody></table></div><div class="pager"><span style="margin-right:auto">${fmt(filtrados.length)} movimiento(s)</span><button type="button" class="btn sec sm" onclick="App.abmPag(-1)">‹</button> Página ${ABM_F.pagina} de ${pags} <button type="button" class="btn sec sm" onclick="App.abmPag(1)">›</button></div></div>`;
     $('main').innerHTML = h;
@@ -2378,7 +2565,7 @@
       ['tareasAntes', 'Tareas Antes'], ['tareasDespues', 'Tareas Despues'],
       ['tareasAgregadas', 'Tareas Agregadas'], ['tareasQuitadas', 'Tareas Quitadas'],
       ['fechaMaxAntes', 'Fecha Max Antes'], ['fechaMaxDespues', 'Fecha Max Despues'],
-      ['teniaGestion', 'Tenia Gestion'], ['detalle', 'Detalle'], ['archivo', 'Archivo'], ['usuario', 'Usuario']
+      ['teniaGestion', 'Tenia Gestion'], ['detalle', 'Detalle']
     ];
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
     const csv = '\ufeff' + cols.map(c => q(c[1])).join(',') + '\n' + lista.map(m => cols.map(([k]) => {
@@ -2493,7 +2680,7 @@
   }
 
   function resetSubfiltrosLista() {
-    Object.assign(F, { sub: '', etiqueta: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '' });
+    Object.assign(F, { sub: '', etiqueta: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '', abmModo: '' });
     pagina = 1;
   }
 
@@ -2629,12 +2816,13 @@
     abmLimpiar() { Object.assign(ABM_F, { lote: '', tipo: '', ambito: '', q: '', pagina: 1 }); renderHistorialABM(); },
     exportarHistorialABM,
     sincronizar, abrirConfig, guardarConfig, exportar,
-    _estado: () => ({ VISITAS, INTENTOS, COLA, LOTE, PADRON_LOCAL, PADRON_UI, ABM_LOCAL, ULTIMO_LOTE_ABM, geminiActivo, F, LOG, ABM_F, vista, subTab })
+    _estado: () => ({ VISITAS, BAJAS_DISCONTINUADAS, INTENTOS, COLA, LOTE, PADRON_LOCAL, PADRON_UI, ABM_LOCAL, ULTIMO_LOTE_ABM, geminiActivo, F, LOG, ABM_F, vista, subTab })
   };
   /* ---------- HINT FLOTANTE DE OBSERVACIONES ---------- */
   function buscarPorIdCualquiera(id) {
     if (!id) return null;
     if (String(id).indexOf('hist|') === 0) return HIST_VISITAS.find(x => x.id === id) || null;
+    if (String(id).indexOf('baja|') === 0) return BAJAS_DISCONTINUADAS.find(x => x.id === id) || null;
     return VISITAS.find(x => x.id === id) || null;
   }
 
