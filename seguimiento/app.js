@@ -1,4 +1,4 @@
-/* Módulo Seguimiento Consultora - UI. Depende de core.js (SegCore), ocr.js (SegOCR) y datos.js (SEG_DATA). */
+/* Módulo Seguimiento Consultora - UI v4. Depende de core.js (SegCore), ocr.js (SegOCR) y datos.js (SEG_DATA). */
 (function () {
   'use strict';
   const C = window.SegCore, E = C.ESTADOS, OCR = window.SegOCR;
@@ -7,6 +7,9 @@
   const MOTIVOS = ['Establecimiento cerrado', 'No atiende nadie / sin responsable', 'Domicilio inexistente o incorrecto',
     'Empleador sin personal', 'Rechazo de la visita', 'Dificultad de acceso / clima', 'Otro'];
   const PAGE = 100;
+  const ETAPAS_ORDEN = ['U', '1', '2'];
+  const ETAPA_LABEL = { U: 'Urgente', '1': 'Etapa 1', '2': 'Etapa 2' };
+  const COL = { sinV: '#C9CDD0', sin: '#8A949C', agV: '#B3261E', ag: '#0F4C5C', ef: '#1E7B4B', fa: '#8FB8C4', sd: '#D97706' };
 
   const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
@@ -18,19 +21,32 @@
   let PADRON_LOCAL = load(LS_PADRON, null);
   let VISITAS_TODAS = [];
   let VISITAS = [];
-  let vista = 'tablero', subTab = 'consolidado', pagina = 1;
+  let vista = 'resumen', subTab = 'consolidado', pagina = 1;
+  let verTodosAmbitosResumen = false, verTodasTareasResumen = false;
   let chMain = null, chSec = null, chPlazo = null, chPart = null;
   let partFiltro = 'all'; // 'all' | 'YYYY-MM'
   let ultimoCP = null;
   let geminiActivo = null; // null = sin verificar, true/false según backend
-  const F = { cohorte: '', plan: '', ambito: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '', q: '', sub: '', excluirMay27: true };
-  const LOG = { etiqueta: '', ambito: '', zona: '', soloPendientes: true, orden: 'prioridad', q: '', verTodasZonas: false, pagina: 1 };
 
-  const TABS = [['tablero', 'Tablero'], ['logistica', '🧭 Logística'], ['todas', 'Todas'], ['agendadas', 'Programadas'],
-    ['realizadas', 'Realizadas'], ['pendientes', 'Pendientes'], ['revisar', 'Errores / A revisar']];
+  const F = {
+    cohorte: '',            // '' | 'Emergente' | 'Residual'
+    etapas: ['U', '1', '2'], // selección múltiple de prioridades
+    ambito: '',             // nombre normalizado de ámbito
+    q: '',                  // búsqueda global
+    sub: '',                // subfiltro contextual de cada lista
+    etiqueta: '',           // id de ETIQUETAS_LOGISTICA al venir desde Resumen
+    estado: '',
+    mes: '',
+    venc: '',
+    tarea: '',
+    cruceOct: '',
+    errTipo: '',
+    excluirMay27: true
+  };
+  const LOG = { etiqueta: '', zona: '', soloPendientes: true, orden: 'prioridad', q: '', verTodasZonas: false, pagina: 1 };
 
   function baseVisitas() {
-    return (PADRON_LOCAL && Array.isArray(PADRON_LOCAL.visitas) && PADRON_LOCAL.visitas.length) ? PADRON_LOCAL.visitas : D.visitas;
+    return (PADRON_LOCAL && Array.isArray(PADRON_LOCAL.visitas) && PADRON_LOCAL.visitas.length) ? PADRON_LOCAL.visitas : (D.visitas || []);
   }
 
   function recalcular() {
@@ -38,30 +54,140 @@
     VISITAS = C.filtrarCorteFuturo(VISITAS_TODAS, F.excluirMay27);
   }
 
+  function etapaClave(v) {
+    if (C.esUrgente(v)) return 'U';
+    if (C.esEtapa1(v)) return '1';
+    return '2';
+  }
+
+  function esSinAgendar(v) {
+    return v.estado === E.SIN_AGENDAR || v.estado === E.FALLIDA_REPROGRAMAR;
+  }
+  function esAgendada(v) {
+    return v.estado === E.AGENDADA;
+  }
+  function esRealizada(v) {
+    return v.estado === E.EFECTIVA || v.estado === E.FALLIDA_CERRADA || v.estado === E.EFECTIVA_SIN_DOC || v.estado === E.FALLIDA_SIN_DOC;
+  }
+  function esSinDoc(v) {
+    return v.estado === E.EFECTIVA_SIN_DOC || v.estado === E.FALLIDA_SIN_DOC;
+  }
+
+  function pasaGlobal(v, ignorarAmbito) {
+    if (F.cohorte && v.cohorte !== F.cohorte) return false;
+    if (F.etapas.length < 3 && F.etapas.indexOf(etapaClave(v)) < 0) return false;
+    if (!ignorarAmbito && F.ambito && C.normAmbito(v.ambito || v.provincia) !== F.ambito) return false;
+    if (F.q) {
+      const q = C.sinTildes(F.q).toLowerCase().trim();
+      if (q) {
+        const h = C.sinTildes([
+          v.cuit, v.empleador, v.contrato, v.establecimiento, v.localidad,
+          v.departamento, v.provincia, v.ambito, v.domicilio, v.tareas, v.nroEstab, v.cp
+        ].join(' ')).toLowerCase();
+        if (h.indexOf(q) < 0) return false;
+      }
+    }
+    return true;
+  }
+
+  function baseGlobal(ignorarAmbito) {
+    return VISITAS.filter(v => pasaGlobal(v, ignorarAmbito));
+  }
+
+  function hayFiltroGlobal(ignorarCohorte) {
+    return !!((!ignorarCohorte && F.cohorte) || F.etapas.length < 3 || F.ambito || (F.q && F.q.trim()));
+  }
+
+  function contarEstados(rows) {
+    const s = { sin: 0, sinV: 0, reprog: 0, ag: 0, agV: 0, ef: 0, fa: 0, sd: 0 };
+    (rows || []).forEach(v => {
+      if (esSinAgendar(v)) {
+        if (v.vencida) s.sinV++; else s.sin++;
+        if (v.estado === E.FALLIDA_REPROGRAMAR) s.reprog++;
+      } else if (esAgendada(v)) {
+        if (v.vencida) s.agV++; else s.ag++;
+      } else if (v.estado === E.EFECTIVA) {
+        s.ef++;
+      } else if (v.estado === E.FALLIDA_CERRADA) {
+        s.fa++;
+      } else if (esSinDoc(v)) {
+        s.sd++;
+      }
+    });
+    s.S = s.sin + s.sinV;
+    s.A = s.ag + s.agV;
+    s.Re = s.ef + s.fa + s.sd;
+    s.T = s.S + s.A + s.Re;
+    s.V = (rows || []).filter(v => v.vencida).length;
+    return s;
+  }
+
   const enVista = {
     todas: () => true,
-    agendadas: v => v.estado === E.AGENDADA,
-    realizadas: v => !!v.resultadoActual,
+    sin_agendar: esSinAgendar,
+    agendadas: esAgendada,
+    realizadas: esRealizada,
+    vencidas: v => v.vencida,
     pendientes: v => !v.cerrada,
     revisar: v => v.revisarDuplicada
   };
 
-  function pillEstado(s) {
-    const cls = { [E.SIN_AGENDAR]: 'p-sin', [E.AGENDADA]: 'p-ag', [E.EFECTIVA]: 'p-ok', [E.EFECTIVA_SIN_DOC]: 'p-warn',
-      [E.FALLIDA_REPROGRAMAR]: 'p-warn', [E.FALLIDA_CERRADA]: 'p-bad', [E.FALLIDA_SIN_DOC]: 'p-warn' }[s] || 'p-sin';
-    return `<span class="pill ${cls}">${esc(s)}</span>`;
+  function pillEstado(s, vencida) {
+    if (s === E.SIN_AGENDAR) {
+      return vencida
+        ? '<span class="pill p-bad">○ Sin agendar · venc.</span>'
+        : '<span class="pill p-sin">○ Sin agendar</span>';
+    }
+    if (s === E.FALLIDA_REPROGRAMAR) {
+      return '<span class="pill p-warn">↻ Fallida: a reprogramar</span>';
+    }
+    if (s === E.AGENDADA) {
+      return vencida
+        ? '<span class="pill p-bad">⚠ Agendada · venc.</span>'
+        : '<span class="pill p-ag">📅 En término</span>';
+    }
+    if (s === E.EFECTIVA) return '<span class="pill p-ok">✔ Efectiva c/PDF</span>';
+    if (s === E.FALLIDA_CERRADA) return '<span class="pill p-bad">✖ Fallida c/PDF</span>';
+    if (s === E.EFECTIVA_SIN_DOC || s === E.FALLIDA_SIN_DOC) {
+      return `<span class="pill p-warn">📎 ${esc(s)}</span>`;
+    }
+    return `<span class="pill p-sin">${esc(s)}</span>`;
+  }
+
+  function pasaSubfiltro(v) {
+    if (!F.sub) return true;
+    if (vista === 'sin_agendar') {
+      if (F.sub === 'venc') return v.vencida;
+      if (F.sub === 'plazo') return !v.vencida;
+      if (F.sub === 'reprog') return v.estado === E.FALLIDA_REPROGRAMAR;
+    } else if (vista === 'agendadas') {
+      if (F.sub === 'venc') return v.vencida;
+      if (F.sub === 'plazo') return !v.vencida;
+    } else if (vista === 'realizadas') {
+      if (F.sub === 'ef' || F.sub === 'Efectiva') return v.estado === E.EFECTIVA;
+      if (F.sub === 'fa' || F.sub === 'Fallida') return v.estado === E.FALLIDA_CERRADA;
+      if (F.sub === 'sd') return esSinDoc(v);
+    } else if (vista === 'vencidas') {
+      if (F.sub === 'sin') return esSinAgendar(v);
+      if (F.sub === 'ag') return esAgendada(v);
+      if (F.sub === 'sd') return esSinDoc(v);
+    }
+    return true;
+  }
+
+  function baseListaSinSub() {
+    let arr = baseGlobal(false);
+    if (F.etiqueta) {
+      arr = C.filtrarPorEtiqueta(arr, F.etiqueta, C.hoyISO());
+    } else if (enVista[vista]) {
+      arr = arr.filter(enVista[vista]);
+    }
+    return arr;
   }
 
   function filtrar() {
-    const q = C.sinTildes(F.q).toLowerCase();
-    return VISITAS.filter(v => {
-      if (vista !== 'tablero' && enVista[vista] && !enVista[vista](v)) return false;
-      if (vista === 'realizadas' && F.sub) {
-        if (v.resultadoActual !== F.sub) return false;
-      }
-      if (F.cohorte && v.cohorte !== F.cohorte) return false;
-      if (F.plan && v.planificacion !== F.plan) return false;
-      if (F.ambito && C.normAmbito(v.ambito || v.provincia) !== F.ambito) return false;
+    return baseListaSinSub().filter(v => {
+      if (!pasaSubfiltro(v)) return false;
       if (F.estado && v.estado !== F.estado) return false;
       if (F.mes && C.mesDe(v.fechaMax) !== F.mes) return false;
       if (F.venc && v.catVenc !== F.venc) return false;
@@ -70,10 +196,6 @@
       if (F.cruceOct === 'con' && !v.cruceOct) return false;
       if (F.cruceOct === 'Efectiva' && !(v.cruceOct && v.cruceOct.resultado === 'Efectiva')) return false;
       if (F.cruceOct === 'Fallida' && !(v.cruceOct && v.cruceOct.resultado === 'Fallida')) return false;
-      if (q) {
-        const h = C.sinTildes([v.cuit, v.empleador, v.contrato, v.establecimiento, v.localidad, v.tareas, v.nroEstab].join(' ')).toLowerCase();
-        if (h.indexOf(q) < 0) return false;
-      }
       return true;
     }).sort((a, b) => {
       if (vista === 'revisar') {
@@ -85,21 +207,77 @@
     });
   }
 
-  const uniq = k => Array.from(new Set(baseVisitas().map(v => k === 'ambito' ? C.normAmbito(v.ambito || v.provincia) : v[k]).filter(Boolean))).sort();
   const opts = (arr, sel, all) => `<option value="">${all}</option>` + arr.map(x => `<option ${x === sel ? 'selected' : ''}>${esc(x)}</option>`).join('');
   const pct = (a, b) => b ? Math.round(a * 100 / b) + '%' : '–';
   const pct1 = x => (Math.round(x * 1000) / 10).toLocaleString('es-AR') + '%';
   const n1 = x => (Math.round(x * 10) / 10).toLocaleString('es-AR');
+  const fmt = n => Math.round(n || 0).toLocaleString('es-AR');
 
-  function renderTabs() {
+  /* ---------- NAVEGACIÓN LATERAL Y BARRA DE FILTROS GLOBAL ---------- */
+  function renderRail() {
+    const rows = baseGlobal(false);
+    const s = contarEstados(rows);
+    const nRev = rows.filter(v => v.revisarDuplicada).length;
     const excluidas = VISITAS_TODAS.length - C.filtrarCorteFuturo(VISITAS_TODAS, true).length;
-    $('tabs').innerHTML = TABS.map(([k, n]) => {
-      const c = (k === 'tablero' || k === 'logistica') ? '' : `<span class="badge">${VISITAS.filter(enVista[k]).length}</span>`;
-      return `<button class="${k === vista ? 'on' : ''}" onclick="App.ir('${k}')">${n}${c}</button>`;
-    }).join('') + `<label class="cut-toggle" title="Predeterminado: excluye visitas con fecha desde Mayo 2027 inclusive en adelante"><input type="checkbox" ${F.excluirMay27 ? 'checked' : ''} onchange="App.toggleMay27(this.checked)"> Excluir ≥ May-2027${excluidas ? ` (${excluidas})` : ''}</label>`;
+    const item = (k, ico, lbl, cnt, alerta) =>
+      `<button type="button" class="nav ${vista === k ? 'on' : ''}" onclick="App.ir('${k}')"><span>${ico}</span><span>${lbl}</span>${cnt != null ? `<span class="n ${alerta && cnt > 0 ? 'al' : ''}">${fmt(cnt)}</span>` : ''}</button>`;
+
+    $('rail').innerHTML = `
+      <div class="brand"><small>IAPSER ART</small><div>Seguimiento de Visitas</div></div>
+      <div class="grp">Análisis</div>
+      ${item('resumen', '📊', 'Resumen')}
+      ${item('metas', '📈', 'Metas y evolución')}
+      ${item('logistica', '🧭', 'Logística por ámbito')}
+      <div class="grp">Visitas</div>
+      ${item('sin_agendar', '○', 'Sin agendar', s.S)}
+      ${item('agendadas', '📅', 'Agendadas', s.A)}
+      ${item('realizadas', '✅', 'Realizadas', s.Re)}
+      ${item('vencidas', '⚠', 'Vencidas (col. R)', s.V, true)}
+      ${item('todas', '🗂', 'Todas las visitas', s.T)}
+      <div class="grp">Control</div>
+      ${item('revisar', '🔎', 'Errores / A revisar', nRev, nRev > 0)}
+      <button type="button" class="nav" onclick="App.abrirConfig()"><span>⚙</span><span>Configurar</span></button>
+      <a class="nav" href="../index.html"><span>↩</span><span>Plataforma anterior</span></a>
+      <div class="rail-foot">
+        <label class="cut-rail" title="Predeterminado: excluye visitas con fecha máxima desde Mayo 2027 inclusive">
+          <input type="checkbox" ${F.excluirMay27 ? 'checked' : ''} onchange="App.toggleMay27(this.checked)">
+          <span>Excluir ≥ May-2027${excluidas ? ` (${excluidas})` : ''}</span>
+        </label>
+        <div>Etapa 1 → 31/01/27 · Etapa 2 → 30/04/27<br>Urgente: vence según col. R</div>
+      </div>`;
   }
 
-  /* ---------- TABLERO UNIFICADO (Consolidado 500 | Emergentes 100 | Residuales 400) ---------- */
+  function barraFiltrosGlobalHTML(totalMostrado) {
+    const ambitosDisp = Array.from(new Set(baseGlobal(true).map(v => C.normAmbito(v.ambito || v.provincia)).filter(Boolean))).sort();
+    if (F.ambito && ambitosDisp.indexOf(F.ambito) < 0) ambitosDisp.push(F.ambito);
+    const btnU = (val, lbl, cls) => `<button type="button" class="${cls} ${F.cohorte === val ? 'on' : ''}" onclick="App.setCohorte('${val}')">${lbl}</button>`;
+    const hayAct = hayFiltroGlobal(false);
+    return `<div class="fbar">
+      <div class="fg">
+        <label>Universo</label>
+        <div class="seg">
+          ${btnU('', 'Todos', '')}
+          ${btnU('Emergente', 'Emergentes', 'e')}
+          ${btnU('Residual', 'Residuales', 'r')}
+        </div>
+      </div>
+      <div class="fg">
+        <label>Prioridad</label>
+        ${ETAPAS_ORDEN.map(k => `<span class="chk ${F.etapas.indexOf(k) >= 0 ? 'on' : ''}" onclick="App.togEtapa('${k}')"><i></i>${ETAPA_LABEL[k]}</span>`).join('')}
+        ${F.etapas.length < 3 ? `<button type="button" class="clear-lnk" onclick="App.todasEtapas()">todas</button>` : ''}
+      </div>
+      <div class="fg">
+        <label>Ámbito</label>
+        <select class="${F.ambito ? 'act' : ''}" onchange="App.setAmbito(this.value)">
+          <option value="">Todos (${ambitosDisp.length})</option>
+          ${ambitosDisp.map(a => `<option value="${esc(a)}" ${F.ambito === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}
+        </select>
+      </div>
+      ${hayAct ? `<button type="button" class="clear-lnk" onclick="App.limpiarGlobal()">limpiar filtros</button>` : ''}
+      <div class="scope"><b>${fmt(totalMostrado != null ? totalMostrado : baseGlobal(false).length)}</b> visitas</div>
+    </div>`;
+  }
+
   function destruirCharts() {
     if (chMain) { chMain.destroy(); chMain = null; }
     if (chSec) { chSec.destroy(); chSec = null; }
@@ -107,12 +285,216 @@
     if (chPart) { chPart.destroy(); chPart = null; }
   }
 
+  /* ---------- 1. PANTALLA RESUMEN ---------- */
+  function svgDonut(parts, centerTxt, subTxt) {
+    const tot = parts.reduce((a, p) => a + p[0], 0);
+    if (!tot) {
+      return `<svg viewBox="0 0 42 42" width="118" height="118"><circle cx="21" cy="21" r="15.9" fill="none" stroke="#EEF0ED" stroke-width="5.5"/><text x="21" y="22.5" text-anchor="middle" font-size="5.5" fill="#5B6670">0</text></svg>`;
+    }
+    let off = 25;
+    const arcs = parts.map(([v, col]) => {
+      if (!v) return '';
+      const d = (v * 100) / tot;
+      const el = `<circle cx="21" cy="21" r="15.9" fill="none" stroke="${col}" stroke-width="5.5" stroke-dasharray="${d} ${Math.max(0, 100 - d)}" stroke-dashoffset="${off}"/>`;
+      off -= d;
+      return el;
+    }).join('');
+    return `<svg viewBox="0 0 42 42" width="118" height="118">
+      <circle cx="21" cy="21" r="15.9" fill="none" stroke="#EEF0ED" stroke-width="5.5"/>
+      ${arcs}
+      <text x="21" y="21" text-anchor="middle" font-size="6.8" font-weight="700" fill="#17202A">${esc(centerTxt)}</text>
+      <text x="21" y="26.8" text-anchor="middle" font-size="3.5" fill="#5B6670">${esc(subTxt)}</text>
+    </svg>`;
+  }
+
+  function renderResumen() {
+    destruirCharts();
+    const hoy = C.hoyISO();
+    const rows = baseGlobal(false);
+    const s = contarEstados(rows);
+    const sinSubfiltros = !F.ambito && F.etapas.length === 3 && !(F.q && F.q.trim());
+    const incluyeEmerg = F.cohorte !== 'Residual';
+    const TGlobal = sinSubfiltros ? C.tablero(VISITAS, D.historico, hoy) : null;
+
+    const stackSeg = list => list.map(([v, c, l]) => v ? `<div style="flex:${v};background:${c}" title="${esc(l)}: ${fmt(v)}"></div>` : '').join('');
+    const miniSeg = list => list.map(([v, c]) => v ? `<i style="flex:${v};background:${c}"></i>` : '').join('');
+
+    let h = `<div class="page-head"><div><h1>Resumen</h1><div class="sub">Dónde está cada visita hoy, en qué ámbitos se concentra y qué requiere prioridad.</div></div></div>`;
+    h += barraFiltrosGlobalHTML(s.T);
+
+    if (s.V > 0) {
+      const detalleV = [];
+      if (s.sinV) detalleV.push(`<b>${fmt(s.sinV)}</b> sin agendar`);
+      if (s.agV) detalleV.push(`<b>${fmt(s.agV)}</b> agendadas`);
+      const restV = s.V - s.sinV - s.agV;
+      if (restV > 0) detalleV.push(`<b>${fmt(restV)}</b> con resultado sin PDF`);
+      h += `<div class="alert-banner">
+        <span>⚠ <b>${fmt(s.V)} visitas con la fecha máxima (col. R) superada</b>${detalleV.length ? ': ' + detalleV.join(' · ') : ''}.</span>
+        <span class="go" onclick="App.ir('vencidas')">Ver vencidas →</span>
+      </div>`;
+    }
+
+    /* Bloque 1: Estado de las visitas */
+    h += `<div class="sec-t">1 · Estado de las visitas en el padrón</div>
+    <div class="panel" style="margin-bottom:14px">
+      <div class="stack">${s.T ? stackSeg([
+        [s.sinV, COL.sinV, 'Sin agendar · vencidas (col. R)'],
+        [s.sin, COL.sin, 'Sin agendar · en plazo'],
+        [s.agV, COL.agV, 'Agendadas · vencidas (col. R)'],
+        [s.ag, COL.ag, 'Agendadas · en término'],
+        [s.ef, COL.ef, 'Efectivas c/PDF'],
+        [s.fa, COL.fa, 'Fallidas c/PDF'],
+        [s.sd, COL.sd, 'Resultado sin PDF']
+      ]) : ''}</div>
+      <div class="stack-l">
+        <span>○ Sin agendar: <b>${fmt(s.S)}</b> (${pct(s.S, s.T)})</span>
+        <span>📅 Agendadas: <b>${fmt(s.A)}</b> (${pct(s.A, s.T)})</span>
+        <span>✅ Realizadas: <b>${fmt(s.Re)}</b> (${pct(s.Re, s.T)})</span>
+      </div>
+    </div>
+    <div class="three">
+      <div class="sc" onclick="App.ir('sin_agendar')">
+        <h4>Sin agendar <span>Ver lista →</span></h4>
+        <div class="big">${fmt(s.S)} <small>${pct(s.S, s.T)}</small></div>
+        <div class="mini">${miniSeg([[s.sinV, COL.agV], [s.sin, COL.sin]])}</div>
+        <div class="ls">
+          <div class="clickable ${s.sinV ? 'bad' : ''}" onclick="event.stopPropagation();App.irLista('sin_agendar',{sub:'venc'})"><i style="background:${COL.agV}"></i>Vencidas (col. R)<b>${fmt(s.sinV)}</b></div>
+          <div class="clickable" onclick="event.stopPropagation();App.irLista('sin_agendar',{sub:'plazo'})"><i style="background:${COL.sin}"></i>En plazo<b>${fmt(s.sin)}</b></div>
+          ${s.reprog ? `<div class="clickable" onclick="event.stopPropagation();App.irLista('sin_agendar',{sub:'reprog'})"><i style="background:${COL.sd}"></i>Fallidas a reprogramar<b>${fmt(s.reprog)}</b></div>` : ''}
+        </div>
+      </div>
+
+      <div class="sc ag" onclick="App.ir('agendadas')">
+        <h4>Agendadas <span>Ver lista →</span></h4>
+        <div class="big">${fmt(s.A)} <small>${pct(s.A, s.T)}</small></div>
+        <div class="mini">${miniSeg([[s.agV, COL.agV], [s.ag, COL.ag]])}</div>
+        <div class="ls">
+          <div class="clickable ${s.agV ? 'bad' : ''}" onclick="event.stopPropagation();App.irLista('agendadas',{sub:'venc'})"><i style="background:${COL.agV}"></i>Vencidas (col. R)<b>${fmt(s.agV)}</b></div>
+          <div class="clickable" onclick="event.stopPropagation();App.irLista('agendadas',{sub:'plazo'})"><i style="background:${COL.ag}"></i>En término<b>${fmt(s.ag)}</b></div>
+        </div>
+      </div>
+
+      <div class="sc re" onclick="App.ir('realizadas')">
+        <h4>Realizadas <span>Ver lista →</span></h4>
+        <div class="big">${fmt(s.Re)} <small>${pct(s.Re, s.T)}</small></div>
+        <div class="mini">${miniSeg([[s.ef, COL.ef], [s.fa, COL.fa], [s.sd, COL.sd]])}</div>
+        <div class="ls">
+          <div class="clickable" onclick="event.stopPropagation();App.irLista('realizadas',{sub:'ef'})"><i style="background:${COL.ef}"></i>Efectivas c/PDF<b>${fmt(s.ef)}</b></div>
+          <div class="clickable" onclick="event.stopPropagation();App.irLista('realizadas',{sub:'fa'})"><i style="background:${COL.fa}"></i>Fallidas c/PDF<b>${fmt(s.fa)}</b></div>
+          ${s.sd ? `<div class="clickable bad" onclick="event.stopPropagation();App.irLista('realizadas',{sub:'sd'})"><i style="background:${COL.sd}"></i>Resultado sin PDF<b>${fmt(s.sd)}</b></div>` : ''}
+        </div>
+        ${TGlobal && incluyeEmerg && TGlobal.consolidado.historico.conDocumento ? `<div class="card-foot">Objetivo ciclo Emergentes (incl. histórico Sep–Oct): <b>${fmt(TGlobal.emergentes.realizadas)}</b> c/PDF (${TGlobal.emergentes.efectivas} ef · ${TGlobal.emergentes.fallidas} fa) — incluye los cruces Oct del padrón.</div>` : ''}
+      </div>
+    </div>`;
+
+    /* Bloque 2: Concentración por ámbito y prioridades críticas */
+    const rowsAmb = baseGlobal(true); // conserva todos los ámbitos visibles para comparar y clicar
+    const porAmb = {};
+    rowsAmb.forEach(v => {
+      const a = C.normAmbito(v.ambito || v.provincia);
+      (porAmb[a] = porAmb[a] || []).push(v);
+    });
+    const listaAmb = Object.keys(porAmb).map(a => ({ ambito: a, c: contarEstados(porAmb[a]) }))
+      .sort((x, y) => (y.c.T - x.c.T) || (y.c.V - x.c.V) || x.ambito.localeCompare(y.ambito));
+    const limAmb = verTodosAmbitosResumen ? listaAmb.length : Math.min(12, listaAmb.length);
+    const maxAmb = listaAmb.length ? listaAmb[0].c.T : 1;
+
+    const tags = C.resumenEtiquetas(rows, hoy);
+    const tagsPrio = tags.filter(t => t.grupo === 'prioridad');
+    const tagsTar = tags.filter(t => t.grupo === 'tareas');
+    const renderTag = t => `<button type="button" class="tag-btn t-${t.tono}${t.count === 0 ? ' zero' : ''}" onclick="App.verEtiqueta('${t.id}')">${esc(t.label)} <span class="cnt">${fmt(t.count)}</span></button>`;
+
+    h += `<div class="sec-t">2 · Concentración por ámbito y prioridades críticas</div>
+    <div class="two w">
+      <div class="panel">
+        <h3>
+          <span>Concentración por ámbito (${listaAmb.length}) ${F.ambito ? `<span class="pill p-ag">${esc(F.ambito)}</span>` : ''}</span>
+          <span>
+            ${F.ambito ? `<a onclick="App.setAmbito('')" style="margin-right:10px">Quitar filtro</a>` : ''}
+            <a onclick="App.ir('logistica')">Por depto / localidad →</a>
+          </span>
+        </h3>
+        <div class="hbh"><span>Ámbito</span><span>Distribución por estado</span><span class="num">Visitas</span><span class="num">Vencidas</span></div>
+        ${listaAmb.length ? listaAmb.slice(0, limAmb).map(x => `<div class="hb ${F.ambito === x.ambito ? 'on' : ''}" data-amb="${esc(x.ambito)}" onclick="App.setAmbito(this.dataset.amb)" title="Clic para filtrar todo por ${esc(x.ambito)}">
+          <span class="nm" title="${esc(x.ambito)}">${esc(x.ambito)}</span>
+          <div class="b-track"><div class="b" style="width:${Math.max(2, (x.c.T * 100) / maxAmb)}%">${miniSeg([[x.c.sinV, COL.sinV], [x.c.sin, COL.sin], [x.c.agV, COL.agV], [x.c.ag, COL.ag], [x.c.ef + x.c.fa + x.c.sd, COL.ef]])}</div></div>
+          <span class="num"><b>${fmt(x.c.T)}</b></span>
+          <span class="vv">${x.c.V ? fmt(x.c.V) + ' (' + pct(x.c.V, x.c.T) + ')' : '–'}</span>
+        </div>`).join('') : '<div class="note" style="padding:12px 6px">Sin visitas para el filtro activo.</div>'}
+        ${listaAmb.length > 12 ? `<div class="note" style="padding:7px 6px 0"><button type="button" class="clear-lnk" onclick="App.togAmbitosResumen()">${verTodosAmbitosResumen ? 'Mostrar Top 12' : `Ver los ${listaAmb.length} ámbitos (+${listaAmb.length - 12} más)`}</button></div>` : ''}
+        <div class="legend">
+          <span><i style="background:${COL.sinV}"></i>Sin agendar venc.</span>
+          <span><i style="background:${COL.sin}"></i>Sin agendar</span>
+          <span><i style="background:${COL.agV}"></i>Agend. venc.</span>
+          <span><i style="background:${COL.ag}"></i>Agend. en término</span>
+          <span><i style="background:${COL.ef}"></i>Realizadas</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3><span>Prioridades críticas</span><span class="note" style="font-weight:400">clic para abrir lista</span></h3>
+        <div class="tlbl">Prioridad y plazo</div>
+        <div class="tags">${tagsPrio.map(renderTag).join('')}</div>
+        <div class="tlbl" style="margin-top:14px">Críticas vencidas por tipo de tarea (col. R)</div>
+        <div class="tags">${tagsTar.map(renderTag).join('')}</div>
+      </div>
+    </div>`;
+
+    /* Bloque 3: Tareas y calidad de cumplimiento */
+    const tareas = C.catalogoTareas(rows);
+    const limTar = verTodasTareasResumen ? tareas.length : Math.min(10, tareas.length);
+    const scopeCP = F.cohorte === 'Emergente' ? 'emergentes' : (F.cohorte === 'Residual' ? 'residuales' : 'consolidado');
+    const cp = C.cumplimientoYParticipacion(rows, sinSubfiltros ? D.historico : [], scopeCP, hoy);
+    const totCerr = cp.efectivas + cp.fallidas;
+
+    h += `<div class="sec-t">3 · Tareas y calidad de cumplimiento</div>
+    <div class="two w">
+      <div class="panel">
+        <h3><span>Resumen por tarea (${tareas.length})</span><span class="note" style="font-weight:400">clic en una fila para filtrar</span></h3>
+        <div class="tw" style="border:0">
+          <table><thead><tr><th>Tarea</th><th class="num">Total</th><th class="num">Cerradas c/PDF</th><th class="num">Pendientes</th><th class="num">Vencidas (R)</th></tr></thead><tbody>
+          ${tareas.length ? tareas.slice(0, limTar).map(t => `<tr data-tarea="${esc(t.key)}" onclick="App.verTarea(this.dataset.tarea)">
+            <td><b>${esc(t.label)}</b></td>
+            <td class="num">${fmt(t.total)}</td>
+            <td class="num">${fmt(t.cerradas)}</td>
+            <td class="num">${fmt(t.pendientes)}</td>
+            <td class="num ${t.vencidas ? 'venc' : ''}">${fmt(t.vencidas)}</td>
+          </tr>`).join('') : '<tr><td colspan="5" class="note">Sin tareas para el filtro activo.</td></tr>'}
+          </tbody></table>
+        </div>
+        ${tareas.length > 10 ? `<div class="note" style="padding-top:8px"><button type="button" class="clear-lnk" onclick="App.togTareasResumen()">${verTodasTareasResumen ? 'Mostrar Top 10' : `Ver todas las tareas (${tareas.length})`}</button></div>` : ''}
+      </div>
+
+      <div class="panel" style="display:flex;flex-direction:column">
+        <h3><span>Cumplimiento en plazo y efectividad</span><a onclick="App.ir('metas')">Metas y evolución →</a></h3>
+        <div class="donut-wrap" style="margin:6px 0">
+          ${svgDonut([[cp.efectivas, COL.ef], [cp.fallidas, COL.fa]], totCerr ? pct(cp.efectivas, totCerr) : '–', 'efectivas')}
+          <div class="ls" style="flex:1;min-width:190px">
+            <div><i style="background:${COL.ef}"></i>Efectivas cerradas c/PDF<b>${fmt(cp.efectivas)}</b></div>
+            <div><i style="background:${COL.fa}"></i>Fallidas cerradas c/PDF<b>${fmt(cp.fallidas)}</b></div>
+            <div style="margin-top:8px"><i style="background:${COL.ag}"></i>Ejecutadas en término<b>${fmt(cp.enTermino)}</b></div>
+            <div class="${cp.vencidas ? 'bad' : ''}"><i style="background:${COL.agV}"></i>Vencidas fuera de plazo<b>${fmt(cp.vencidas)}</b></div>
+            <div><span class="note">% en término</span><b>${pct1(cp.pctEnTermino)}</b></div>
+          </div>
+        </div>
+        <div class="card-foot">
+          ${sinSubfiltros
+            ? `Solo cuenta para el objetivo lo cerrado <b>con PDF</b>. Ver curvas mensuales y metas en <button type="button" class="clear-lnk" onclick="App.ir('metas')">Metas y evolución →</button>`
+            : `Calculado sobre las <b>${fmt(s.T)}</b> visitas filtradas (el histórico Sep–Oct no posee desglose por ámbito/etapa).`}
+        </div>
+      </div>
+    </div>`;
+
+    $('main').innerHTML = h;
+  }
+
+  /* ---------- 2. METAS Y EVOLUCIÓN (con Chart.js + tablas ejecutivas) ---------- */
   function bloqueCumplimientoHTML(cp, tituloScope) {
     const okBadge = cp.vencidas === 0
       ? `<span class="pill p-ok">✓ 0 vencidas (${pct1(cp.pctEnTermino)} en término)</span>`
-      : `<span class="pill p-bad">⚠ ${cp.vencidas} vencidas (${pct1(cp.pctEnTermino)} en término)</span>`;
-    const activeBtns = `<button class="${partFiltro === 'all' ? 'on' : ''}" onclick="App.partMes('all')">Acumulado</button>` +
-      cp.mesesActivos.map(m => `<button class="${partFiltro === m.key ? 'on' : ''}" onclick="App.partMes('${esc(m.key)}')">${esc(m.label)}</button>`).join('');
+      : `<span class="pill p-bad">⚠ ${fmt(cp.vencidas)} vencidas (${pct1(cp.pctEnTermino)} en término)</span>`;
+    const activeBtns = `<button type="button" class="${partFiltro === 'all' ? 'on' : ''}" onclick="App.partMes('all')">Acumulado</button>` +
+      cp.mesesActivos.map(m => `<button type="button" class="${partFiltro === m.key ? 'on' : ''}" onclick="App.partMes('${esc(m.key)}')">${esc(m.label)}</button>`).join('');
     const resumenMeses = cp.series.filter(x => (x.enTermino + x.vencidas) > 0).slice(0, 4)
       .map(x => `<span>${esc(x.label)}: <b>${x.enTermino}</b> en término · <b class="${x.vencidas ? 'venc' : ''}">${x.vencidas}</b> venc.</span>`).join('');
     return `<div class="grid2" style="margin-top:16px">
@@ -125,7 +507,7 @@
         <div style="height:230px"><canvas id="chPlazo"></canvas></div>
         <div class="exec-foot">
           <div style="display:flex;gap:14px;flex-wrap:wrap">${resumenMeses || 'Sin actividad registrada aún'}</div>
-          <div>Total ${esc(tituloScope)}: <b>${cp.enTermino} en término</b> · <b class="${cp.vencidas ? 'venc' : ''}">${cp.vencidas} vencidas</b> (${pct1(cp.pctEnTermino)})</div>
+          <div>Total ${esc(tituloScope)}: <b>${fmt(cp.enTermino)} en término</b> · <b class="${cp.vencidas ? 'venc' : ''}">${fmt(cp.vencidas)} vencidas</b> (${pct1(cp.pctEnTermino)})</div>
         </div>
       </div>
       <div class="exec-card">
@@ -198,96 +580,101 @@
     renderChartParticipacion(cp, tituloScope);
   }
 
-  function renderTablero() {
+  function renderMetas() {
     destruirCharts();
-    const T = C.tablero(VISITAS, D.historico, C.hoyISO());
+    const hoy = C.hoyISO();
+    const rows = baseGlobal(false);
+    const sinSubfiltros = !F.ambito && F.etapas.length === 3 && !(F.q && F.q.trim());
+    const histScope = sinSubfiltros ? D.historico : [];
+    // Para calcular el tablero respetando filtros de ámbito/prioridad/búsqueda pero manteniendo los 3 universos disponibles:
+    const visitasParaTablero = VISITAS.filter(v => {
+      if (F.etapas.length < 3 && F.etapas.indexOf(etapaClave(v)) < 0) return false;
+      if (F.ambito && C.normAmbito(v.ambito || v.provincia) !== F.ambito) return false;
+      if (F.q && !pasaGlobal(v, false)) return false;
+      return true;
+    });
+    const T = C.tablero(visitasParaTablero, histScope, hoy);
     const co = T.consolidado, em = T.emergentes, re = T.residuales;
-    const card = (k, v, s, click) => `<div class="card${click ? ' click' : ''}"${click ? ` onclick="${click}"` : ''}><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`;
+    const card = (k, v, s, cls, click) => `<div class="card${cls ? ' ' + cls : ''}${click ? ' click' : ''}"${click ? ` onclick="${click}"` : ''}><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || ''}</div></div>`;
 
-    let h = `<div class="subtabs">
-      <button class="${subTab === 'consolidado' ? 'on' : ''}" onclick="App.sub('consolidado')">Consolidado <small>(Meta 500/mes)</small></button>
-      <button class="${subTab === 'emergentes' ? 'on' : ''}" onclick="App.sub('emergentes')">Emergentes Mensuales <small>(Meta 100/mes)</small></button>
-      <button class="${subTab === 'residuales' ? 'on' : ''}" onclick="App.sub('residuales')">Stock Residual <small>(Meta 400/mes)</small></button>
-    </div>`;
+    let h = `<div class="page-head"><div><h1>Metas y evolución</h1><div class="sub">Meta vigente: 500 visitas/mes desde nov-26 (100 emergentes + 400 residuales). Solo cuenta lo cerrado <b>con PDF</b>.</div></div></div>`;
+    h += barraFiltrosGlobalHTML(rows.length);
+
+    if (!sinSubfiltros) {
+      h += `<div class="info-box">Filtro activo sobre el padrón (${fmt(visitasParaTablero.length)} visitas). El histórico Sep–Oct no tiene columna de ámbito ni etapa, por lo que no se incluye al filtrar.</div>`;
+    }
+
+    h += `<div style="margin-bottom:14px"><div class="seg">
+      <button type="button" class="${subTab === 'consolidado' ? 'on' : ''}" onclick="App.sub('consolidado')">Objetivo y ritmo (500/mes)</button>
+      <button type="button" class="e ${subTab === 'emergentes' ? 'on' : ''}" onclick="App.sub('emergentes')">Emergentes (100/mes)</button>
+      <button type="button" class="r ${subTab === 'residuales' ? 'on' : ''}" onclick="App.sub('residuales')">Stock Residual (400/mes)</button>
+    </div></div>`;
 
     if (subTab === 'consolidado') {
-      h += `<div class="hero-dual">
-        <div class="hero-box" onclick="App.sub('emergentes')">
-          <div class="ht"><span>Universo 1 · Emergentes Mensuales</span><span>Ver detalle →</span></div>
-          <div class="hv">${em.realizadas.toLocaleString('es-AR')} <span style="font-size:14px;font-weight:400;color:var(--mut)">/ ${em.metaAnual.toLocaleString('es-AR')} (${pct1(em.pct)})</span></div>
-          <div class="hs"><span>Meta: <b>${em.metaMes}/mes</b></span><span>Efectivas: <b>${em.efectivas}</b></span><span>Fallidas: <b>${em.fallidas}</b></span><span>Programadas mes: <b>${em.agendadasMesActual}</b></span></div>
-        </div>
-        <div class="hero-box res" onclick="App.sub('residuales')">
-          <div class="ht"><span>Universo 2 · Stock Residual (&lt; oct-26)</span><span>Ver detalle →</span></div>
-          <div class="hv">${re.realizadas.toLocaleString('es-AR')} <span style="font-size:14px;font-weight:400;color:var(--mut)">/ ${re.total.toLocaleString('es-AR')} (${pct1(re.pct)})</span></div>
-          <div class="hs"><span>Meta: <b>${re.metaMes}/mes</b> (desde Nov-26)</span><span>Pendientes: <b>${re.pendientes.toLocaleString('es-AR')}</b></span><span>Programadas mes: <b>${re.agendadasMesActual}</b></span><span>Vencidas: <b class="${re.vencidas ? 'venc' : ''}">${re.vencidas.toLocaleString('es-AR')}</b></span></div>
-        </div>
+      h += `<div class="cards">
+        ${card('Objetivo Consolidado (c/PDF)', `${fmt(co.realizadas)} <small>/ ${fmt(co.planTotal)}</small>`, `${pct1(co.pct)} del plan${co.historico.conDocumento ? ` · incluye ${co.historico.conDocumento} Sep–Oct` : ''}`, 'ok')}
+        ${card('Programadas este mes (' + co.mesActual + ')', `${fmt(co.agendadasMesActual)} <small>/ ${co.metaMesVigente}</small>`, `${pct(co.agendadasMesActual, co.metaMesVigente)} de la meta mensual (100 em + 400 res)`, 'warn')}
+        ${card('Ritmo requerido Etapa 1', `${n1(re.ritmoRequeridoE1)} <small>/mes</small>`, `${re.mesesRestE1} mes(es) restantes hasta 31/01/27`, '')}
+        ${card('Vencidas (col. R)', fmt(co.vencidas), `${fmt(re.vencidas)} residual + ${fmt(em.vencidas)} emergente · clic para ver →`, co.vencidas ? 'bad' : '', "App.verVencidas('')")}
+        ${card('Con resultado sin PDF', fmt(co.sinDocumento), 'no cuentan para el objetivo' + (co.historico.sinDocumento ? ` (${co.historico.sinDocumento} Sep–Oct)` : ''), co.sinDocumento ? 'bad' : '')}
       </div>
-      <div class="cards">
-        ${card('Objetivo Consolidado (c/PDF)', co.realizadas.toLocaleString('es-AR'), `de ${co.planTotal.toLocaleString('es-AR')} del plan (${pct1(co.pct)}) · incluye ${co.historico.conDocumento} Sep–Oct`)}
-        ${card('Meta mensual vigente (' + co.mesActual + ')', co.metaMesVigente, '100 emergentes + 400 residuales')}
-        ${card('Programadas este mes', co.agendadasMesActual, `por preventor · vs ${co.metaMesVigente} (${pct(co.agendadasMesActual, co.metaMesVigente)})`)}
-        ${card('Sin programar / a reprogramar', co.sinAgendar.toLocaleString('es-AR'), 'en tabla vigente')}
-        ${card('Vencidas (col. R)', co.vencidas.toLocaleString('es-AR'), `${re.vencidas.toLocaleString('es-AR')} residual + ${em.vencidas.toLocaleString('es-AR')} emergente · clic para ver →`, "App.verVencidas('')")}
-        ${card('Con resultado sin PDF', co.sinDocumento, 'no cuentan para el objetivo' + (co.historico.sinDocumento ? ` (${co.historico.sinDocumento} Sep–Oct)` : ''))}
-      </div>
-      <h2>Evolución Mensual Consolidada · Cerradas c/PDF (apiladas) y Programadas vs Meta (100 Sep–Oct · 500 Nov+)</h2>
-      <div class="card" style="height:290px"><canvas id="chMain"></canvas></div>
+      <div class="sec-t">Evolución mensual consolidada · cerradas c/PDF y programadas vs. meta</div>
+      <div class="panel" style="height:295px;margin-bottom:16px"><canvas id="chMain"></canvas></div>
       <div class="grid2">
-        <div><h2>Resumen Consolidado por Mes</h2>
-        <table><thead><tr><th>Mes</th><th>Meta</th><th>Emerg. (Ef/Fa)</th><th>Resid. (Ef/Fa)</th><th>Total c/PDF</th><th>Cumpl.</th><th>Programadas</th></tr></thead><tbody>
-        ${co.meses.map(m => `<tr style="cursor:default"><td>${m.mes}</td><td>${m.meta}</td><td>${m.emTot} <span class="note">(${m.emEf}/${m.emFa})</span></td><td>${m.resTot} <span class="note">(${m.resEf}/${m.resFa})</span></td><td><b>${m.total}</b></td><td><div class="bar"><i style="width:${Math.min(100, m.total * 100 / m.meta)}%"></i></div>${pct(m.total, m.meta)}</td><td>${m.agendadas == null ? '–' : m.agendadas}</td></tr>`).join('')}
-        </tbody></table></div>
-        <div><h2>Por Etapa (Total Padrón)</h2>
-        <table><thead><tr><th>Etapa</th><th>Meta etapa</th><th>Total</th><th>Cerradas</th><th>Avance</th><th>Sin programar</th><th>Vencidas (col. R)</th></tr></thead><tbody>
-        ${co.etapas.map(b => `<tr style="cursor:default"><td>${esc(b.etapa)}</td><td>${/Urgente/.test(b.etapa) ? 'según col. R' : C.aDMY(C.CONFIG.PLAZO_ETAPA[b.etapa])}</td><td>${b.total}</td><td>${b.cerradas}</td><td><div class="bar"><i style="width:${b.total ? b.cerradas * 100 / b.total : 0}%"></i></div>${pct(b.cerradas, b.total)}</td><td>${b.sinAgendar}</td><td class="${b.vencidas ? 'venc' : ''}">${b.vencidas}</td></tr>`).join('')}
-        ${co.historico.total ? `<tr style="cursor:default"><td>Histórico Sep–Oct (Emergentes)</td><td>ejecutadas</td><td>${co.historico.total}</td><td>${co.historico.conDocumento}</td><td><div class="bar"><i style="width:${co.historico.conDocumento * 100 / co.historico.total}%"></i></div>${pct(co.historico.conDocumento, co.historico.total)}</td><td>0</td><td>0</td></tr>` : ''}
-        </tbody></table></div>
-      </div>
-      <h2>Resumen por Tarea (clic en una fila para filtrar)</h2>
-      <table><thead><tr><th>Tarea</th><th>Total visitas</th><th>Cerradas c/PDF</th><th>Pendientes</th><th>Vencidas (col. R)</th></tr></thead><tbody>
-      ${C.catalogoTareas(VISITAS).map(t => `<tr onclick="App.verTarea('${esc(t.key)}')"><td><b>${esc(t.label)}</b></td><td>${t.total.toLocaleString('es-AR')}</td><td>${t.cerradas.toLocaleString('es-AR')}</td><td>${t.pendientes.toLocaleString('es-AR')}</td><td class="${t.vencidas ? 'venc' : ''}">${t.vencidas.toLocaleString('es-AR')}</td></tr>`).join('')}
-      </tbody></table>`;
+        <div class="panel"><h3>Resumen consolidado por mes</h3>
+          <div class="tw" style="border:0"><table><thead><tr><th>Mes</th><th class="num">Meta</th><th class="num">Emerg. (Ef/Fa)</th><th class="num">Resid. (Ef/Fa)</th><th class="num">Total c/PDF</th><th>Cumpl.</th><th class="num">Prog.</th></tr></thead><tbody>
+          ${co.meses.map(m => `<tr style="cursor:default;${m.futuro ? 'color:#8A949C' : ''}"><td>${m.mes}</td><td class="num">${m.meta}</td><td class="num">${m.emTot} <span class="note">(${m.emEf}/${m.emFa})</span></td><td class="num">${m.resTot} <span class="note">(${m.resEf}/${m.resFa})</span></td><td class="num"><b>${m.total}</b></td><td><span class="bar"><i style="width:${Math.min(100, (m.total * 100) / m.meta)}%"></i></span>${pct(m.total, m.meta)}</td><td class="num">${m.agendadas == null ? '–' : m.agendadas}</td></tr>`).join('')}
+          </tbody></table></div>
+        </div>
+        <div class="panel"><h3>Por etapa</h3>
+          <div class="tw" style="border:0"><table><thead><tr><th>Etapa</th><th>Plazo</th><th class="num">Total</th><th class="num">Cerradas</th><th>Avance</th><th class="num">Sin prog.</th><th class="num">Venc. (R)</th></tr></thead><tbody>
+          ${co.etapas.map(b => `<tr style="cursor:default"><td><b>${esc(b.etapa)}</b></td><td>${/Urgente/.test(b.etapa) ? 'según col. R' : C.aDMY(C.CONFIG.PLAZO_ETAPA[b.etapa])}</td><td class="num">${fmt(b.total)}</td><td class="num">${fmt(b.cerradas)}</td><td><span class="bar"><i style="width:${b.total ? (b.cerradas * 100) / b.total : 0}%"></i></span>${pct(b.cerradas, b.total)}</td><td class="num">${fmt(b.sinAgendar)}</td><td class="num ${b.vencidas ? 'venc' : ''}">${fmt(b.vencidas)}</td></tr>`).join('')}
+          ${co.historico.total ? `<tr style="cursor:default"><td>Histórico Sep–Oct (Emerg.)</td><td>ejecutadas</td><td class="num">${fmt(co.historico.total)}</td><td class="num">${fmt(co.historico.conDocumento)}</td><td><span class="bar"><i style="width:${(co.historico.conDocumento * 100) / co.historico.total}%"></i></span>${pct(co.historico.conDocumento, co.historico.total)}</td><td class="num">0</td><td class="num">0</td></tr>` : ''}
+          </tbody></table></div>
+        </div>
+      </div>`;
     } else if (subTab === 'emergentes') {
       h += `<div class="cards">
-        ${card('Realizadas del ciclo (c/PDF)', em.realizadas, `de ${em.metaAnual.toLocaleString('es-AR')} (${pct1(em.pct)}) · restan ${em.restanMetaAnual}`)}
-        ${card('Efectivas / Fallidas', `${em.efectivas} / ${em.fallidas}`, `tasa efectividad ${pct1(em.tasaEfectividad)}`)}
-        ${card('Meta acumulada a hoy', em.metaAcum, `desvío ${em.desvio >= 0 ? '+' : ''}${em.desvio} (100/mes)`)}
-        ${card('Programadas este mes', em.agendadasMesActual, `meta ${em.metaMes}/mes · ${pct(em.agendadasMesActual, em.metaMes)}`)}
-        ${card('Promedio mensual', n1(em.promedioMensual), em.mejorMes ? `mejor mes ${em.mejorMes.mes}: ${em.mejorMes.total} (${em.mejorMes.efectivas} ef + ${em.mejorMes.fallidas} fa)` : '')}
-        ${card('Arrastre Oct / Vencidas (col. R)', `${em.vencidasOctubre} / ${em.vencidas}`, `con PDF Oct (cruce): ${em.cruceOct.total} (${em.cruceOct.efectivas} ef · ${em.cruceOct.fallidas} fa) · clic →`, "App.verVencidas('Emergente')")}
+        ${card('Realizadas del ciclo (c/PDF)', `${fmt(em.realizadas)} <small>/ ${fmt(em.metaAnual)}</small>`, `${pct1(em.pct)} · restan ${fmt(em.restanMetaAnual)}`, 'ok')}
+        ${card('Efectivas / Fallidas', `${em.efectivas} / ${em.fallidas}`, `tasa efectividad ${pct1(em.tasaEfectividad)}`, '')}
+        ${card('Meta acumulada a hoy', fmt(em.metaAcum), `desvío ${em.desvio >= 0 ? '+' : ''}${em.desvio} (100/mes)`, em.desvio < 0 ? 'bad' : 'ok')}
+        ${card('Programadas este mes', fmt(em.agendadasMesActual), `meta ${em.metaMes}/mes · ${pct(em.agendadasMesActual, em.metaMes)}`, 'warn')}
+        ${card('Promedio mensual', n1(em.promedioMensual), em.mejorMes ? `mejor mes ${em.mejorMes.mes}: ${em.mejorMes.total} (${em.mejorMes.efectivas} ef + ${em.mejorMes.fallidas} fa)` : '', '')}
+        ${card('Arrastre Oct / Vencidas (col. R)', `${em.vencidasOctubre} / ${em.vencidas}`, `con PDF Oct (cruce): ${em.cruceOct.total} (${em.cruceOct.efectivas} ef · ${em.cruceOct.fallidas} fa) · clic →`, em.vencidas ? 'bad' : '', "App.verVencidas('Emergente')")}
       </div>
-      <div class="info-box" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <span><strong>Cruce PDF Octubre vs Emergentes (CUIT + Estab col. M):</strong> ${em.cruceOct.total} filas emergentes coinciden con un PDF de octubre (<b>${em.cruceOct.efectivas} Efectivas</b> y <b>${em.cruceOct.fallidas} Fallidas</b>). Se muestran marcadas en la tabla sin sumar doble al objetivo.</span>
-        <button class="btn sec sm" onclick="App.verCruceOct()">Ver esas ${em.cruceOct.total} filas →</button>
+      <div class="info-box" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+        <span><strong>Cruce PDF Octubre vs Emergentes (CUIT + Estab col. M):</strong> ${em.cruceOct.total} filas emergentes coinciden con un PDF de octubre (<b>${em.cruceOct.efectivas} Efectivas</b> y <b>${em.cruceOct.fallidas} Fallidas</b>). Se marcan en la tabla sin sumar doble al objetivo.</span>
+        <button type="button" class="btn sec sm" onclick="App.verCruceOct()">Ver esas ${em.cruceOct.total} filas →</button>
       </div>
       <div class="grid2">
-        <div><h2>Emergentes por Mes · Efectivas + Fallidas c/PDF y Programadas (Meta 100/mes)</h2><div class="card" style="height:270px"><canvas id="chMain"></canvas></div></div>
-        <div><h2>Cortes Trimestrales (Meta 300/trimestre)</h2>
-        <table><thead><tr><th>Corte</th><th>Período</th><th>Meta</th><th>Efectivas</th><th>Fallidas</th><th>Total</th><th>Cumpl.</th></tr></thead><tbody>
-        ${em.trimestres.map(t => `<tr style="cursor:default"><td>${t.q}</td><td>${t.desde} → ${t.hasta}</td><td>${t.meta}</td><td>${t.efectivas}</td><td>${t.fallidas}</td><td><b>${t.total}</b></td><td><div class="bar"><i style="width:${Math.min(100, t.total * 100 / t.meta)}%"></i></div>${pct(t.total, t.meta)}</td></tr>`).join('')}
-        </tbody></table></div>
+        <div class="panel"><h3>Emergentes por mes · Efectivas + Fallidas c/PDF y Programadas (Meta 100/mes)</h3><div style="height:260px"><canvas id="chMain"></canvas></div></div>
+        <div class="panel"><h3>Cortes trimestrales (Meta 300/trimestre)</h3>
+          <div class="tw" style="border:0"><table><thead><tr><th>Corte</th><th>Período</th><th class="num">Meta</th><th class="num">Ef.</th><th class="num">Fa.</th><th class="num">Total</th><th>Cumpl.</th></tr></thead><tbody>
+          ${em.trimestres.map(t => `<tr style="cursor:default"><td><b>${t.q}</b></td><td>${t.desde} → ${t.hasta}</td><td class="num">${t.meta}</td><td class="num">${t.efectivas}</td><td class="num">${t.fallidas}</td><td class="num"><b>${t.total}</b></td><td><span class="bar"><i style="width:${Math.min(100, (t.total * 100) / t.meta)}%"></i></span>${pct(t.total, t.meta)}</td></tr>`).join('')}
+          </tbody></table></div>
+        </div>
       </div>`;
     } else {
       h += `<div class="cards">
-        ${card('Residuales cerradas (c/PDF)', re.realizadas, `de ${re.total.toLocaleString('es-AR')} (${pct1(re.pct)})`)}
-        ${card('Pendientes a liquidar', re.pendientes.toLocaleString('es-AR'), `Etapa 1 fin ${C.aDMY(re.finE1)} · Etapa 2 fin ${C.aDMY(re.finE2)}`)}
-        ${card('Programadas este mes', re.agendadasMesActual, `meta ${re.metaMes}/mes · ${pct(re.agendadasMesActual, re.metaMes)}`)}
-        ${card('Ritmo requerido (Etapa 1)', n1(re.ritmoRequeridoE1), `visitas/mes (${re.mesesRestE1} mes/es hasta Ene-27)`)}
-        ${card('Técnicas / Especiales', `${re.tecnicas} / ${re.especiales}`, 'tipología del stock residual')}
-        ${card('Vencidas (col. R)', re.vencidas.toLocaleString('es-AR'), 'fecha máx. (col. R) superada · clic para ver →', "App.verVencidas('Residual')")}
+        ${card('Residuales cerradas (c/PDF)', `${fmt(re.realizadas)} <small>/ ${fmt(re.total)}</small>`, `${pct1(re.pct)} del stock residual`, 'ok')}
+        ${card('Pendientes a liquidar', fmt(re.pendientes), `Etapa 1 fin ${C.aDMY(re.finE1)} · Etapa 2 fin ${C.aDMY(re.finE2)}`, 'warn')}
+        ${card('Programadas este mes', fmt(re.agendadasMesActual), `meta ${re.metaMes}/mes · ${pct(re.agendadasMesActual, re.metaMes)}`, '')}
+        ${card('Ritmo requerido (Etapa 1)', `${n1(re.ritmoRequeridoE1)} <small>/mes</small>`, `${re.mesesRestE1} mes(es) hasta Ene-27`, '')}
+        ${card('Técnicas / Especiales', `${fmt(re.tecnicas)} / ${fmt(re.especiales)}`, 'tipología del stock residual', '')}
+        ${card('Vencidas (col. R)', fmt(re.vencidas), 'fecha máx. (col. R) superada · clic para ver →', re.vencidas ? 'bad' : '', "App.verVencidas('Residual')")}
       </div>
-      <div class="grid2">
-        <div><h2>Residuales por Mes · Cerradas c/PDF y Programadas (Meta 400/mes)</h2><div class="card" style="height:270px"><canvas id="chMain"></canvas></div></div>
-        <div><h2>Curva de Extinción (Burn-down a 400/mes)</h2><div class="card" style="height:270px"><canvas id="chSec"></canvas></div></div>
+      <div class="grid2" style="margin-bottom:16px">
+        <div class="panel"><h3>Residuales por mes · Cerradas c/PDF y Programadas (Meta 400/mes)</h3><div style="height:260px"><canvas id="chMain"></canvas></div></div>
+        <div class="panel"><h3>Curva de extinción (Burn-down a 400/mes)</h3><div style="height:260px"><canvas id="chSec"></canvas></div></div>
       </div>
-      <h2>Stock Residual por Etapa</h2>
-      <table><thead><tr><th>Etapa</th><th>Meta etapa</th><th>Total</th><th>Cerradas c/PDF</th><th>Avance</th><th>Programadas</th><th>Sin programar</th><th>Vencidas (col. R)</th></tr></thead><tbody>
-      ${re.etapas.map(b => `<tr style="cursor:default"><td>${esc(b.etapa)}</td><td>${/Urgente/.test(b.etapa) ? 'según col. R' : C.aDMY(C.CONFIG.PLAZO_ETAPA[b.etapa])}</td><td>${b.total}</td><td>${b.cerradas}</td><td><div class="bar"><i style="width:${b.total ? b.cerradas * 100 / b.total : 0}%"></i></div>${pct(b.cerradas, b.total)}</td><td>${b.agendadasPend}</td><td>${b.sinAgendar}</td><td class="${b.vencidas ? 'venc' : ''}">${b.vencidas}</td></tr>`).join('')}
-      </tbody></table>`;
+      <div class="panel"><h3>Stock residual por etapa</h3>
+        <div class="tw" style="border:0"><table><thead><tr><th>Etapa</th><th>Meta etapa</th><th class="num">Total</th><th class="num">Cerradas c/PDF</th><th>Avance</th><th class="num">Programadas</th><th class="num">Sin programar</th><th class="num">Vencidas (R)</th></tr></thead><tbody>
+        ${re.etapas.map(b => `<tr style="cursor:default"><td><b>${esc(b.etapa)}</b></td><td>${/Urgente/.test(b.etapa) ? 'según col. R' : C.aDMY(C.CONFIG.PLAZO_ETAPA[b.etapa])}</td><td class="num">${fmt(b.total)}</td><td class="num">${fmt(b.cerradas)}</td><td><span class="bar"><i style="width:${b.total ? (b.cerradas * 100) / b.total : 0}%"></i></span>${pct(b.cerradas, b.total)}</td><td class="num">${fmt(b.agendadasPend)}</td><td class="num">${fmt(b.sinAgendar)}</td><td class="num ${b.vencidas ? 'venc' : ''}">${fmt(b.vencidas)}</td></tr>`).join('')}
+        </tbody></table></div>
+      </div>`;
     }
 
-    const cp = C.cumplimientoYParticipacion(VISITAS, D.historico, subTab, C.hoyISO());
+    const cp = C.cumplimientoYParticipacion(visitasParaTablero, histScope, subTab, hoy);
     if (partFiltro !== 'all' && !cp.mesesActivos.some(m => m.key === partFiltro)) partFiltro = 'all';
     const tituloScope = subTab === 'consolidado' ? 'Consolidado' : (subTab === 'emergentes' ? 'Emergentes' : 'Residuales');
     h += bloqueCumplimientoHTML(cp, tituloScope);
@@ -307,7 +694,7 @@
             { label: 'Emerg. Fallidas c/PDF',  data: ms.map(x => x.emFa), backgroundColor: '#B3261E', stack: 'cerradas', order: 2 },
             { label: 'Resid. Efectivas c/PDF', data: ms.map(x => x.resEf), backgroundColor: '#0F4C5C', stack: 'cerradas', order: 2 },
             { label: 'Resid. Fallidas c/PDF',  data: ms.map(x => x.resFa), backgroundColor: '#D97706', stack: 'cerradas', order: 2 },
-            { label: 'Programadas (mes)',        data: ms.map(x => x.agendadas), backgroundColor: 'rgba(91,102,112,0.55)', stack: 'agenda', order: 2 },
+            { label: 'Programadas (mes)',      data: ms.map(x => x.agendadas), backgroundColor: 'rgba(91,102,112,0.55)', stack: 'agenda', order: 2 },
             { type: 'line', label: 'Meta mensual (100 → 500)', data: ms.map(x => x.meta), borderColor: '#A8470A', borderWidth: 2, borderDash: [6, 4], pointRadius: 3, stepped: true, stack: 'meta', order: 1 }
           ]
         },
@@ -328,7 +715,7 @@
           datasets: [
             { label: 'Efectivas c/PDF', data: ms.map(x => x.futuro ? null : x.efectivas), backgroundColor: '#1E7B4B', stack: 'cerradas', order: 2 },
             { label: 'Fallidas c/PDF',  data: ms.map(x => x.futuro ? null : x.fallidas),  backgroundColor: '#B3261E', stack: 'cerradas', order: 2 },
-            { label: 'Programadas',       data: ms.map(x => x.agendadas), backgroundColor: 'rgba(15,76,92,0.55)', stack: 'agenda', order: 2 },
+            { label: 'Programadas',     data: ms.map(x => x.agendadas), backgroundColor: 'rgba(15,76,92,0.55)', stack: 'agenda', order: 2 },
             { type: 'line', label: 'Meta ' + em.metaMes + '/mes', data: ms.map(x => x.meta), borderColor: '#A8470A', borderDash: [6, 4], pointRadius: 0, stack: 'meta', order: 1 }
           ]
         },
@@ -349,7 +736,7 @@
           datasets: [
             { label: 'Efectivas c/PDF', data: ms.map(x => x.futuro ? null : x.efectivas), backgroundColor: '#0F4C5C', stack: 'cerradas', order: 2 },
             { label: 'Fallidas c/PDF',  data: ms.map(x => x.futuro ? null : x.fallidas),  backgroundColor: '#D97706', stack: 'cerradas', order: 2 },
-            { label: 'Programadas',       data: ms.map(x => x.agendadas), backgroundColor: 'rgba(91,102,112,0.55)', stack: 'agenda', order: 2 },
+            { label: 'Programadas',     data: ms.map(x => x.agendadas), backgroundColor: 'rgba(91,102,112,0.55)', stack: 'agenda', order: 2 },
             { type: 'line', label: 'Meta ' + re.metaMes + '/mes', data: ms.map(x => x.meta), borderColor: '#A8470A', borderDash: [6, 4], pointRadius: 0, stack: 'meta', order: 1 }
           ]
         },
@@ -373,81 +760,16 @@
     }
   }
 
-  /* ---------- GRILLA OPERATIVA ---------- */
-  function renderLista() {
-    destruirCharts();
-    const lista = filtrar();
-    const total = lista.length, pags = Math.max(1, Math.ceil(total / PAGE));
-    if (pagina > pags) pagina = pags;
-    const sl = lista.slice((pagina - 1) * PAGE, pagina * PAGE);
-    const meses = Array.from(new Set(baseVisitas().map(v => C.mesDe(v.fechaMax)).filter(Boolean))).sort();
-    const enEstaVista = VISITAS.filter(v => vista === 'tablero' || !enVista[vista] || enVista[vista](v));
-    const nVenc = enEstaVista.filter(v => v.catVenc === 'vencida').length;
-    const nMesAct = enEstaVista.filter(v => v.catVenc === 'mes_actual').length;
-    const nOtroMes = enEstaVista.filter(v => v.catVenc === 'otro_mes').length;
-    const tareasCat = C.catalogoTareas(enEstaVista);
-    const tareaOpts = tareasCat.map(t => `<option value="${esc(t.key)}" ${F.tarea === t.key ? 'selected' : ''}>${esc(t.label)} (${t.total})</option>`).join('') +
-      (F.tarea && !tareasCat.some(t => t.key === F.tarea) ? `<option value="${esc(F.tarea)}" selected>${esc(F.tarea)} (0)</option>` : '');
-    const hayFiltros = !!(F.q || F.venc || F.tarea || F.cohorte || F.plan || F.ambito || F.mes || F.estado || F.cruceOct || F.sub || F.errTipo);
-    let h = `<div class="filters">
-      <input type="search" placeholder="Buscar CUIT, empleador, contrato, localidad…" value="${esc(F.q)}" oninput="App.f('q',this.value,true)">
-      <select onchange="App.f('tarea',this.value)" title="Filtrar por tarea (columna Q)">
-        <option value="">Tarea: todas</option>
-        ${tareaOpts}
-      </select>
-      <select onchange="App.f('venc',this.value)" title="Vencimiento según Fecha máxima (columna R)">
-        <option value="">Vencimiento (col. R): todos</option>
-        <option value="vencida" ${F.venc === 'vencida' ? 'selected' : ''}>Vencidas (${nVenc})</option>
-        <option value="mes_actual" ${F.venc === 'mes_actual' ? 'selected' : ''}>Vencen mes actual (${nMesAct})</option>
-        <option value="otro_mes" ${F.venc === 'otro_mes' ? 'selected' : ''}>Vencen otro mes (${nOtroMes})</option>
-      </select>
-      <select onchange="App.f('cohorte',this.value)">${opts(['Residual', 'Emergente'], F.cohorte, 'Cohorte: todas')}</select>
-      <select onchange="App.f('plan',this.value)">${opts(uniq('planificacion'), F.plan, 'Etapa: todas')}</select>
-      <select onchange="App.f('ambito',this.value)">${opts(uniq('ambito'), F.ambito, 'Ámbito: todos')}</select>
-      <select onchange="App.f('mes',this.value)">${opts(meses, F.mes, 'Mes fecha máx.: todos')}</select>
-      <select onchange="App.f('estado',this.value)">${opts(Object.values(E), F.estado, 'Estado: todos')}</select>
-      <select onchange="App.f('cruceOct',this.value)">
-        <option value="">Cruce PDF Oct: todos</option>
-        <option value="con" ${F.cruceOct === 'con' ? 'selected' : ''}>Con PDF de Oct (todos)</option>
-        <option value="Efectiva" ${F.cruceOct === 'Efectiva' ? 'selected' : ''}>PDF Oct: Efectiva</option>
-        <option value="Fallida" ${F.cruceOct === 'Fallida' ? 'selected' : ''}>PDF Oct: Fallida</option>
-      </select>
-      ${vista === 'realizadas' ? `<select onchange="App.f('sub',this.value)"><option value="">Efectivas y fallidas</option><option value="Efectiva" ${F.sub === 'Efectiva' ? 'selected' : ''}>Solo efectivas</option><option value="Fallida" ${F.sub === 'Fallida' ? 'selected' : ''}>Solo fallidas</option></select>` : ''}
-      ${vista === 'revisar' ? `<select onchange="App.f('errTipo',this.value)"><option value="">Tipo de error: todos</option><option value="misma_tarea_anios" ${F.errTipo === 'misma_tarea_anios' ? 'selected' : ''}>Misma tarea año ant. y actual (${VISITAS.filter(v => v.errores && v.errores.indexOf('misma_tarea_anios') >= 0).length})</option><option value="duplicada_fecha" ${F.errTipo === 'duplicada_fecha' ? 'selected' : ''}>Duplicada otra fecha (${VISITAS.filter(v => v.errores && v.errores.indexOf('duplicada_fecha') >= 0).length})</option></select>` : ''}
-      ${hayFiltros ? '<button class="btn sec sm" onclick="App.limpiarFiltros()">Limpiar filtros</button>' : ''}
-      <button class="btn sec sm" onclick="App.exportar()">Exportar CSV</button>
-      <span class="note">${total} visitas</span></div>`;
-    h += `<div style="overflow:auto;max-height:72vh"><table class="grid-op"><thead><tr><th>Cohorte</th><th>Etapa</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Localidad</th><th>Tareas</th><th title="Fecha máxima según Columna R de la planilla">Fecha máx. (R)</th><th title="Fecha programada cargada por el preventor">F. programada</th><th title="Fecha en que se realizó efectivamente la visita">Fecha real</th><th>Estado</th><th>Acción</th></tr></thead><tbody>`;
-    sl.forEach(v => {
-      const tareasTxt = v.tareas.split('//').join(' · ');
-      const estabTxt = `${v.nroEstab} · ${v.establecimiento}`;
-      const locTxt = `${v.localidad}, ${v.provincia}`;
-      const cruceTag = v.cruceOct ? ` <a href="${esc(v.cruceOct.url)}" target="_blank" onclick="event.stopPropagation()" class="pill ${v.cruceOct.resultado === 'Efectiva' ? 'p-ok' : 'p-bad'}" title="PDF cargado en Octubre (${esc(v.cruceOct.fecha)} · ${esc(v.cruceOct.tarea)})">PDF Oct: ${v.cruceOct.resultado} ↗</a>` : '';
-      const esAnios = v.errores && v.errores.indexOf('misma_tarea_anios') >= 0;
-      const errTag = esAnios
-        ? `<span class="pill p-bad" title="Misma tarea repetida entre año anterior y actual: ${esc((v.tareasRepetidasAnio || []).join(', '))}">🔁 Año ant./act.</span> `
-        : (v.revisarDuplicada ? '<span class="pill p-warn" title="Misma tarea y establecimiento con fecha distinta">⚠ Duplicada</span> ' : '');
-      const fechaCelda = C.aDMY(v.fechaMax) + (v.vencida ? ' <span class="pill p-bad">Vencida</span>' : '');
-      h += `<tr class="${v.vencida ? 'is-venc' : ''}" data-id="${esc(v.id)}" onclick="App.abrir(this.dataset.id)"><td>${v.cohorte}</td><td>${esc(v.planificacion)}</td><td>${esc(v.cuit)}</td><td class="clip" style="max-width:190px" title="${esc(v.empleador)}">${esc(v.empleador)}</td>
-        <td class="clip" style="max-width:140px" title="${esc(estabTxt)}">${esc(estabTxt)}</td><td class="clip" style="max-width:140px" title="${esc(locTxt)}">${esc(locTxt)}</td>
-        <td class="clip" style="max-width:250px" title="${esc(tareasTxt)}">${errTag}${cruceTag ? cruceTag + ' ' : ''}${esc(tareasTxt)}</td>
-        <td class="${v.vencida ? 'venc' : ''}">${fechaCelda}</td><td>${C.aDMY(v.fechaAgendada)}</td><td>${C.aDMY(v.fechaReal)}</td><td>${pillEstado(v.estado)}</td>
-        <td><button class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📄 PDF</button></td></tr>`;
-    });
-    if (!sl.length) h += '<tr><td colspan="12" class="note" style="padding:20px">Sin resultados.</td></tr>';
-    h += `</tbody></table></div><div class="pager"><button onclick="App.pag(-1)">‹</button> Página ${pagina} de ${pags} <button onclick="App.pag(1)">›</button></div>`;
-    $('main').innerHTML = h;
-  }
-
-  /* ---------- LOGÍSTICA Y ETIQUETAS DINÁMICAS ---------- */
+  /* ---------- 3. LOGÍSTICA POR ÁMBITO Y DEPARTAMENTO/LOCALIDAD ---------- */
   function filtrarLogisticaLista() {
     const hoy = C.hoyISO();
     const q = C.sinTildes(LOG.q).toLowerCase().trim();
-    const base = LOG.soloPendientes ? VISITAS.filter(v => !v.cerrada) : VISITAS;
-    const porEt = C.filtrarPorEtiqueta(base, LOG.etiqueta, hoy);
+    const baseSinAmb = baseGlobal(true).filter(v => !LOG.soloPendientes || !v.cerrada);
+    const porEt = C.filtrarPorEtiqueta(baseSinAmb, LOG.etiqueta, hoy);
+    const ambKeyAct = F.ambito ? C.sinTildes(F.ambito).toLowerCase() : '';
     const out = porEt.filter(v => {
       const ambKey = C.sinTildes(C.normAmbito(v.ambito || v.provincia)).toLowerCase();
-      if (LOG.ambito && ambKey !== LOG.ambito) return false;
+      if (ambKeyAct && ambKey !== ambKeyAct) return false;
       const zonaKey = ambKey + '|' + C.sinTildes(C.zonaVisita(v)).toLowerCase();
       if (LOG.zona && zonaKey !== LOG.zona) return false;
       if (q) {
@@ -472,12 +794,13 @@
   function renderLogistica() {
     destruirCharts();
     const hoy = C.hoyISO();
-    const base = LOG.soloPendientes ? VISITAS.filter(v => !v.cerrada) : VISITAS;
+    const baseSinAmb = baseGlobal(true).filter(v => !LOG.soloPendientes || !v.cerrada);
+    const ambKeyAct = F.ambito ? C.sinTildes(F.ambito).toLowerCase() : '';
 
-    // 1. Etiquetas dinámicas (se actualizan según Ámbito/Zona si hay uno elegido para dar cruce bidireccional)
-    const baseGeo = base.filter(v => {
+    // 1. Etiquetas dinámicas (cruce bidireccional con Ámbito/Zona)
+    const baseGeo = baseSinAmb.filter(v => {
       const ambKey = C.sinTildes(C.normAmbito(v.ambito || v.provincia)).toLowerCase();
-      if (LOG.ambito && ambKey !== LOG.ambito) return false;
+      if (ambKeyAct && ambKey !== ambKeyAct) return false;
       const zonaKey = ambKey + '|' + C.sinTildes(C.zonaVisita(v)).toLowerCase();
       if (LOG.zona && zonaKey !== LOG.zona) return false;
       return true;
@@ -487,11 +810,11 @@
     const tagsTareas = tags.filter(t => t.grupo === 'tareas');
 
     // 2. Agrupación geográfica (filtrada por la etiqueta activa)
-    const baseEt = C.filtrarPorEtiqueta(base, LOG.etiqueta, hoy);
+    const baseEt = C.filtrarPorEtiqueta(baseSinAmb, LOG.etiqueta, hoy);
     const geo = C.agruparLogistica(baseEt);
-    const zonasVisibles = LOG.ambito ? geo.zonas.filter(z => z.ambKey === LOG.ambito) : geo.zonas;
-    const limiteZonas = (LOG.ambito || LOG.verTodasZonas) ? zonasVisibles.length : Math.min(25, zonasVisibles.length);
-    const ambSelObj = LOG.ambito ? geo.ambitos.find(a => a.key === LOG.ambito) : null;
+    const zonasVisibles = ambKeyAct ? geo.zonas.filter(z => z.ambKey === ambKeyAct) : geo.zonas;
+    const limiteZonas = (ambKeyAct || LOG.verTodasZonas) ? zonasVisibles.length : Math.min(25, zonasVisibles.length);
+    const ambSelObj = ambKeyAct ? geo.ambitos.find(a => a.key === ambKeyAct) : null;
     const zonaSelObj = LOG.zona ? geo.zonas.find(z => z.key === LOG.zona) : null;
     const etSelObj = LOG.etiqueta ? tags.find(t => t.id === LOG.etiqueta) : null;
 
@@ -504,77 +827,82 @@
     const nVencRuta = ruta.filter(v => v.vencida).length;
     const nUrgRuta = ruta.filter(v => !v.cerrada && C.esUrgente(v)).length;
     const nProgRuta = ruta.filter(v => v.estado === E.AGENDADA).length;
-    const haySel = !!(LOG.etiqueta || LOG.ambito || LOG.zona || LOG.q);
+    const haySel = !!(LOG.etiqueta || F.ambito || LOG.zona || LOG.q);
 
-    const btnTag = t => `<button class="tag-btn t-${t.tono}${LOG.etiqueta === t.id ? ' on' : ''}${t.count === 0 ? ' zero' : ''}" onclick="App.logTag('${t.id}')">${esc(t.label)} <span class="cnt">${t.count.toLocaleString('es-AR')}</span></button>`;
+    const btnTag = t => `<button type="button" class="tag-btn t-${t.tono}${LOG.etiqueta === t.id ? ' on' : ''}${t.count === 0 ? ' zero' : ''}" onclick="App.logTag('${t.id}')">${esc(t.label)} <span class="cnt">${fmt(t.count)}</span></button>`;
 
-    let h = `<div class="tag-panel">
-      <div class="tag-row"><span class="tag-lbl">Prioridad y etapa</span>${tagsPrio.map(btnTag).join('')}</div>
-      <div class="tag-row"><span class="tag-lbl">Críticas vencidas (R)</span>${tagsTareas.map(btnTag).join('')}</div>
+    let h = `<div class="page-head"><div><h1>Logística por ámbito</h1><div class="sub">Agrupación geográfica por ámbito y departamento/localidad para armar hojas de ruta.</div></div></div>`;
+    h += barraFiltrosGlobalHTML(ruta.length);
+
+    h += `<div class="panel" style="margin-bottom:14px">
+      <div class="tlbl">Prioridad y etapa</div>
+      <div class="tags">${tagsPrio.map(btnTag).join('')}</div>
+      <div class="tlbl" style="margin-top:11px">Críticas vencidas (col. R)</div>
+      <div class="tags">${tagsTareas.map(btnTag).join('')}</div>
     </div>`;
 
-    h += `<div class="log-split">
-      <div class="log-box">
-        <div class="log-box-head">
-          <h3>Por Ámbito (${geo.ambitos.length}) ${etSelObj ? `<span class="pill p-ag">${esc(etSelObj.label)}</span>` : ''}</h3>
-          ${LOG.ambito ? `<button class="btn sec sm" onclick="App.logAmbito('')">Ver todos los ámbitos</button>` : '<span class="note">Clic para enfocar zona</span>'}
-        </div>
+    h += `<div class="two w">
+      <div class="panel">
+        <h3>
+          <span>Por Ámbito (${geo.ambitos.length}) ${etSelObj ? `<span class="pill p-ag">${esc(etSelObj.label)}</span>` : ''}</span>
+          ${F.ambito ? `<button type="button" class="btn sec sm" onclick="App.setAmbito('')">Ver todos los ámbitos</button>` : '<span class="note" style="font-weight:400">Clic para enfocar zona</span>'}
+        </h3>
         <div class="amb-grid">
-          ${geo.ambitos.length ? geo.ambitos.map(a => `<button class="amb-card${LOG.ambito === a.key ? ' on' : ''}" onclick="App.logAmbito('${esc(a.key)}')">
+          ${geo.ambitos.length ? geo.ambitos.map(a => `<button type="button" class="amb-card${ambKeyAct === a.key ? ' on' : ''}" data-amb="${esc(a.ambito)}" onclick="App.setAmbito(this.dataset.amb)">
             <div class="an" title="${esc(a.ambito)}">${esc(a.ambito)}</div>
-            <div class="av">${a.total.toLocaleString('es-AR')}</div>
+            <div class="av">${fmt(a.total)}</div>
             <div class="as"><span class="${a.vencidas ? 'venc' : ''}">${a.vencidas} venc.</span>${a.urgentes ? `<span><b>${a.urgentes}</b> urg.</span>` : ''}<span>${a.estabUnicos} estab.</span></div>
           </button>`).join('') : '<span class="note">Sin visitas para esta etiqueta.</span>'}
         </div>
       </div>
-      <div class="log-box">
-        <div class="log-box-head">
-          <h3>${ambSelObj ? `Departamentos / Localidades en ${esc(ambSelObj.ambito)} (${zonasVisibles.length})` : `Concentración por Departamento / Localidad (Top ${limiteZonas} de ${zonasVisibles.length})`}</h3>
-          <div style="display:flex;gap:6px;align-items:center">
-            ${LOG.zona ? `<button class="btn sec sm" onclick="App.logZona('')">Quitar localidad</button>` : ''}
-            ${!LOG.ambito && zonasVisibles.length > 25 ? `<button class="btn sec sm" onclick="App.logToggleZonas()">${LOG.verTodasZonas ? 'Ver Top 25' : 'Ver todas (' + zonasVisibles.length + ')'}</button>` : ''}
-          </div>
-        </div>
+
+      <div class="panel">
+        <h3>
+          <span>${ambSelObj ? `Departamentos / Localidades en ${esc(ambSelObj.ambito)} (${zonasVisibles.length})` : `Concentración por Departamento / Localidad (Top ${limiteZonas} de ${zonasVisibles.length})`}</span>
+          <span style="display:flex;gap:6px;align-items:center">
+            ${LOG.zona ? `<button type="button" class="btn sec sm" onclick="App.logZona('')">Quitar localidad</button>` : ''}
+            ${!ambKeyAct && zonasVisibles.length > 25 ? `<button type="button" class="btn sec sm" onclick="App.logToggleZonas()">${LOG.verTodasZonas ? 'Ver Top 25' : 'Ver todas (' + zonasVisibles.length + ')'}</button>` : ''}
+          </span>
+        </h3>
         <div style="max-height:310px;overflow:auto">
-          <table class="grid-op"><thead><tr>${LOG.ambito ? '' : '<th>Ámbito</th>'}<th>Depto / Localidad</th><th>Visitas</th><th>Estab.</th><th>Venc. (R)</th><th>Urg.</th><th>AT/EP</th><th>PESE/363</th><th>Obras</th><th>Sin prog.</th></tr></thead><tbody>
-          ${zonasVisibles.length ? zonasVisibles.slice(0, limiteZonas).map(z => `<tr class="${LOG.zona === z.key ? 'zona-on' : ''}" onclick="App.logZona('${esc(z.key)}')">
-            ${LOG.ambito ? '' : `<td>${esc(z.ambito)}</td>`}
-            <td><b>${esc(z.zona)}</b></td><td><b>${z.total}</b></td><td>${z.estabUnicos}</td>
-            <td class="${z.vencidas ? 'venc' : ''}">${z.vencidas}</td>
-            <td>${z.urgentes || '–'}</td>
-            <td class="${z.atEp ? 'venc' : ''}">${z.atEp || '–'}</td>
-            <td class="${z.pese363 ? 'venc' : ''}">${z.pese363 || '–'}</td>
-            <td>${z.obras || '–'}</td>
-            <td>${z.sinProgramar}</td>
+          <table class="grid-op"><thead><tr>${ambKeyAct ? '' : '<th>Ámbito</th>'}<th>Depto / Localidad</th><th class="num">Visitas</th><th class="num">Estab.</th><th class="num">Venc. (R)</th><th class="num">Urg.</th><th class="num">AT/EP</th><th class="num">PESE/363</th><th class="num">Obras</th><th class="num">Sin prog.</th></tr></thead><tbody>
+          ${zonasVisibles.length ? zonasVisibles.slice(0, limiteZonas).map(z => `<tr class="${LOG.zona === z.key ? 'zona-on' : ''}" data-zona="${esc(z.key)}" data-amb="${esc(z.ambito)}" onclick="App.logZona(this.dataset.zona,this.dataset.amb)">
+            ${ambKeyAct ? '' : `<td>${esc(z.ambito)}</td>`}
+            <td><b>${esc(z.zona)}</b></td><td class="num"><b>${z.total}</b></td><td class="num">${z.estabUnicos}</td>
+            <td class="num ${z.vencidas ? 'venc' : ''}">${z.vencidas}</td>
+            <td class="num">${z.urgentes || '–'}</td>
+            <td class="num ${z.atEp ? 'venc' : ''}">${z.atEp || '–'}</td>
+            <td class="num ${z.pese363 ? 'venc' : ''}">${z.pese363 || '–'}</td>
+            <td class="num">${z.obras || '–'}</td>
+            <td class="num">${z.sinProgramar}</td>
           </tr>`).join('') : '<tr><td colspan="10" class="note">Sin zonas con visitas para el filtro activo.</td></tr>'}
           </tbody></table>
         </div>
       </div>
     </div>`;
 
-    // Barra de resumen + controles de hoja de ruta
     const focoPartes = [];
     if (etSelObj) focoPartes.push(`Etiqueta: <b>${esc(etSelObj.label)}</b>`);
-    if (ambSelObj) focoPartes.push(`Ámbito: <b>${esc(ambSelObj.ambito)}</b>`);
+    if (F.ambito) focoPartes.push(`Ámbito: <b>${esc(F.ambito)}</b>`);
     if (zonaSelObj) focoPartes.push(`Zona: <b>${esc(zonaSelObj.zona)}</b>`);
 
     h += `<div class="route-bar">
       <span>${focoPartes.length ? focoPartes.join(' · ') : '<b>Todo el país</b>'}</span>
-      <span>· <b>${ruta.length.toLocaleString('es-AR')}</b> visitas (<b>${estabSet.size.toLocaleString('es-AR')}</b> estab. únicos)</span>
-      <span>· <b class="${nVencRuta ? 'venc' : ''}">${nVencRuta.toLocaleString('es-AR')}</b> venc. · <b>${nUrgRuta}</b> urg. · <b>${nProgRuta}</b> prog.</span>
+      <span>· <b>${fmt(ruta.length)}</b> visitas (<b>${fmt(estabSet.size)}</b> estab. únicos)</span>
+      <span>· <b class="${nVencRuta ? 'venc' : ''}">${fmt(nVencRuta)}</b> venc. · <b>${fmt(nUrgRuta)}</b> urg. · <b>${fmt(nProgRuta)}</b> prog.</span>
       <span style="flex:1"></span>
-      <label style="display:inline-flex;align-items:center;gap:5px;margin:0;cursor:pointer;font-size:12px"><input type="checkbox" ${LOG.soloPendientes ? 'checked' : ''} onchange="App.logOpt('soloPendientes',this.checked)"> Solo pendientes</label>
-      <select style="padding:4px 7px;font-size:12px;border:1px solid var(--line);border-radius:3px" onchange="App.logOpt('orden',this.value)" title="Orden de la hoja de ruta">
+      <label style="display:inline-flex;align-items:center;gap:5px;margin:0;cursor:pointer;font-size:12px"><input type="checkbox" style="width:auto;margin:0" ${LOG.soloPendientes ? 'checked' : ''} onchange="App.logOpt('soloPendientes',this.checked)"> Solo pendientes</label>
+      <select style="padding:5px 8px;font-size:12px;border:1px solid var(--line);border-radius:6px;background:#fff" onchange="App.logOpt('orden',this.value)" title="Orden de la hoja de ruta">
         <option value="prioridad" ${LOG.orden === 'prioridad' ? 'selected' : ''}>Orden: Prioridad crítica</option>
         <option value="zona_cp" ${LOG.orden === 'zona_cp' ? 'selected' : ''}>Orden: Zona + CP + Domicilio (ruta)</option>
         <option value="fecha" ${LOG.orden === 'fecha' ? 'selected' : ''}>Orden: Fecha máx. (col. R)</option>
       </select>
-      <input type="search" id="logSearch" placeholder="Filtrar domicilio, empleador, CP…" value="${esc(LOG.q)}" style="padding:4px 8px;font-size:12px;border:1px solid var(--line);border-radius:3px;min-width:190px" oninput="App.logBuscar(this.value)">
-      ${haySel ? '<button class="btn sec sm" onclick="App.logLimpiar()">Limpiar</button>' : ''}
-      <button class="btn sm" onclick="App.exportarRutaCSV()">⬇ Exportar Hoja de Ruta</button>
+      <input type="search" id="logSearch" placeholder="Filtrar domicilio, empleador, CP…" value="${esc(LOG.q)}" style="padding:5px 9px;font-size:12px;border:1px solid var(--line);border-radius:6px;min-width:190px;background:#fff" oninput="App.logBuscar(this.value)">
+      ${haySel ? '<button type="button" class="btn sec sm" onclick="App.logLimpiar()">Limpiar</button>' : ''}
+      <button type="button" class="btn sm" onclick="App.exportarRutaCSV()">⬇ Exportar Hoja de Ruta</button>
     </div>`;
 
-    h += `<div style="overflow:auto;max-height:58vh"><table class="grid-op"><thead><tr>
+    h += `<div class="tw"><div style="overflow:auto;max-height:58vh"><table class="grid-op"><thead><tr>
       <th>Ámbito</th><th>Depto / Localidad</th><th>Domicilio</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Etapa</th><th>Tareas</th>
       <th title="Fecha máxima según Columna R de la planilla">Fecha máx. (R)</th><th title="Fecha programada cargada por el preventor">F. programada</th><th>Estado</th><th>Acción</th>
     </tr></thead><tbody>`;
@@ -594,12 +922,12 @@
         <td class="clip" style="max-width:220px" title="${esc(tareasTxt)}">${esc(tareasTxt)}</td>
         <td class="${v.vencida ? 'venc' : ''}">${fechaCelda}</td>
         <td>${C.aDMY(v.fechaAgendada)}</td>
-        <td>${pillEstado(v.estado)}</td>
-        <td><button class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📅 Programar</button></td>
+        <td>${pillEstado(v.estado, v.vencida)}</td>
+        <td><button type="button" class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📅 Programar</button></td>
       </tr>`;
     });
-    if (!sl.length) h += '<tr><td colspan="12" class="note" style="padding:20px">Sin visitas para esta selección.</td></tr>';
-    h += `</tbody></table></div><div class="pager"><button onclick="App.logPag(-1)">‹</button> Página ${LOG.pagina} de ${pags} <button onclick="App.logPag(1)">›</button></div>`;
+    if (!sl.length) h += '<tr><td colspan="12" class="note" style="padding:20px;text-align:center">Sin visitas para esta selección.</td></tr>';
+    h += `</tbody></table></div><div class="pager"><button type="button" class="btn sec sm" onclick="App.logPag(-1)">‹</button> Página ${LOG.pagina} de ${pags} <button type="button" class="btn sec sm" onclick="App.logPag(1)">›</button></div></div>`;
     $('main').innerHTML = h;
   }
 
@@ -625,16 +953,149 @@
     a.click();
   }
 
-  function render() {
-    renderTabs();
-    if (vista === 'tablero') renderTablero();
+  /* ---------- 4. GRILLAS OPERATIVAS DE VISITAS ---------- */
+  const META_VISTA = {
+    sin_agendar: ['Sin agendar', 'Visitas sin fecha programada o fallidas pendientes de reprogramar.'],
+    agendadas: ['Agendadas', 'Visitas con fecha programada por preventor, aún sin resultado cargado.'],
+    realizadas: ['Realizadas', 'Visitas con resultado cargado. Cuentan para el objetivo solo cuando tienen PDF adjunto.'],
+    vencidas: ['Vencidas (col. R)', 'Visitas abiertas cuya fecha máxima (columna R) ya fue superada.'],
+    todas: ['Todas las visitas', 'Padrón completo de visitas con todos los filtros operativos.'],
+    pendientes: ['Pendientes', 'Visitas aún no cerradas con documento PDF.'],
+    revisar: ['Errores / A revisar', 'Posibles duplicadas por fecha o tareas repetidas entre año anterior y actual.']
+  };
+
+  function subtabsVistaHTML(baseRows) {
+    if (F.etiqueta) return '';
+    const c = contarEstados(baseRows);
+    let defs = null;
+    if (vista === 'sin_agendar') {
+      defs = [['', `Todas (${fmt(c.S)})`], ['venc', `Vencidas col. R (${fmt(c.sinV)})`], ['plazo', `En plazo (${fmt(c.sin)})`]];
+      if (c.reprog) defs.push(['reprog', `A reprogramar (${fmt(c.reprog)})`]);
+    } else if (vista === 'agendadas') {
+      defs = [['', `Todas (${fmt(c.A)})`], ['venc', `Vencidas (${fmt(c.agV)})`], ['plazo', `En término (${fmt(c.ag)})`]];
+    } else if (vista === 'realizadas') {
+      defs = [['', `Todas (${fmt(c.Re)})`], ['ef', `Efectivas c/PDF (${fmt(c.ef)})`], ['fa', `Fallidas c/PDF (${fmt(c.fa)})`]];
+      if (c.sd) defs.push(['sd', `Sin PDF (${fmt(c.sd)})`]);
+    } else if (vista === 'vencidas') {
+      const nSdV = baseRows.filter(v => esSinDoc(v) && v.vencida).length;
+      defs = [['', `Todas (${fmt(c.V)})`], ['sin', `Sin agendar (${fmt(c.sinV)})`], ['ag', `Agendadas (${fmt(c.agV)})`]];
+      if (nSdV) defs.push(['sd', `Sin PDF (${fmt(nSdV)})`]);
+    }
+    if (!defs) return '';
+    return `<div class="seg">${defs.map(([k, l]) => `<button type="button" class="${F.sub === k ? 'on' : ''}" onclick="App.f('sub','${k}')">${l}</button>`).join('')}</div>`;
+  }
+
+  function renderLista() {
+    destruirCharts();
+    const baseVista = baseListaSinSub();
+    const lista = filtrar();
+    const total = lista.length, pags = Math.max(1, Math.ceil(total / PAGE));
+    if (pagina > pags) pagina = pags;
+    const sl = lista.slice((pagina - 1) * PAGE, pagina * PAGE);
+
+    const meses = Array.from(new Set(baseVisitas().map(v => C.mesDe(v.fechaMax)).filter(Boolean))).sort();
+    const nVenc = baseVista.filter(v => v.catVenc === 'vencida').length;
+    const nMesAct = baseVista.filter(v => v.catVenc === 'mes_actual').length;
+    const nOtroMes = baseVista.filter(v => v.catVenc === 'otro_mes').length;
+    const tareasCat = C.catalogoTareas(baseVista);
+    const tareaOpts = tareasCat.map(t => `<option value="${esc(t.key)}" ${F.tarea === t.key ? 'selected' : ''}>${esc(t.label)} (${t.total})</option>`).join('') +
+      (F.tarea && !tareasCat.some(t => t.key === F.tarea) ? `<option value="${esc(F.tarea)}" selected>${esc(F.tarea)} (0)</option>` : '');
+
+    const etObj = F.etiqueta ? C.ETIQUETAS_LOGISTICA.find(x => x.id === F.etiqueta) : null;
+    const [tit, desc] = etObj ? [etObj.label, 'Prioridad crítica seleccionada desde Resumen.'] : (META_VISTA[vista] || ['Visitas', '']);
+    const hayFiltrosLocales = !!(F.sub || F.etiqueta || F.tarea || F.venc || F.mes || F.estado || F.cruceOct || F.errTipo);
+
+    let h = `<div class="page-head"><div><h1>${esc(tit)}</h1><div class="sub">${esc(desc)}</div></div></div>`;
+    h += barraFiltrosGlobalHTML(total);
+
+    if (etObj) {
+      h += `<div class="info-box" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">
+        <span>Filtro de prioridad activa: <b>${esc(etObj.label)}</b> (${fmt(total)} visitas)</span>
+        <button type="button" class="btn sec sm" onclick="App.f('etiqueta','')">Quitar prioridad</button>
+      </div>`;
+    }
+
+    h += `<div class="filters">
+      ${subtabsVistaHTML(baseVista)}
+      <select class="${F.tarea ? 'act' : ''}" onchange="App.f('tarea',this.value)" title="Filtrar por tarea (columna Q)">
+        <option value="">Tarea: todas</option>
+        ${tareaOpts}
+      </select>
+      ${(vista === 'todas' || vista === 'revisar' || vista === 'pendientes') ? `<select class="${F.venc ? 'act' : ''}" onchange="App.f('venc',this.value)" title="Vencimiento según Fecha máxima (columna R)">
+        <option value="">Vencimiento (col. R): todos</option>
+        <option value="vencida" ${F.venc === 'vencida' ? 'selected' : ''}>Vencidas (${nVenc})</option>
+        <option value="mes_actual" ${F.venc === 'mes_actual' ? 'selected' : ''}>Vencen mes actual (${nMesAct})</option>
+        <option value="otro_mes" ${F.venc === 'otro_mes' ? 'selected' : ''}>Vencen otro mes (${nOtroMes})</option>
+      </select>` : ''}
+      <select class="${F.mes ? 'act' : ''}" onchange="App.f('mes',this.value)">${opts(meses, F.mes, 'Mes fecha máx.: todos')}</select>
+      ${vista === 'todas' ? `<select class="${F.estado ? 'act' : ''}" onchange="App.f('estado',this.value)">${opts(Object.values(E), F.estado, 'Estado: todos')}</select>` : ''}
+      <select class="${F.cruceOct ? 'act' : ''}" onchange="App.f('cruceOct',this.value)">
+        <option value="">Cruce PDF Oct: todos</option>
+        <option value="con" ${F.cruceOct === 'con' ? 'selected' : ''}>Con PDF de Oct (todos)</option>
+        <option value="Efectiva" ${F.cruceOct === 'Efectiva' ? 'selected' : ''}>PDF Oct: Efectiva</option>
+        <option value="Fallida" ${F.cruceOct === 'Fallida' ? 'selected' : ''}>PDF Oct: Fallida</option>
+      </select>
+      ${vista === 'revisar' ? `<select class="${F.errTipo ? 'act' : ''}" onchange="App.f('errTipo',this.value)">
+        <option value="">Tipo de error: todos</option>
+        <option value="misma_tarea_anios" ${F.errTipo === 'misma_tarea_anios' ? 'selected' : ''}>Misma tarea año ant. y actual (${baseVista.filter(v => v.errores && v.errores.indexOf('misma_tarea_anios') >= 0).length})</option>
+        <option value="duplicada_fecha" ${F.errTipo === 'duplicada_fecha' ? 'selected' : ''}>Duplicada otra fecha (${baseVista.filter(v => v.errores && v.errores.indexOf('duplicada_fecha') >= 0).length})</option>
+      </select>` : ''}
+      ${hayFiltrosLocales ? '<button type="button" class="btn sec sm" onclick="App.limpiarFiltros()">Limpiar subfiltros</button>' : ''}
+      <button type="button" class="btn sec sm" style="margin-left:auto" onclick="App.exportar()">⬇ Exportar CSV</button>
+    </div>`;
+
+    h += `<div class="tw"><div style="overflow:auto;max-height:70vh"><table class="grid-op"><thead><tr>
+      <th>Universo</th><th>Prioridad</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Ámbito / Localidad</th><th>Tareas</th>
+      <th title="Fecha máxima según Columna R de la planilla">Fecha máx. (R)</th><th title="Fecha programada cargada por el preventor">F. programada</th><th title="Fecha en que se realizó efectivamente la visita">Fecha real</th><th>Estado</th><th>Acción</th>
+    </tr></thead><tbody>`;
+
+    sl.forEach(v => {
+      const tareasTxt = v.tareas.split('//').join(' · ');
+      const estabTxt = `${v.nroEstab} · ${v.establecimiento}`;
+      const ambTxt = C.normAmbito(v.ambito || v.provincia);
+      const locTxt = `${ambTxt} / ${C.zonaVisita(v)}`;
+      const cruceTag = v.cruceOct ? ` <a href="${esc(v.cruceOct.url)}" target="_blank" onclick="event.stopPropagation()" class="pill ${v.cruceOct.resultado === 'Efectiva' ? 'p-ok' : 'p-bad'}" title="PDF cargado en Octubre (${esc(v.cruceOct.fecha)} · ${esc(v.cruceOct.tarea)})">PDF Oct: ${v.cruceOct.resultado} ↗</a>` : '';
+      const esAnios = v.errores && v.errores.indexOf('misma_tarea_anios') >= 0;
+      const errTag = esAnios
+        ? `<span class="pill p-bad" title="Misma tarea repetida entre año anterior y actual: ${esc((v.tareasRepetidasAnio || []).join(', '))}">🔁 Año ant./act.</span> `
+        : (v.revisarDuplicada ? '<span class="pill p-warn" title="Misma tarea y establecimiento con fecha distinta">⚠ Duplicada</span> ' : '');
+      const fechaCelda = C.aDMY(v.fechaMax) + (v.vencida ? ' <span class="pill p-bad">Vencida</span>' : '');
+      h += `<tr class="${v.vencida ? 'is-venc' : ''}" data-id="${esc(v.id)}" onclick="App.abrir(this.dataset.id)">
+        <td class="${v.cohorte === 'Emergente' ? 'tE' : 'tR'}">${v.cohorte}</td>
+        <td>${esc(v.planificacion)}</td>
+        <td>${esc(v.cuit)}</td>
+        <td class="clip" style="max-width:185px" title="${esc(v.empleador)}"><b>${esc(v.empleador)}</b></td>
+        <td class="clip" style="max-width:135px" title="${esc(estabTxt)}">${esc(estabTxt)}</td>
+        <td class="clip" style="max-width:150px" title="${esc(locTxt)}">${esc(ambTxt)} <span class="note">/ ${esc(C.zonaVisita(v))}</span></td>
+        <td class="clip" style="max-width:240px" title="${esc(tareasTxt)}">${errTag}${cruceTag ? cruceTag + ' ' : ''}${esc(tareasTxt)}</td>
+        <td class="${v.vencida ? 'venc' : ''}">${fechaCelda}</td>
+        <td>${C.aDMY(v.fechaAgendada)}</td>
+        <td>${C.aDMY(v.fechaReal)}</td>
+        <td>${pillEstado(v.estado, v.vencida)}</td>
+        <td><button type="button" class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📄 PDF</button></td>
+      </tr>`;
+    });
+    if (!sl.length) h += '<tr><td colspan="12" class="note" style="padding:24px;text-align:center">Sin visitas para los filtros actuales.</td></tr>';
+    h += `</tbody></table></div><div class="pager"><span style="margin-right:auto">${fmt(total)} visita(s)</span><button type="button" class="btn sec sm" onclick="App.pag(-1)">‹</button> Página ${pagina} de ${pags} <button type="button" class="btn sec sm" onclick="App.pag(1)">›</button></div></div>`;
+    $('main').innerHTML = h;
+  }
+
+  function render(mantenerBusqueda) {
+    if (vista === 'tablero') vista = 'resumen';
+    renderRail();
+    if (!mantenerBusqueda && $('qGlobal')) $('qGlobal').value = F.q;
+    if ($('qClear')) $('qClear').style.display = F.q ? 'block' : 'none';
+
+    if (vista === 'resumen') renderResumen();
+    else if (vista === 'metas') renderMetas();
     else if (vista === 'logistica') renderLogistica();
     else renderLista();
+
     const pend = COLA.length;
     const baseTxt = PADRON_LOCAL && PADRON_LOCAL.generado
-      ? ('Padrón actualizado: ' + PADRON_LOCAL.generado + ' (' + baseVisitas().length + ' visitas)')
-      : (D.generado ? 'Datos base: ' + D.generado : '');
-    $('sync').textContent = baseTxt + (pend ? ' · ' + pend + ' envío(s) pendiente(s)' : '');
+      ? ('Padrón: ' + PADRON_LOCAL.generado + ' (' + fmt(baseVisitas().length) + ')')
+      : (D.generado ? 'Datos: ' + D.generado : '');
+    $('sync').textContent = '● ' + baseTxt + (pend ? ' · ' + pend + ' envío(s) pend.' : '');
   }
 
   /* ---------- FICHA INDIVIDUAL (con detección automática + vista previa PDF) ---------- */
@@ -699,7 +1160,7 @@
       ${dato('Localidad', v.localidad + ', ' + v.provincia)}${dato('Tareas', v.tareas.split('//').join(' · '))}
       ${dato('Cohorte / Etapa', v.cohorte + ' · ' + v.planificacion)}
       <b>Fecha máxima (col. R)</b><span class="${v.vencida ? 'venc' : ''}">${C.aDMY(v.fechaMax)}${v.vencida ? ' <span class="pill p-bad">Vencida</span>' : ''}</span>
-      <b>Estado</b><span>${pillEstado(v.estado)}</span>${v.obsCS ? dato('Obs. CS', v.obsCS) : ''}${v.obsIAPSER ? dato('Obs. IAPSER', v.obsIAPSER) : ''}</div>
+      <b>Estado</b><span>${pillEstado(v.estado, v.vencida)}</span>${v.obsCS ? dato('Obs. CS', v.obsCS) : ''}${v.obsIAPSER ? dato('Obs. IAPSER', v.obsIAPSER) : ''}</div>
       ${errHtml}
       ${cruceHtml}
       ${previos.length ? `<table class="hist"><thead><tr><th>#</th><th>Programada</th><th>Real</th><th>Resultado</th><th>Motivo</th><th>PDF</th></tr></thead><tbody>${previos.map(p => `<tr style="cursor:default"><td>${p.n}</td><td>${C.aDMY(p.fechaAgendada)}</td><td>${C.aDMY(p.fechaReal)}</td><td>${esc(p.resultado)}</td><td>${esc(p.motivo)}</td><td>${p.adjunto ? `<a href="${esc(p.adjunto)}" target="_blank">ver</a>` : '–'}</td></tr>`).join('')}</tbody></table>` : ''}
@@ -716,7 +1177,7 @@
           <label>Detalle (opcional)</label><input id="fDet" value="${esc(detalle)}"></div>
       </fieldset><div class="err" id="dvErr"></div></div>
       <div class="pdf-pane" id="dvPreview" style="display:none"></div></div>`;
-    $('dvFoot').innerHTML = `<button class="btn sec" onclick="dlgVisita.close()">Cancelar</button><button class="btn" id="btnGuardar" onclick="App.guardar()">Guardar</button>`;
+    $('dvFoot').innerHTML = `<button type="button" class="btn sec" onclick="dlgVisita.close()">Cancelar</button><button type="button" class="btn" id="btnGuardar" onclick="App.guardar()">Guardar</button>`;
     toggleRes();
     const prevDrive = it.adjunto ? drivePreviewUrl(it.adjunto) : (v.cerradaPorCruceOct && v.cruceOct ? drivePreviewUrl(v.cruceOct.url) : '');
     const prevTitulo = it.adjunto ? 'PDF guardado en Drive' : (v.cerradaPorCruceOct && v.cruceOct ? `PDF Octubre (${v.cruceOct.fecha} · ${v.cruceOct.resultado})` : '');
@@ -913,7 +1374,7 @@
         : `<span class="pill p-ai">✨ ${it.source === 'gemini' ? 'Gemini IA' : (it.source === 'ocr_local' ? 'OCR local' : (it.source === 'pdf_texto' ? 'Texto PDF' : 'Nombre'))}</span>`;
 
       if (it.status === 'error' && !it.base64) {
-        return `<div class="bitem bad"><div class="bitem-head"><strong>${esc(it.nombre)}</strong><div>${badge} <button class="btn sec sm" onclick="App.quitarLote('${it.uid}')">✕</button></div></div></div>`;
+        return `<div class="bitem bad"><div class="bitem-head"><strong>${esc(it.nombre)}</strong><div>${badge} <button type="button" class="btn sec sm" onclick="App.quitarLote('${it.uid}')">✕</button></div></div></div>`;
       }
       const opciones = buscarOpcionesVisita(it.filtro, it.cuit);
       const selVisita = opciones.map(v => `<option value="${esc(v.id)}" ${v.id === it.visitaId ? 'selected' : ''}>${esc(v.cuit)} · ${esc(v.empleador)} · Estab ${esc(v.nroEstab)} (${esc(v.cohorte)} · ${esc(v.tareas.slice(0, 35))})</option>`).join('');
@@ -922,7 +1383,7 @@
       return `<div class="bitem ${cls}" data-uid="${it.uid}">
         <div class="bitem-head">
           <div style="cursor:pointer" onclick="App.verPdfLote('${it.uid}')"><strong>📄 ${esc(it.nombre)}</strong> ${it.cuit ? `<span class="note">CUIT: ${esc(it.cuit)}${it.nroEstab ? ' · Estab ' + esc(it.nroEstab) : ''}</span>` : ''}</div>
-          <div>${badge} <button class="btn sec sm" onclick="App.verPdfLote('${it.uid}')">👁 Ver</button> <button class="btn sec sm" ${dis} onclick="App.quitarLote('${it.uid}')">✕</button></div>
+          <div>${badge} <button type="button" class="btn sec sm" onclick="App.verPdfLote('${it.uid}')">👁 Ver</button> <button type="button" class="btn sec sm" ${dis} onclick="App.quitarLote('${it.uid}')">✕</button></div>
         </div>
         ${it.error && it.status !== 'subido' ? `<div class="venc" style="font-size:12px;margin-bottom:6px">${esc(it.error)}</div>` : ''}
         <div class="row2">
@@ -958,7 +1419,6 @@
       const act = document.activeElement;
       const pos = act ? act.selectionStart : null;
       renderMasiva();
-      // restaurar foco en el input de filtro
       const inputs = $('masivaLista').querySelectorAll('input[placeholder*="Tipeá"]');
       const idx = LOTE.findIndex(x => x.uid === uid);
       if (inputs[idx]) { inputs[idx].focus(); if (pos != null) inputs[idx].setSelectionRange(pos, pos); }
@@ -1097,7 +1557,6 @@
       }
       if (!nombresHojas.length) return mostrarStatusPadron('El archivo no contiene hojas con datos.');
 
-      // Elegir automáticamente la hoja con mejor coincidencia de columnas (priorizando "General")
       let mejorHoja = nombresHojas[0], mejorScore = -1;
       nombresHojas.forEach(sn => {
         const rows = hojas[sn] || [];
@@ -1141,7 +1600,6 @@
       const diff = C.compararPadron(actuales, parsed.visitas, INTENTOS, mapaOct);
       PADRON_UI.parsed = parsed;
       PADRON_UI.diff = diff;
-      // Elegir pestaña con datos por defecto
       if (diff.bajas.length && !diff.altas.length && !diff.modificadas.length) PADRON_UI.diffTab = 'bajas';
       else if (diff.modificadas.length && !diff.altas.length) PADRON_UI.diffTab = 'modificadas';
     } else {
@@ -1198,7 +1656,6 @@
         ? `<label style="display:inline-flex;align-items:center;gap:6px">Hoja a importar: <select style="width:auto" onchange="App.cambiarHojaPadron(this.value)">${nombresHojas.map(sn => `<option value="${esc(sn)}" ${sn === hojaActiva ? 'selected' : ''}>${esc(sn)} (${Math.max(0, (PADRON_UI.hojas[sn] || []).length - 1)} filas)</option>`).join('')}</select></label>`
         : `<span class="note">Hoja: ${esc(hojaActiva)} (${Math.max(0, rows.length - 1)} filas)</span>`);
 
-    // 1. VALIDADOR DE COLUMNAS
     const hayNovedades = val.nuevasDesconocidas.length || val.faltantes.length || val.cambiosFormato.length || val.cambiosPosicion.length || val.duplicadas.length;
     const clsVal = !val.ok ? 'bad' : (hayNovedades ? 'warn' : 'ok');
     const titVal = !val.ok
@@ -1221,7 +1678,6 @@
         </div>
       </div>`;
 
-    // Tabla de faltantes / renombradas con remapeo manual
     const remapeadas = val.coincidencias.filter(c => c.estado === 'remapeada');
     if (val.faltantes.length || remapeadas.length) {
       const todasOpciones = val.headers.map((hd, i) => ({ idx: i, letra: C.letraCol(i), nombre: hd || '(sin título)' })).filter(o => o.nombre !== '(sin título)');
@@ -1249,13 +1705,11 @@
       h += '</tbody></table></div>';
     }
 
-    // Columnas agregadas / nuevas
     if (val.agregadas.length) {
       h += `<div style="margin-top:8px"><strong>Columnas adicionales detectadas en el archivo (${val.agregadas.length}):</strong>
         <div class="chip-list">${val.agregadas.map(a => `<span class="pill ${a.esAuxiliarConocida ? 'p-ag' : 'p-warn'}">${a.letra}: ${esc(a.nombre)}${a.esAuxiliarConocida ? ' (auxiliar)' : ' (NUEVA)'}</span>`).join('')}</div>
         <div class="note" style="margin-top:4px">Las columnas marcadas como <b>NUEVA</b> no estaban en el esquema A..W. No rompen la importación, pero revisá si alguna corresponde a un campo renombrado.</div></div>`;
     }
-
     if (val.cambiosFormato.length) {
       h += `<div class="note" style="margin-top:6px">🔄 <b>Cambio de mayúsculas/tildes:</b> ${val.cambiosFormato.map(c => `${esc(c.esperada)} → "${esc(c.encontrada)}" (${c.letra})`).join(' · ')}</div>`;
     }
@@ -1266,19 +1720,17 @@
       h += `<div class="venc" style="font-size:12px;margin-top:4px">⚠ <b>Encabezados duplicados:</b> ${val.duplicadas.map(d => `"${esc(d.nombre)}" en ${d.primeraLetra} y ${d.letra} (se usa la primera)`).join(' · ')}</div>`;
     }
 
-    // Auditoría completa plegable
     h += `<details style="margin-top:8px"><summary class="note" style="cursor:pointer">Ver detalle completo de mapeo (${val.coincidencias.length} columnas mapeadas)</summary>
       <table class="diff-tbl"><thead><tr><th>Esperada</th><th>Letra esp.</th><th>En archivo</th><th>Letra arch.</th><th>Estado</th></tr></thead><tbody>
       ${val.coincidencias.map(c => `<tr style="cursor:default"><td>${esc(c.esperada)}</td><td>${c.letraEsperada}</td><td>${esc(c.encontrada)}</td><td>${c.letra}</td><td><span class="pill ${c.estado === 'exacta' ? 'p-ok' : (c.estado === 'remapeada' ? 'p-ai' : 'p-ag')}">${c.estado}</span></td></tr>`).join('')}
       </tbody></table></details></div>`;
 
-    // 2. VISTA PREVIA DE CAMBIOS (si el esquema es válido)
     if (val.ok && parsed && diff) {
       h += `<div class="cards" style="margin:12px 0 8px">
-        <div class="card"><div class="k">Sin cambios</div><div class="v">${diff.sinCambios.length.toLocaleString('es-AR')}</div><div class="s">se conservan intactas</div></div>
-        <div class="card"><div class="k">Altas (nuevas)</div><div class="v" style="color:var(--ok)">+${diff.altas.length.toLocaleString('es-AR')}</div><div class="s">nuevas en el archivo</div></div>
-        <div class="card"><div class="k">Modificadas</div><div class="v" style="color:var(--amber)">${diff.modificadas.length.toLocaleString('es-AR')}</div><div class="s">cambió algún dato o fecha máx.</div></div>
-        <div class="card"><div class="k">Bajas (eliminadas)</div><div class="v" style="color:var(--bad)">-${diff.bajas.length.toLocaleString('es-AR')}</div><div class="s">${diff.bajasConGestion.length ? `<span class="venc">${diff.bajasConGestion.length} con gestión/PDF</span>` : 'sin gestión cargada'}</div></div>
+        <div class="card"><div class="k">Sin cambios</div><div class="v">${fmt(diff.sinCambios.length)}</div><div class="s">se conservan intactas</div></div>
+        <div class="card ok"><div class="k">Altas (nuevas)</div><div class="v" style="color:var(--ok)">+${fmt(diff.altas.length)}</div><div class="s">nuevas en el archivo</div></div>
+        <div class="card warn"><div class="k">Modificadas</div><div class="v" style="color:var(--amber)">${fmt(diff.modificadas.length)}</div><div class="s">cambió algún dato o fecha máx.</div></div>
+        <div class="card bad"><div class="k">Bajas (eliminadas)</div><div class="v" style="color:var(--bad)">-${fmt(diff.bajas.length)}</div><div class="s">${diff.bajasConGestion.length ? `<span class="venc">${diff.bajasConGestion.length} con gestión/PDF</span>` : 'sin gestión cargada'}</div></div>
       </div>`;
 
       if (diff.bajasConGestion.length) {
@@ -1297,13 +1749,13 @@
 
       const dt = PADRON_UI.diffTab;
       h += `<div class="diff-tabs">
-        <button class="${dt === 'altas' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','altas')">Altas (${diff.altas.length})</button>
-        <button class="${dt === 'modificadas' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','modificadas')">Modificadas (${diff.modificadas.length})</button>
-        <button class="${dt === 'bajas' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','bajas')">Bajas (${diff.bajas.length})</button>
-        ${parsed.duplicadosOmitidos.length ? `<button class="${dt === 'dups' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','dups')">Duplicados omitidos (${parsed.duplicadosOmitidos.length})</button>` : ''}
+        <button type="button" class="${dt === 'altas' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','altas')">Altas (${diff.altas.length})</button>
+        <button type="button" class="${dt === 'modificadas' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','modificadas')">Modificadas (${diff.modificadas.length})</button>
+        <button type="button" class="${dt === 'bajas' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','bajas')">Bajas (${diff.bajas.length})</button>
+        ${parsed.duplicadosOmitidos.length ? `<button type="button" class="${dt === 'dups' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','dups')">Duplicados omitidos (${parsed.duplicadosOmitidos.length})</button>` : ''}
       </div>`;
 
-      h += '<div style="max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:4px">';
+      h += '<div style="max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px">';
       if (dt === 'altas') {
         h += `<table class="diff-tbl"><thead><tr><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Localidad</th><th>Tareas</th><th>Fecha máx. (R)</th></tr></thead><tbody>` +
           (diff.altas.length ? diff.altas.slice(0, 100).map(v => `<tr style="cursor:default"><td>${esc(v.cuit)}</td><td>${esc(v.empleador)}</td><td>${esc(v.nroEstab)}</td><td>${esc(v.localidad)}</td><td>${esc(v.tareas.split('//').join(' · '))}</td><td>${C.aDMY(v.fechaMax)}</td></tr>`).join('') : '<tr><td colspan="6" class="note">Sin altas nuevas.</td></tr>') +
@@ -1324,7 +1776,7 @@
       h += '</div>';
 
       const totalFinal = parsed.visitas.length + (PADRON_UI.aplicarBajas ? 0 : diff.bajas.length);
-      $('padronResumen').textContent = `Resultado: ${totalFinal.toLocaleString('es-AR')} visitas (+${diff.altas.length} altas · ${diff.modificadas.length} modif. · ${PADRON_UI.aplicarBajas ? '-' + diff.bajas.length + ' bajas' : diff.bajas.length + ' bajas conservadas'})`;
+      $('padronResumen').textContent = `Resultado: ${fmt(totalFinal)} visitas (+${diff.altas.length} altas · ${diff.modificadas.length} modif. · ${PADRON_UI.aplicarBajas ? '-' + diff.bajas.length + ' bajas' : diff.bajas.length + ' bajas conservadas'})`;
       btnOk.disabled = false;
       btnCsv.style.display = 'inline-block';
       btnJs.style.display = 'inline-block';
@@ -1390,13 +1842,11 @@
     const gen = C.hoyISO(ahora) + ' ' + String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
     const nuevoLocal = { generado: gen, ts: ahora.toISOString(), archivo: PADRON_UI.archivo, visitas: finales };
 
-    // 1. Aplicar localmente en la app inmediatamente
     PADRON_LOCAL = nuevoLocal;
     save(LS_PADRON, PADRON_LOCAL);
     recalcular();
     render();
 
-    // 2. Sincronizar con Google Sheets si está marcado
     if (PADRON_UI.syncSheets && url()) {
       mostrarStatusPadron('Actualizado en pantalla. Sincronizando cambios con Google Sheets (preservando X..AJ y fórmulas)…', true);
       try {
@@ -1420,7 +1870,7 @@
         mostrarStatusPadron('⚠ Aplicado en esta app, pero no se pudo conectar con Google Sheets (' + esc(e && e.message || 'sin conexión') + ').', false);
       }
     } else {
-      mostrarStatusPadron(`✅ Padrón actualizado en la app (${finales.length.toLocaleString('es-AR')} visitas). Podés descargar <code>datos.js</code> o activar la sincronización con Google Sheets.`, true);
+      mostrarStatusPadron(`✅ Padrón actualizado en la app (${fmt(finales.length)} visitas). Podés descargar <code>datos.js</code> o activar la sincronización con Google Sheets.`, true);
     }
     btn.disabled = false;
   }
@@ -1506,19 +1956,93 @@
     a.download = 'seguimiento_' + vista + '_' + C.hoyISO() + '.csv'; a.click();
   }
 
-  function resetFiltros() {
-    Object.assign(F, { cohorte: '', plan: '', ambito: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '', q: '', sub: '' });
+  function resetSubfiltrosLista() {
+    Object.assign(F, { sub: '', etiqueta: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '' });
     pagina = 1;
   }
 
   function limpiarFiltros() {
-    resetFiltros();
+    resetSubfiltrosLista();
+    render();
+  }
+
+  function limpiarGlobal() {
+    F.cohorte = '';
+    F.etapas = ['U', '1', '2'];
+    F.ambito = '';
+    F.q = '';
+    LOG.zona = '';
+    pagina = 1;
+    LOG.pagina = 1;
     render();
   }
 
   window.App = {
-    ir(v) { vista = v; pagina = 1; render(); },
-    sub(s) { subTab = s; partFiltro = 'all'; vista = 'tablero'; render(); },
+    ir(v) {
+      vista = v;
+      resetSubfiltrosLista();
+      render();
+      if ($('main')) $('main').scrollTop = 0;
+    },
+    irLista(v, optsLista) {
+      vista = v;
+      resetSubfiltrosLista();
+      Object.assign(F, optsLista || {});
+      render();
+      if ($('main')) $('main').scrollTop = 0;
+    },
+    sub(s) {
+      subTab = s;
+      partFiltro = 'all';
+      vista = 'metas';
+      render();
+    },
+    setCohorte(c) {
+      F.cohorte = c;
+      if (vista === 'metas') {
+        subTab = c === 'Emergente' ? 'emergentes' : (c === 'Residual' ? 'residuales' : 'consolidado');
+        partFiltro = 'all';
+      }
+      pagina = 1; LOG.pagina = 1;
+      render();
+    },
+    togEtapa(k) {
+      const idx = F.etapas.indexOf(k);
+      if (idx >= 0) {
+        if (F.etapas.length > 1) F.etapas.splice(idx, 1);
+      } else {
+        F.etapas.push(k);
+      }
+      pagina = 1; LOG.pagina = 1;
+      render();
+    },
+    todasEtapas() {
+      F.etapas = ['U', '1', '2'];
+      pagina = 1; LOG.pagina = 1;
+      render();
+    },
+    setAmbito(a) {
+      F.ambito = (F.ambito === a) ? '' : a;
+      LOG.zona = '';
+      pagina = 1; LOG.pagina = 1;
+      render();
+    },
+    buscarGlobal(val, forzarInput) {
+      F.q = val || '';
+      pagina = 1; LOG.pagina = 1;
+      render(!forzarInput);
+      if (forzarInput && $('qGlobal')) $('qGlobal').focus();
+    },
+    togAmbitosResumen() { verTodosAmbitosResumen = !verTodosAmbitosResumen; renderResumen(); },
+    togTareasResumen() { verTodasTareasResumen = !verTodasTareasResumen; renderResumen(); },
+    verEtiqueta(id) {
+      resetSubfiltrosLista();
+      F.etiqueta = id;
+      const esVenc = /venc/.test(id) && id !== 'vence_mes' && id !== 'vence_prox';
+      vista = esVenc ? 'vencidas' : 'todas';
+      render();
+      if ($('main')) $('main').scrollTop = 0;
+    },
     partMes(k) {
       partFiltro = k;
       if (ultimoCP) {
@@ -1527,26 +2051,32 @@
       }
     },
     toggleMay27(checked) { F.excluirMay27 = !!checked; pagina = 1; recalcular(); render(); },
-    verCruceOct() { resetFiltros(); F.cohorte = 'Emergente'; F.cruceOct = 'con'; vista = 'todas'; render(); },
-    verTarea(k) { resetFiltros(); F.tarea = k; vista = 'todas'; render(); },
-    verVencidas(cohorte) { resetFiltros(); if (cohorte) F.cohorte = cohorte; F.venc = 'vencida'; vista = 'pendientes'; render(); },
+    verCruceOct() { resetSubfiltrosLista(); F.cohorte = 'Emergente'; F.cruceOct = 'con'; vista = 'todas'; render(); if ($('main')) $('main').scrollTop = 0; },
+    verTarea(k) { resetSubfiltrosLista(); F.tarea = k; vista = 'todas'; render(); if ($('main')) $('main').scrollTop = 0; },
+    verVencidas(cohorte) { resetSubfiltrosLista(); if (cohorte) F.cohorte = cohorte; vista = 'vencidas'; render(); if ($('main')) $('main').scrollTop = 0; },
     limpiarFiltros,
-    f(k, val, keep) { F[k] = val; pagina = 1; if (keep) { renderLista(); const i = document.querySelector('input[type=search]'); if (i) { i.focus(); i.setSelectionRange(val.length, val.length); } } else render(); },
+    limpiarGlobal,
+    f(k, val) { F[k] = val; pagina = 1; render(); },
     pag(d) { pagina = Math.max(1, pagina + d); renderLista(); },
     logTag(id) { LOG.etiqueta = (LOG.etiqueta === id) ? '' : id; LOG.pagina = 1; renderLogistica(); },
-    logAmbito(k) { LOG.ambito = (LOG.ambito === k) ? '' : k; LOG.zona = ''; LOG.pagina = 1; renderLogistica(); },
-    logZona(k) { LOG.zona = (LOG.zona === k) ? '' : k; if (LOG.zona && !LOG.ambito) LOG.ambito = LOG.zona.split('|')[0]; LOG.pagina = 1; renderLogistica(); },
+    logAmbito(a) { App.setAmbito(a); },
+    logZona(k, ambNombre) {
+      LOG.zona = (LOG.zona === k) ? '' : k;
+      if (LOG.zona && !F.ambito && ambNombre) F.ambito = ambNombre;
+      LOG.pagina = 1;
+      render();
+    },
     logToggleZonas() { LOG.verTodasZonas = !LOG.verTodasZonas; renderLogistica(); },
     logOpt(k, val) { LOG[k] = val; LOG.pagina = 1; renderLogistica(); },
     logBuscar(val) { LOG.q = val; LOG.pagina = 1; renderLogistica(); const i = $('logSearch'); if (i) { i.focus(); i.setSelectionRange(val.length, val.length); } },
     logPag(d) { LOG.pagina = Math.max(1, LOG.pagina + d); renderLogistica(); },
-    logLimpiar() { Object.assign(LOG, { etiqueta: '', ambito: '', zona: '', q: '', pagina: 1 }); renderLogistica(); },
+    logLimpiar() { Object.assign(LOG, { etiqueta: '', zona: '', q: '', pagina: 1 }); F.ambito = ''; render(); },
     exportarRutaCSV,
     abrir, guardar, toggleRes, analizarPdfIndividual,
     abrirMasiva, agregarArchivosMasiva, updLote, quitarLote, limpiarMasiva, confirmarLote, verPdfLote,
     abrirPadron, cargarArchivoPadron, cambiarHojaPadron, remapearColumnaPadron, setPadronOpt, aplicarPadron, descargarDiffCSV, descargarDatosJS, restaurarPadronBase,
     sincronizar, abrirConfig, guardarConfig, exportar,
-    _estado: () => ({ VISITAS, INTENTOS, COLA, LOTE, PADRON_LOCAL, PADRON_UI, geminiActivo })
+    _estado: () => ({ VISITAS, INTENTOS, COLA, LOTE, PADRON_LOCAL, PADRON_UI, geminiActivo, F, LOG, vista, subTab })
   };
   window.dlgVisita = $('dlgVisita'); window.dlgCfg = $('dlgCfg'); window.dlgMasiva = $('dlgMasiva'); window.dlgPadron = $('dlgPadron');
   $('dlgVisita').addEventListener('close', () => {
