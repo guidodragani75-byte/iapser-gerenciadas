@@ -205,11 +205,11 @@
       v.ultimoABM = hit;
     });
 
-    // Construir filas originales (en cursiva) para las visitas que cambiaron en el último lote ABM
-    // Así el preventor no pierde la posibilidad de cargar un PDF de la tarea anterior si ya la había hecho.
+    // Construir filas originales (en cursiva) solo cuando cambia la tarea o la fecha máxima (CAMBIO_TAREA / CAMBIO_PLAZO)
+    // Si solo cambió un dato informativo (ej. Obs. IAPSER), sigue siendo la misma visita y no se duplica.
     const origVistas = {};
     delUltimo.forEach((m, idx) => {
-      if (m.tipo !== 'CAMBIO_TAREA' && m.tipo !== 'CAMBIO_PLAZO' && m.tipo !== 'MODIFICACION') return;
+      if (m.tipo !== 'CAMBIO_TAREA' && m.tipo !== 'CAMBIO_PLAZO') return;
       const tOrig = m.tareasAntes || m.tareasDespues || 'Visita';
       const fOrig = m.fechaMaxAntes || m.fechaMaxDespues || '';
       const kOrig = [m.cuit || '', m.nroEstab || '', C.sinTildes(tOrig).toLowerCase(), fOrig, m.detalle || ''].join('|');
