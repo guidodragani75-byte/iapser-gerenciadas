@@ -48,7 +48,10 @@
     cruceOct: '',
     obsFiltro: '',          // '' | 'riesgo' | 'alto' | 'medio' | 'con_obs'
     errTipo: '',
-    abmModo: '',            // '' | 'con_bajas' | 'solo_bajas' | 'novedades' (en Padrón vigente)
+    incOrig: true,          // incluir versiones originales en cursiva de visitas que cambiaron
+    incBajas: false,        // en vistas operativas: ocultar bajas por defecto (toggleable)
+    incBajasTodas: true,    // en Padrón total ('todas'): mostrar bajas en rojo por defecto
+    soloModificadas: false, // ver únicamente pares original (cursiva) + modificada
     excluirMay27: true
   };
   const LOG = { etiqueta: '', zona: '', soloPendientes: true, orden: 'prioridad', q: '', verTodasZonas: false, pagina: 1 };
@@ -262,16 +265,20 @@
 
     // Construir filas discontinuadas (Bajas registradas que ya no están en el padrón activo)
     const bajasVistas = {};
+    const hoy = C.hoyISO();
     todos.forEach((m, idx) => {
       if (m.tipo !== 'BAJA') return;
       const kBaja = [m.cuit || '', m.nroEstab || '', C.sinTildes(m.tareasAntes || '').toLowerCase(), m.fechaMaxAntes || ''].join('|');
       if (activasSet[kBaja] || bajasVistas[kBaja]) return;
       bajasVistas[kBaja] = true;
+      const fBaja = m.fechaMaxAntes || '';
+      const esVencBaja = !!(fBaja && fBaja < hoy);
+      const teniaGest = !!(m.teniaGestion && m.teniaGestion !== 'No');
       BAJAS_DISCONTINUADAS.push({
         id: 'baja|' + idx,
         esBajaABM: true,
         tieneEtapaPadron: true,
-        cohorte: C.cohorte(m.fechaMaxAntes),
+        cohorte: C.cohorte(fBaja),
         planificacion: 'Baja ABM',
         cuit: m.cuit || '',
         empleador: m.empleador || '',
@@ -285,17 +292,18 @@
         domicilio: '',
         cp: '',
         tareas: m.tareasAntes || 'Visita',
-        fechaMax: m.fechaMaxAntes || '',
+        fechaMax: fBaja,
+        plazo: fBaja,
         fechaAgendada: '',
         fechaReal: '',
         estado: 'Discontinuada',
-        cerrada: true,
+        cerrada: teniaGest,
         cuentaObjetivo: false,
         cerradaPorCruceOct: false,
-        vencida: false,
-        catVenc: 'cerrada',
+        vencida: !teniaGest && esVencBaja,
+        catVenc: teniaGest ? 'cerrada' : (!fBaja ? 'cerrada' : (esVencBaja ? 'vencida' : (C.mesDe(fBaja) === C.mesDe(hoy) ? 'mes_actual' : 'otro_mes'))),
         intentos: [],
-        partesObs: [{ fuente: 'Baja ABM (' + (m.fechaABM || '') + ')', texto: (m.detalle || 'Dada de baja del padrón') + (m.teniaGestion && m.teniaGestion !== 'No' ? ' · Gestión previa: ' + m.teniaGestion : '') }],
+        partesObs: [{ fuente: 'Baja ABM (' + (m.fechaABM || '') + ')', texto: (m.detalle || 'Dada de baja del padrón') + (teniaGest ? ' · Gestión previa: ' + m.teniaGestion : '') }],
         textoObs: '',
         riesgoFallida: null,
         ultimoABM: m
@@ -474,25 +482,42 @@
     return true;
   }
 
-  function baseListaSinSub() {
-    if (vista === 'realizadas' && !F.etiqueta) {
-      return realizadasUnificadas(false);
-    }
-    let arr = baseGlobal(false);
-    if (F.etiqueta) {
-      arr = C.filtrarPorEtiqueta(arr, F.etiqueta, C.hoyISO());
-    } else if (vista === 'todas') {
-      const origFilt = ORIGINALES_MODIFICADAS.filter(o => pasaGlobal(o, false));
-      const bajasFilt = BAJAS_DISCONTINUADAS.filter(b => pasaGlobal(b, false));
-      if (F.abmModo === 'solo_bajas') return bajasFilt;
-      if (F.abmModo === 'sin_orig') return arr;
-      if (F.abmModo === 'con_bajas') return arr.concat(origFilt).concat(bajasFilt);
-      if (F.abmModo === 'novedades') return arr.filter(v => !!v.ultimoABM).concat(origFilt);
-      return arr.concat(origFilt); // Por defecto: vigentes + cambiadas + originales en cursiva (bajas ocultas)
-    } else if (enVista[vista]) {
-      arr = arr.filter(enVista[vista]);
-    }
+  function mostrarBajasEnVista(vName) {
+    return (vName === 'todas') ? !!F.incBajasTodas : !!F.incBajas;
+  }
+
+  function filtrarPorVistaBase(arr, vName) {
+    if (F.etiqueta) return C.filtrarPorEtiqueta(arr, F.etiqueta, C.hoyISO());
+    if (vName === 'todas') return arr;
+    if (vName === 'sin_agendar') return arr.filter(v => v.esBajaABM ? !v.cerrada : esSinAgendar(v));
+    if (vName === 'realizadas') return arr.filter(v => v.esBajaABM ? v.cerrada : esRealizada(v));
+    if (enVista[vName]) return arr.filter(enVista[vName]);
     return arr;
+  }
+
+  function scopeABMVista(vName) {
+    const vig = (vName === 'realizadas' && !F.etiqueta)
+      ? realizadasUnificadas(false)
+      : filtrarPorVistaBase(baseGlobal(false), vName);
+    const origs = filtrarPorVistaBase(ORIGINALES_MODIFICADAS.filter(o => pasaGlobal(o, false)), vName);
+    const bajas = filtrarPorVistaBase(BAJAS_DISCONTINUADAS.filter(b => pasaGlobal(b, false)), vName);
+    const modifVigs = vig.filter(v => !!v.ultimoABM);
+    return {
+      vig,
+      origs,
+      bajas,
+      modifVigs,
+      paresMod: modifVigs.length + origs.length
+    };
+  }
+
+  function baseListaSinSub() {
+    const sc = scopeABMVista(vista);
+    if (F.soloModificadas) return sc.modifVigs.concat(sc.origs);
+    let out = sc.vig.slice();
+    if (F.incOrig && sc.origs.length) out = out.concat(sc.origs);
+    if (mostrarBajasEnVista(vista) && sc.bajas.length) out = out.concat(sc.bajas);
+    return out;
   }
 
   function badgeObsHTML(v) {
@@ -549,6 +574,7 @@
     const nPot = rows.filter(v => !v.cerrada && v.riesgoFallida).length;
     const nRev = rows.filter(v => v.revisarDuplicada).length;
     const excluidas = VISITAS_TODAS.length - C.filtrarCorteFuturo(VISITAS_TODAS, true).length;
+    const nTodasFull = rows.length + ORIGINALES_MODIFICADAS.filter(o => pasaGlobal(o, false)).length + BAJAS_DISCONTINUADAS.filter(b => pasaGlobal(b, false)).length;
     const item = (k, ico, lbl, cnt, alerta) =>
       `<button type="button" class="nav ${vista === k ? 'on' : ''}" onclick="App.ir('${k}')"><span>${ico}</span><span>${lbl}</span>${cnt != null ? `<span class="n ${alerta && cnt > 0 ? 'al' : ''}">${fmt(cnt)}</span>` : ''}</button>`;
 
@@ -564,7 +590,7 @@
       ${item('realizadas', '✅', 'Realizadas', s.Re)}
       ${item('vencidas', '⚠', 'Vencidas (col. R)', s.V, true)}
       ${item('pot_fallidas', '⚡', 'Pot. fallidas', nPot, true)}
-      ${item('todas', '🗂', 'Padrón vigente', rows.length)}
+      ${item('todas', '🗂', 'Padrón total', nTodasFull)}
       <div class="grp">Control</div>
       ${item('abm', '📋', 'Historial ABM', movimientosABMUnificados().length)}
       ${item('revisar', '🔎', 'Errores / A revisar', nRev, nRev > 0)}
@@ -1307,7 +1333,7 @@
     realizadas: ['Realizadas', 'Todas las visitas realizadas (ciclo vigente + Sep–Oct sin doble conteo). Solo suman al objetivo las que tienen PDF.'],
     vencidas: ['Vencidas (col. R)', 'Visitas abiertas cuya fecha máxima (columna R) ya fue superada.'],
     pot_fallidas: ['Potencialmente fallidas', 'Visitas abiertas con alertas en sus observaciones (cerrado, fallecido, sin actividad AFIP/pública o domicilio dudoso).'],
-    todas: ['Padrón vigente', 'Planilla operativa vigente completa con todos los filtros.'],
+    todas: ['Padrón total', 'Asignación completa de trabajo (presente, pasada y futura): vigentes, originales en cursiva y bajas en rojo.'],
     pendientes: ['Pendientes', 'Visitas aún no cerradas con documento PDF.'],
     revisar: ['Errores / A revisar', 'Posibles duplicadas por fecha o tareas repetidas entre año anterior y actual.']
   };
@@ -1350,8 +1376,33 @@
     return `<div class="seg">${defs.map(([k, l]) => `<button type="button" class="${F.sub === k ? 'on' : ''}" onclick="App.f('sub','${k}')">${l}</button>`).join('')}</div>`;
   }
 
+  function botonesABMHTML(sc, totalMostrado) {
+    const bajasAct = mostrarBajasEnVista(vista);
+    const soloMod = !!F.soloModificadas;
+    const origAct = !soloMod && !!F.incOrig;
+    const bajasOn = !soloMod && bajasAct;
+    const totConTodo = sc.vig.length + sc.origs.length + sc.bajas.length;
+    return `<div class="abm-bar">
+      <span class="abm-lbl">Visibilidad ABM:</span>
+      <button type="button" class="abm-btn ${!soloMod ? 'on' : ''}" onclick="App.togAbm('vig')" title="Ver padrón vigente completo">
+        Vigentes <span class="cnt">${fmt(sc.vig.length)}</span>
+      </button>
+      <button type="button" class="abm-btn ${origAct ? 'on' : (sc.origs.length ? '' : 'dis')}" onclick="App.togAbm('orig')" title="Incluir o quitar versiones originales en cursiva de visitas que cambiaron">
+        ${origAct ? '✓ ' : ''}Originales (cursiva) <span class="cnt">${fmt(sc.origs.length)}</span>
+      </button>
+      <button type="button" class="abm-btn ${bajasOn ? 'on-bad' : (sc.bajas.length ? '' : 'dis')}" onclick="App.togAbm('bajas')" title="Incluir o quitar visitas dadas de baja (en rojo)">
+        ${bajasOn ? '✓ ' : ''}Bajas (rojo) <span class="cnt">${fmt(sc.bajas.length)}</span>
+      </button>
+      <button type="button" class="abm-btn ${soloMod ? 'on-chg' : (sc.paresMod ? '' : 'dis')}" onclick="App.togAbm('modif')" title="Ver únicamente las visitas que cambiaron: original en cursiva + modificada">
+        ⇄ Solo modificadas (orig. + modif.) <span class="cnt">${fmt(sc.paresMod)}</span>
+      </button>
+      <span style="margin-left:auto" class="note">Mostrando <b>${fmt(totalMostrado)}</b> de ${fmt(totConTodo)} totales (c/orig. y bajas)</span>
+    </div>`;
+  }
+
   function renderLista() {
     destruirCharts();
+    const scABM = scopeABMVista(vista);
     const baseVista = baseListaSinSub();
     const lista = filtrar();
     const total = lista.length, pags = Math.max(1, Math.ceil(total / PAGE));
@@ -1368,13 +1419,11 @@
 
     const etObj = F.etiqueta ? C.ETIQUETAS_LOGISTICA.find(x => x.id === F.etiqueta) : null;
     const [tit, desc] = etObj ? [etObj.label, 'Prioridad crítica seleccionada desde Resumen.'] : (META_VISTA[vista] || ['Visitas', '']);
-    const hayFiltrosLocales = !!(F.sub || F.etiqueta || F.tarea || F.venc || F.mes || F.estado || F.cruceOct || F.errTipo || F.abmModo);
-    const nBajasDisp = vista === 'todas' ? BAJAS_DISCONTINUADAS.filter(b => pasaGlobal(b, false)).length : 0;
-    const nOrigDisp = vista === 'todas' ? ORIGINALES_MODIFICADAS.filter(o => pasaGlobal(o, false)).length : 0;
-    const nNovDisp = vista === 'todas' ? baseGlobal(false).filter(v => !!v.ultimoABM).length : 0;
+    const hayFiltrosLocales = !!(F.sub || F.etiqueta || F.tarea || F.venc || F.mes || F.estado || F.cruceOct || F.errTipo || F.soloModificadas);
 
     let h = `<div class="page-head"><div><h1>${esc(tit)}</h1><div class="sub">${esc(desc)}</div></div></div>`;
     h += barraFiltrosGlobalHTML(total);
+    h += botonesABMHTML(scABM, total);
 
     if (etObj) {
       h += `<div class="info-box" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">
@@ -1385,13 +1434,6 @@
 
     h += `<div class="filters">
       ${subtabsVistaHTML(baseVista)}
-      ${(vista === 'todas' && (nBajasDisp || nOrigDisp || nNovDisp || F.abmModo)) ? `<select class="${F.abmModo ? 'act' : ''}" onchange="App.f('abmModo',this.value)" title="Cómo ver originales en cursiva y bajas en rojo">
-        <option value="" ${F.abmModo === '' ? 'selected' : ''}>ABM: vigentes + originales (${nOrigDisp}) · oculta ${nBajasDisp} bajas</option>
-        <option value="novedades" ${F.abmModo === 'novedades' ? 'selected' : ''}>Solo cambiadas (original + cambiada: ${nOrigDisp + nNovDisp})</option>
-        <option value="sin_orig" ${F.abmModo === 'sin_orig' ? 'selected' : ''}>Solo padrón vigente (sin originales ni bajas)</option>
-        <option value="con_bajas" ${F.abmModo === 'con_bajas' ? 'selected' : ''}>Incluir bajas en rojo (+${nBajasDisp})</option>
-        <option value="solo_bajas" ${F.abmModo === 'solo_bajas' ? 'selected' : ''}>Solo bajas en rojo (${nBajasDisp})</option>
-      </select>` : ''}
       <select class="${F.tarea ? 'act' : ''}" onchange="App.f('tarea',this.value)" title="Filtrar por tarea (columna Q)">
         <option value="">Tarea: todas</option>
         ${tareaOpts}
@@ -2757,7 +2799,7 @@
   }
 
   function resetSubfiltrosLista() {
-    Object.assign(F, { sub: '', etiqueta: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '', abmModo: '' });
+    Object.assign(F, { sub: '', etiqueta: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '', soloModificadas: false });
     pagina = 1;
   }
 
@@ -2866,6 +2908,22 @@
     verVencidas(cohorte) { resetSubfiltrosLista(); if (cohorte) F.cohorte = cohorte; vista = 'vencidas'; render(); if ($('main')) $('main').scrollTop = 0; },
     limpiarFiltros,
     limpiarGlobal,
+    togAbm(k) {
+      if (k === 'vig') {
+        F.soloModificadas = false;
+      } else if (k === 'orig') {
+        F.soloModificadas = false;
+        F.incOrig = !F.incOrig;
+      } else if (k === 'bajas') {
+        F.soloModificadas = false;
+        if (vista === 'todas') F.incBajasTodas = !F.incBajasTodas;
+        else F.incBajas = !F.incBajas;
+      } else if (k === 'modif') {
+        F.soloModificadas = !F.soloModificadas;
+      }
+      pagina = 1;
+      render();
+    },
     f(k, val) { F[k] = val; pagina = 1; render(); },
     pag(d) { pagina = Math.max(1, pagina + d); renderLista(); },
     logTag(id) { LOG.etiqueta = (LOG.etiqueta === id) ? '' : id; LOG.pagina = 1; renderLogistica(); },

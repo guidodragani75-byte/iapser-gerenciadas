@@ -184,6 +184,15 @@
 
   /* Tablas y estados (tipografía uniforme 13px) */
   .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+  .abm-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 10px;padding:7px 11px;background:#fff;border:1px solid var(--line);border-radius:10px;font-size:12.5px}
+  .abm-bar .abm-lbl{font-size:11.5px;color:var(--mut);font-weight:600;margin-right:2px}
+  .abm-btn{border:1px solid var(--line);background:#FAFAF8;color:var(--ink);padding:4px 10px;border-radius:16px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .12s}
+  .abm-btn:hover{border-color:var(--teal);background:#F2F8F8}
+  .abm-btn .cnt{font-weight:700;font-variant-numeric:tabular-nums}
+  .abm-btn.on{background:#E6F1F4;border-color:var(--teal);color:var(--teal);font-weight:600}
+  .abm-btn.on-bad{background:#FBE9E7;border-color:var(--bad);color:var(--bad);font-weight:600}
+  .abm-btn.on-chg{background:#EDE9FE;border-color:#6D28D9;color:#5B21B6;font-weight:600}
+  .abm-btn.dis{opacity:.55}
   .tw{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
   table{border-collapse:collapse;width:100%;background:#fff;font-size:13px}
   th,td{padding:8px 10px;border-bottom:1px solid #ECEEEA;text-align:left;vertical-align:middle;font-size:13px}
