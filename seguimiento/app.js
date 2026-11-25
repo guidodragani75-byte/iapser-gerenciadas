@@ -26,6 +26,7 @@
   let VISITAS = [];
   let HIST_VISITAS = [];
   let BAJAS_DISCONTINUADAS = [];
+  let ORIGINALES_MODIFICADAS = [];
   let vista = 'resumen', subTab = 'consolidado', pagina = 1;
   let verTodosAmbitosResumen = false, verTodasTareasResumen = false;
   let chMain = null, chSec = null, chPlazo = null, chPart = null;
@@ -153,6 +154,7 @@
   function enriquecerConABM() {
     const todos = movimientosABMUnificados();
     BAJAS_DISCONTINUADAS = [];
+    ORIGINALES_MODIFICADAS = [];
     if (!todos.length) return;
 
     const ultimoLoteKey = todos[0].loteId || todos[0].fechaABM || '';
@@ -169,9 +171,11 @@
     });
 
     const conteoNoObraCE = {};
+    const visitaPorCE = {};
     VISITAS_TODAS.forEach(v => {
+      const ce = v.cuit + '|' + v.nroEstab;
+      if (!visitaPorCE[ce]) visitaPorCE[ce] = v;
       if (!v.esObra) {
-        const ce = v.cuit + '|' + v.nroEstab;
         conteoNoObraCE[ce] = (conteoNoObraCE[ce] || 0) + 1;
       }
     });
@@ -197,6 +201,65 @@
       v.ultimoABM = hit;
     });
 
+    // Construir filas originales (en cursiva) para las visitas que cambiaron en el último lote ABM
+    // Así el preventor no pierde la posibilidad de cargar un PDF de la tarea anterior si ya la había hecho.
+    const origVistas = {};
+    delUltimo.forEach((m, idx) => {
+      if (m.tipo !== 'CAMBIO_TAREA' && m.tipo !== 'CAMBIO_PLAZO' && m.tipo !== 'MODIFICACION') return;
+      const tOrig = m.tareasAntes || m.tareasDespues || 'Visita';
+      const fOrig = m.fechaMaxAntes || m.fechaMaxDespues || '';
+      const kOrig = [m.cuit || '', m.nroEstab || '', C.sinTildes(tOrig).toLowerCase(), fOrig, m.detalle || ''].join('|');
+      if (origVistas[kOrig]) return;
+      origVistas[kOrig] = true;
+
+      const ce = (m.cuit || '') + '|' + (m.nroEstab || '');
+      const ref = visitaPorCE[ce] || {};
+      const idOrigReal = [m.cuit || '', m.nroEstab || '', C.sinTildes(tOrig).toLowerCase(), fOrig].join('|');
+      const ints = INTENTOS[idOrigReal] || [];
+      const est = C.estadoVisita(ints);
+      const u = C.ultimoIntento(ints);
+      const cerrada = C.estaCerrada(est);
+      const hoy = C.hoyISO();
+      const catVenc = cerrada || !fOrig ? 'cerrada' : (fOrig < hoy ? 'vencida' : (C.mesDe(fOrig) === C.mesDe(hoy) ? 'mes_actual' : 'otro_mes'));
+
+      ORIGINALES_MODIFICADAS.push({
+        id: 'orig|' + idx,
+        idOriginalReal: idOrigReal,
+        esOriginalABM: true,
+        tieneEtapaPadron: true,
+        cohorte: C.cohorte(fOrig),
+        planificacion: ref.planificacion || 'Original ABM',
+        cuit: m.cuit || '',
+        empleador: m.empleador || ref.empleador || '',
+        contrato: ref.contrato || '',
+        nroEstab: m.nroEstab || '',
+        establecimiento: ref.establecimiento || '',
+        ambito: m.ambito || ref.ambito || '',
+        provincia: ref.provincia || m.ambito || '',
+        localidad: m.localidad || ref.localidad || '',
+        departamento: ref.departamento || '',
+        domicilio: ref.domicilio || '',
+        cp: ref.cp || '',
+        tareas: tOrig,
+        fechaMax: fOrig,
+        plazo: fOrig,
+        fechaAgendada: u && u.fechaAgendada ? u.fechaAgendada : '',
+        fechaReal: u && u.fechaReal ? u.fechaReal : '',
+        resultadoActual: u && u.resultado ? u.resultado : '',
+        estado: est,
+        cerrada: cerrada,
+        cuentaObjetivo: false,
+        cerradaPorCruceOct: false,
+        vencida: catVenc === 'vencida',
+        catVenc: catVenc,
+        intentos: ints,
+        partesObs: [{ fuente: 'Original antes ABM (' + (m.fechaABM || '') + ')', texto: (m.detalle || 'Versión anterior al cambio') }],
+        textoObs: '',
+        riesgoFallida: null,
+        ultimoABM: m
+      });
+    });
+
     // Construir filas discontinuadas (Bajas registradas que ya no están en el padrón activo)
     const bajasVistas = {};
     todos.forEach((m, idx) => {
@@ -209,7 +272,7 @@
         esBajaABM: true,
         tieneEtapaPadron: true,
         cohorte: C.cohorte(m.fechaMaxAntes),
-        planificacion: 'Discontinuada',
+        planificacion: 'Baja ABM',
         cuit: m.cuit || '',
         empleador: m.empleador || '',
         contrato: '',
@@ -419,10 +482,13 @@
     if (F.etiqueta) {
       arr = C.filtrarPorEtiqueta(arr, F.etiqueta, C.hoyISO());
     } else if (vista === 'todas') {
+      const origFilt = ORIGINALES_MODIFICADAS.filter(o => pasaGlobal(o, false));
       const bajasFilt = BAJAS_DISCONTINUADAS.filter(b => pasaGlobal(b, false));
       if (F.abmModo === 'solo_bajas') return bajasFilt;
-      if (F.abmModo === 'con_bajas') return arr.concat(bajasFilt);
-      if (F.abmModo === 'novedades') return arr.filter(v => !!v.ultimoABM);
+      if (F.abmModo === 'sin_orig') return arr;
+      if (F.abmModo === 'con_bajas') return arr.concat(origFilt).concat(bajasFilt);
+      if (F.abmModo === 'novedades') return arr.filter(v => !!v.ultimoABM).concat(origFilt);
+      return arr.concat(origFilt); // Por defecto: vigentes + cambiadas + originales en cursiva (bajas ocultas)
     } else if (enVista[vista]) {
       arr = arr.filter(enVista[vista]);
     }
@@ -462,7 +528,10 @@
         const kb = `${b.cuit}|${String(b.nroEstab).padStart(4, '0')}|${b.fechaMax || '9'}`;
         return ka.localeCompare(kb);
       }
-      return (a.fechaMax || '9').localeCompare(b.fechaMax || '9');
+      return (a.fechaMax || '9').localeCompare(b.fechaMax || '9') ||
+        String(a.cuit || '').localeCompare(String(b.cuit || '')) ||
+        String(a.nroEstab || '').localeCompare(String(b.nroEstab || '')) ||
+        ((a.esOriginalABM ? 1 : 0) - (b.esOriginalABM ? 1 : 0));
     });
   }
 
@@ -1301,6 +1370,7 @@
     const [tit, desc] = etObj ? [etObj.label, 'Prioridad crítica seleccionada desde Resumen.'] : (META_VISTA[vista] || ['Visitas', '']);
     const hayFiltrosLocales = !!(F.sub || F.etiqueta || F.tarea || F.venc || F.mes || F.estado || F.cruceOct || F.errTipo || F.abmModo);
     const nBajasDisp = vista === 'todas' ? BAJAS_DISCONTINUADAS.filter(b => pasaGlobal(b, false)).length : 0;
+    const nOrigDisp = vista === 'todas' ? ORIGINALES_MODIFICADAS.filter(o => pasaGlobal(o, false)).length : 0;
     const nNovDisp = vista === 'todas' ? baseGlobal(false).filter(v => !!v.ultimoABM).length : 0;
 
     let h = `<div class="page-head"><div><h1>${esc(tit)}</h1><div class="sub">${esc(desc)}</div></div></div>`;
@@ -1315,11 +1385,12 @@
 
     h += `<div class="filters">
       ${subtabsVistaHTML(baseVista)}
-      ${(vista === 'todas' && (nBajasDisp || nNovDisp || F.abmModo)) ? `<select class="${F.abmModo ? 'act' : ''}" onchange="App.f('abmModo',this.value)" title="Cómo ver novedades y bajas del padrón en esta vista">
-        <option value="" ${F.abmModo === '' ? 'selected' : ''}>ABM: solo padrón vigente (oculta ${nBajasDisp} baja(s))</option>
-        <option value="con_bajas" ${F.abmModo === 'con_bajas' ? 'selected' : ''}>Incluir discontinuadas (+${nBajasDisp} baja(s))</option>
-        <option value="solo_bajas" ${F.abmModo === 'solo_bajas' ? 'selected' : ''}>Solo discontinuadas / bajas (${nBajasDisp})</option>
-        <option value="novedades" ${F.abmModo === 'novedades' ? 'selected' : ''}>Con cambios en último ABM (${nNovDisp})</option>
+      ${(vista === 'todas' && (nBajasDisp || nOrigDisp || nNovDisp || F.abmModo)) ? `<select class="${F.abmModo ? 'act' : ''}" onchange="App.f('abmModo',this.value)" title="Cómo ver originales en cursiva y bajas en rojo">
+        <option value="" ${F.abmModo === '' ? 'selected' : ''}>ABM: vigentes + originales (${nOrigDisp}) · oculta ${nBajasDisp} bajas</option>
+        <option value="novedades" ${F.abmModo === 'novedades' ? 'selected' : ''}>Solo cambiadas (original + cambiada: ${nOrigDisp + nNovDisp})</option>
+        <option value="sin_orig" ${F.abmModo === 'sin_orig' ? 'selected' : ''}>Solo padrón vigente (sin originales ni bajas)</option>
+        <option value="con_bajas" ${F.abmModo === 'con_bajas' ? 'selected' : ''}>Incluir bajas en rojo (+${nBajasDisp})</option>
+        <option value="solo_bajas" ${F.abmModo === 'solo_bajas' ? 'selected' : ''}>Solo bajas en rojo (${nBajasDisp})</option>
       </select>` : ''}
       <select class="${F.tarea ? 'act' : ''}" onchange="App.f('tarea',this.value)" title="Filtrar por tarea (columna Q)">
         <option value="">Tarea: todas</option>
@@ -1364,9 +1435,11 @@
       const errTag = esAnios
         ? `<span class="pill p-bad" title="Misma tarea repetida entre año anterior y actual: ${esc((v.tareasRepetidasAnio || []).join(', '))}">🔁 Año ant./act.</span> `
         : (v.revisarDuplicada ? '<span class="pill p-warn" title="Misma tarea y establecimiento con fecha distinta">⚠ Duplicada</span> ' : '');
-      const abmTag = (!v.esBajaABM && v.ultimoABM) ? badgeNovedadABM(v.ultimoABM) + ' ' : '';
+      const abmTag = v.esOriginalABM
+        ? `<span class="pill p-sin" title="Versión original anterior al cambio ABM (por si el preventor ya la realizó)">Original</span> `
+        : ((!v.esBajaABM && v.ultimoABM) ? badgeNovedadABM(v.ultimoABM) + ' ' : '');
       const fechaCelda = (v.fechaMax ? C.aDMY(v.fechaMax) : '–') + (v.vencida ? ' <span class="pill p-bad">Vencida</span>' : '');
-      const rowCls = v.esBajaABM ? 'is-baja' : (v.vencida ? 'is-venc' : '');
+      const rowCls = v.esBajaABM ? 'is-baja' : (v.esOriginalABM ? 'is-orig' : (v.vencida ? 'is-venc' : ''));
       const btnAccion = v.esBajaABM
         ? `<button type="button" class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📋 Ver baja</button>`
         : `<button type="button" class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📄 PDF</button>`;
@@ -1501,17 +1574,21 @@
       $('dlgVisita').showModal();
       return;
     }
-    const v = VISITAS.find(x => x.id === id);
+    const v = String(id || '').indexOf('orig|') === 0
+      ? ORIGINALES_MODIFICADAS.find(x => x.id === id)
+      : VISITAS.find(x => x.id === id);
     if (!v) return;
     if (blobUrlIndividual) { URL.revokeObjectURL(blobUrlIndividual); blobUrlIndividual = ''; }
     const it = intentoEditable(v);
-    editando = { id, it };
+    editando = { id: v.esOriginalABM ? v.idOriginalReal : id, it };
     const previos = v.intentos.filter(x => x.n !== it.n);
     const dato = (k, val) => `<b>${k}</b><span>${esc(val) || '–'}</span>`;
     const motivoBase = MOTIVOS.indexOf((it.motivo || '').split(' - ')[0]) >= 0 ? (it.motivo || '').split(' - ')[0] : '';
     const detalle = (it.motivo || '').indexOf(' - ') > 0 ? it.motivo.split(' - ').slice(1).join(' - ') : (motivoBase ? '' : (it.motivo || ''));
     const cruceHtml = v.cruceOct ? `<div class="info-box"><strong>Cruce con PDF de Octubre (CUIT + Estab ${esc(v.nroEstab)}):</strong><br>${v.cruceOct.items.map(x => `• ${esc(x.fecha)} — <b>${esc(x.resultado)}</b> (${esc(x.tarea)}) · <a href="${esc(x.url)}" target="_blank">Abrir PDF en Drive ↗</a>`).join('<br>')}</div>` : '';
-    const abmHtml = v.ultimoABM ? `<div class="info-box" style="background:#F5F3FF;border-color:#DDD6FE;color:#4C1D95"><strong>Novedad ABM (${esc(v.ultimoABM.fechaABM)}):</strong> ${pillTipoABM(v.ultimoABM)}<div style="margin-top:4px">${celdaDetalleABM(v.ultimoABM)}</div></div>` : '';
+    const abmHtml = v.esOriginalABM
+      ? `<div class="info-box" style="background:#FAFBF9;border-color:#D5D8D3;color:#4A5560"><strong>Versión original (antes del cambio ABM ${esc((v.ultimoABM && v.ultimoABM.fechaABM) || '')}):</strong><div style="margin-top:4px">Si el preventor ya realizó esta visita antes del cambio, podés cargar el resultado y el PDF acá sin perder el registro.</div></div>`
+      : (v.ultimoABM ? `<div class="info-box" style="background:#F5F3FF;border-color:#DDD6FE;color:#4C1D95"><strong>Novedad ABM (${esc(v.ultimoABM.fechaABM)}):</strong> ${pillTipoABM(v.ultimoABM)}<div style="margin-top:4px">${celdaDetalleABM(v.ultimoABM)}</div></div>` : '');
     const errHtml = v.revisarDuplicada ? `<div class="err" style="display:block"><strong>Error / A revisar:</strong> ${v.errores && v.errores.indexOf('misma_tarea_anios') >= 0 ? `Misma tarea repetida entre año anterior y actual (${esc((v.tareasRepetidasAnio || []).join(', '))})` : 'Misma tarea y establecimiento con fecha máxima distinta'} · Fecha original planilla: <b>${C.aDMY(v.fechaMax)}</b></div>` : '';
     const riesgoHtml = v.riesgoFallida ? `<div class="val-box ${v.riesgoFallida.nivel === 'alto' ? 'bad' : 'warn'}"><strong>⚠ Potencialmente fallida (${esc(v.riesgoFallida.motivo)}):</strong> revisá las observaciones antes de asignar o enviar al preventor.</div>` : '';
     const contactoTxt = [v.responsable, v.telefono, v.email].filter(Boolean).join(' · ');
@@ -2816,13 +2893,14 @@
     abmLimpiar() { Object.assign(ABM_F, { lote: '', tipo: '', ambito: '', q: '', pagina: 1 }); renderHistorialABM(); },
     exportarHistorialABM,
     sincronizar, abrirConfig, guardarConfig, exportar,
-    _estado: () => ({ VISITAS, BAJAS_DISCONTINUADAS, INTENTOS, COLA, LOTE, PADRON_LOCAL, PADRON_UI, ABM_LOCAL, ULTIMO_LOTE_ABM, geminiActivo, F, LOG, ABM_F, vista, subTab })
+    _estado: () => ({ VISITAS, BAJAS_DISCONTINUADAS, ORIGINALES_MODIFICADAS, INTENTOS, COLA, LOTE, PADRON_LOCAL, PADRON_UI, ABM_LOCAL, ULTIMO_LOTE_ABM, geminiActivo, F, LOG, ABM_F, vista, subTab })
   };
   /* ---------- HINT FLOTANTE DE OBSERVACIONES ---------- */
   function buscarPorIdCualquiera(id) {
     if (!id) return null;
     if (String(id).indexOf('hist|') === 0) return HIST_VISITAS.find(x => x.id === id) || null;
     if (String(id).indexOf('baja|') === 0) return BAJAS_DISCONTINUADAS.find(x => x.id === id) || null;
+    if (String(id).indexOf('orig|') === 0) return ORIGINALES_MODIFICADAS.find(x => x.id === id) || null;
     return VISITAS.find(x => x.id === id) || null;
   }
 
