@@ -78,17 +78,27 @@ def get_pref_last(fila, idx, col):
     return get(fila, idx, col)
 
 
+def leer_archivo_texto(ruta):
+    raw = open(ruta, 'rb').read()
+    try:
+        return raw.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        return raw.decode('cp1252', errors='replace')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--detalle')
     ap.add_argument('--emergentes')
     ap.add_argument('--hoja1', help='CSV de Hoja 1 (Prioridad mes vencido): col A+I=clave, F=fecha, AB=resultado, AE=link')
     ap.add_argument('--hoja1-links', help='JSON de read-links de col AE de Hoja 1 (hipervinculos embebidos)')
+    ap.add_argument('--sin-abm', action='store_true', help='No generar nuevo lote en historialABM al regenerar datos.js')
+    ap.add_argument('--usuario', default='Script build_data')
     ap.add_argument('--salida', default=os.path.join(HERE, 'datos.js'))
     a = ap.parse_args()
 
-    t_det = open(a.detalle, encoding='utf-8').read() if a.detalle else descargar(HOJA_DETALLE)
-    t_em = open(a.emergentes, encoding='utf-8').read() if a.emergentes else descargar(HOJA_EMERG)
+    t_det = leer_archivo_texto(a.detalle) if a.detalle else descargar(HOJA_DETALLE)
+    t_em = leer_archivo_texto(a.emergentes) if a.emergentes else descargar(HOJA_EMERG)
     idx, filas = leer_csv(t_det)
     validar_encabezados(idx, HOJA_DETALLE, COLUMNAS_FIJAS)
     idx_e, filas_e = leer_csv(t_em)
@@ -213,7 +223,51 @@ def main():
                   'localidad', 'tarea', 'fechaRealizada', 'resultadoVisita', 'observaciones', 'documentoAdjunto', 'origenPlan']
         hist = [{c: r.get(c, '') for c in campos} for r in json.loads(js) if r.get('origenPlan') != 'Residual 2026']
 
-    datos = {'generado': datetime.now().strftime('%Y-%m-%d %H:%M'), 'visitas': visitas, 'historico': hist}
+    gen_ts = datetime.now().strftime('%Y-%m-%d %H:%M')
+    prev_visitas = []
+    hist_abm = []
+    if os.path.exists(a.salida):
+        try:
+            raw_prev = open(a.salida, encoding='utf-8').read()
+            eq = raw_prev.find('=')
+            if eq >= 0:
+                prev_obj = json.loads(raw_prev[eq + 1:].strip().rstrip(';'))
+                prev_visitas = prev_obj.get('visitas', []) or []
+                hist_abm = prev_obj.get('historialABM', []) or []
+        except Exception as e_prev:
+            print('AVISO: no se pudo leer historialABM previo:', e_prev)
+
+    if prev_visitas and not a.sin_abm:
+        try:
+            payload_cmp = json.dumps({
+                'actuales': prev_visitas,
+                'nuevas': visitas,
+                'historico': hist,
+                'meta': {
+                    'fechaABM': gen_ts,
+                    'archivo': os.path.basename(a.detalle) if a.detalle else HOJA_DETALLE,
+                    'usuario': a.usuario
+                }
+            }, ensure_ascii=False).encode('utf-8')
+            node_cmd = (
+                "const fs=require('fs'),C=require('./seguimiento/core.js');"
+                "const p=JSON.parse(fs.readFileSync(0,'utf8'));"
+                "const d=C.compararPadron(p.actuales,p.nuevas,{},C.indexarCruceOctubre(p.historico));"
+                "const l=C.construirLoteABM(d,p.meta);"
+                "process.stdout.write(JSON.stringify(l));"
+            )
+            out_lote = subprocess.check_output(['node', '-e', node_cmd], input=payload_cmp, cwd=ROOT)
+            lote = json.loads(out_lote.decode('utf-8'))
+            if lote.get('movimientos'):
+                hist_abm.extend(lote['movimientos'])
+                r_abm = lote.get('resumen', {})
+                print('ABM registrado (%s): +%d altas | -%d bajas | %d cambios de tareas | %d otros' % (
+                    gen_ts, r_abm.get('altas', 0), r_abm.get('bajas', 0),
+                    r_abm.get('cambiosTareas', 0), r_abm.get('otrasModificadas', 0)))
+        except Exception as e_abm:
+            print('AVISO: no se pudo calcular diff ABM:', e_abm)
+
+    datos = {'generado': gen_ts, 'visitas': visitas, 'historico': hist, 'historialABM': hist_abm}
     with open(a.salida, 'w', encoding='utf-8') as fh:
         fh.write('window.SEG_DATA = ' + json.dumps(datos, ensure_ascii=False) + ';\n')
     print('visitas:', len(visitas), '| historico:', len(hist), '| a revisar (fechas distintas):', n_rev)

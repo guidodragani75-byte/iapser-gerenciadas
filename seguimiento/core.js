@@ -1088,10 +1088,13 @@
     // Índices rápidos de las visitas actuales para heredar Planificación / Ámbito / Depto / mesEmergente
     const prevPorId = {};
     const prevPorCET = {};
+    const prevPorCE = {};
     (actuales || []).forEach(function (v) {
       prevPorId[v.id] = v;
       const k = [v.cuit, v.nroEstab, sinTildes(v.tareas).toLowerCase()].join('|');
       if (!prevPorCET[k]) prevPorCET[k] = v;
+      const ce = [v.cuit, v.nroEstab].join('|');
+      if (!prevPorCE[ce]) prevPorCE[ce] = v;
     });
 
     const visitas = [];
@@ -1123,7 +1126,8 @@
       }
       const vid = base + (n > 1 ? ('#' + n) : '');
       const cet = [cuit, nroEstab, sinTildes(tareas).toLowerCase()].join('|');
-      const prev = prevPorId[vid] || prevPorCET[cet] || null;
+      const ceKey = [cuit, nroEstab].join('|');
+      const prev = prevPorId[vid] || prevPorCET[cet] || (!obra ? prevPorCE[ceKey] : null) || null;
       const prov = cel(r, 'Provincia');
 
       const vObj = {
@@ -1163,6 +1167,8 @@
       filasRaw.push({
         id: vid,
         cet: cet,
+        ce: ceKey,
+        esObra: obra,
         colsAW: COLUMNAS_PADRON.map(function (col) {
           if (col === 'Cuit') return cuit;
           if (col === 'Contrato IAPART') return contrato;
@@ -1179,7 +1185,32 @@
     return { visitas: visitas, duplicadosOmitidos: duplicadosOmitidos, filasSinFecha: filasSinFecha, filasRaw: filasRaw };
   }
 
-  /** Compara padrón actual vs nuevo y clasifica en sinCambios, modificadas, altas y bajas (detectando si tienen gestión). */
+  /** Compara dos cadenas de tareas ('//') y devuelve subtareas agregadas, quitadas y sin cambio. */
+  function diffTareas(tareasAntes, tareasDespues) {
+    const aList = subtareasLimpias(tareasAntes);
+    const bList = subtareasLimpias(tareasDespues);
+    const mapA = {}, mapB = {};
+    aList.forEach(function (x) { mapA[x.key] = x.label; });
+    bList.forEach(function (x) { mapB[x.key] = x.label; });
+    const agregadas = [];
+    const quitadas = [];
+    const sinCambio = [];
+    bList.forEach(function (x) {
+      if (mapA[x.key]) sinCambio.push(x.label);
+      else agregadas.push(x.label);
+    });
+    aList.forEach(function (x) {
+      if (!mapB[x.key]) quitadas.push(x.label);
+    });
+    return { agregadas: agregadas, quitadas: quitadas, sinCambio: sinCambio };
+  }
+
+  /**
+   * Compara padrón actual vs nuevo en 3 pasadas:
+   *   1) ID exacto (cuit|nroEstab|tareas|fechaMax)
+   *   2) CUIT|Estab|Tareas (cambió Fecha máx. col. R)
+   *   3) CUIT|Estab fuera de obras (cambió la columna Tareas en el mismo establecimiento)
+   */
   function compararPadron(actuales, nuevas, intentosPorId, cruceOctMapa) {
     intentosPorId = intentosPorId || {};
     cruceOctMapa = cruceOctMapa || {};
@@ -1210,6 +1241,17 @@
       return out;
     }
 
+    function infoGestion(av) {
+      const ints = intentosPorId[av.id] || [];
+      const ceKey = String(av.cuit || '').trim() + '|' + String(av.nroEstab || '').trim();
+      const tieneOct = av.cohorte === 'Emergente' && !!(cruceOctMapa[ceKey] && cruceOctMapa[ceKey].length);
+      return {
+        tieneGestion: ints.length > 0 || tieneOct,
+        cantIntentos: ints.length,
+        tieneCruceOct: tieneOct
+      };
+    }
+
     const mapAct = {};
     (actuales || []).forEach(function (v) { mapAct[v.id] = v; });
 
@@ -1225,8 +1267,16 @@
       matchedAct[av.id] = true;
       matchedNew[ni] = true;
       const d = diffs(av, nv);
-      if (d.length) modificadas.push({ anterior: av, nueva: nv, cambios: d, cambioId: false });
-      else sinCambios.push(nv);
+      if (d.length) {
+        const g = infoGestion(av);
+        modificadas.push({
+          anterior: av, nueva: nv, cambios: d, cambioId: false,
+          cambioTareas: false, diffTareas: null,
+          tieneGestion: g.tieneGestion, cantIntentos: g.cantIntentos, tieneCruceOct: g.tieneCruceOct
+        });
+      } else {
+        sinCambios.push(nv);
+      }
     });
 
     // 2. Emparejar remanentes 1-a-1 por CUIT|Estab|Tareas (detecta cuando cambió la Fecha máx. col. R)
@@ -1237,7 +1287,6 @@
       (remActPorCET[k] = remActPorCET[k] || []).push(av);
     });
 
-    const altas = [];
     (nuevas || []).forEach(function (nv, ni) {
       if (matchedNew[ni]) return;
       const k = [nv.cuit, nv.nroEstab, sinTildes(nv.tareas).toLowerCase()].join('|');
@@ -1246,33 +1295,189 @@
         const av = cola.shift();
         matchedAct[av.id] = true;
         matchedNew[ni] = true;
-        modificadas.push({ anterior: av, nueva: nv, cambios: diffs(av, nv), cambioId: true });
+        const g = infoGestion(av);
+        modificadas.push({
+          anterior: av, nueva: nv, cambios: diffs(av, nv), cambioId: true,
+          cambioTareas: false, diffTareas: null,
+          tieneGestion: g.tieneGestion, cantIntentos: g.cantIntentos, tieneCruceOct: g.tieneCruceOct
+        });
+      }
+    });
+
+    // 3. Emparejar remanentes no-obras 1-a-1 por CUIT|Estab (detecta Cambios de tareas en el establecimiento)
+    const remActPorCE = {};
+    (actuales || []).forEach(function (av) {
+      if (matchedAct[av.id] || av.esObra || esObra(av.tareas)) return;
+      const ce = [av.cuit, av.nroEstab].join('|');
+      (remActPorCE[ce] = remActPorCE[ce] || []).push(av);
+    });
+
+    const altas = [];
+    (nuevas || []).forEach(function (nv, ni) {
+      if (matchedNew[ni]) return;
+      const obraNueva = nv.esObra || esObra(nv.tareas);
+      const ce = [nv.cuit, nv.nroEstab].join('|');
+      const colaCE = !obraNueva ? remActPorCE[ce] : null;
+      if (colaCE && colaCE.length) {
+        // Priorizar candidato con igual fechaMax si hubiera más de uno
+        let pickIdx = 0;
+        for (let ci = 0; ci < colaCE.length; ci++) {
+          if (colaCE[ci].fechaMax === nv.fechaMax) { pickIdx = ci; break; }
+        }
+        const av = colaCE.splice(pickIdx, 1)[0];
+        matchedAct[av.id] = true;
+        matchedNew[ni] = true;
+        const dt = diffTareas(av.tareas, nv.tareas);
+        const g = infoGestion(av);
+        modificadas.push({
+          anterior: av, nueva: nv, cambios: diffs(av, nv), cambioId: av.id !== nv.id,
+          cambioTareas: true, diffTareas: dt,
+          tieneGestion: g.tieneGestion, cantIntentos: g.cantIntentos, tieneCruceOct: g.tieneCruceOct
+        });
       } else {
         altas.push(nv);
       }
     });
 
-    // 3. Remanentes de actuales => Bajas (verificando si ya tienen intentos o cruce PDF Oct)
+    // 4. Remanentes de actuales => Bajas (verificando si ya tienen intentos o cruce PDF Oct)
     const bajas = [];
     (actuales || []).forEach(function (av) {
       if (matchedAct[av.id]) return;
-      const ints = intentosPorId[av.id] || [];
-      const ceKey = String(av.cuit || '').trim() + '|' + String(av.nroEstab || '').trim();
-      const tieneOct = av.cohorte === 'Emergente' && !!(cruceOctMapa[ceKey] && cruceOctMapa[ceKey].length);
+      const g = infoGestion(av);
       bajas.push({
         visita: av,
-        tieneGestion: ints.length > 0 || tieneOct,
-        cantIntentos: ints.length,
-        tieneCruceOct: tieneOct
+        tieneGestion: g.tieneGestion,
+        cantIntentos: g.cantIntentos,
+        tieneCruceOct: g.tieneCruceOct
       });
     });
+
+    const cambiosTareas = modificadas.filter(function (m) { return m.cambioTareas; });
+    const otrasModificadas = modificadas.filter(function (m) { return !m.cambioTareas; });
+    const migracionesId = modificadas
+      .filter(function (m) { return m.cambioId && m.anterior.id !== m.nueva.id && (intentosPorId[m.anterior.id] || []).length > 0; })
+      .map(function (m) { return { idAnterior: m.anterior.id, idNuevo: m.nueva.id }; });
 
     return {
       sinCambios: sinCambios,
       modificadas: modificadas,
+      cambiosTareas: cambiosTareas,
+      otrasModificadas: otrasModificadas,
+      migracionesId: migracionesId,
       altas: altas,
       bajas: bajas,
       bajasConGestion: bajas.filter(function (b) { return b.tieneGestion; })
+    };
+  }
+
+  /**
+   * Construye un lote y sus movimientos planos de auditoría ABM (Altas, Bajas, Cambios de tareas y Plazos)
+   * con Fecha de ABM para guardar en Historial_ABM (Google Sheets), localStorage y datos.js.
+   */
+  function construirLoteABM(diff, meta) {
+    meta = meta || {};
+    const fechaABM = meta.fechaABM || (hoyISO() + ' 00:00');
+    const loteId = meta.loteId || ('abm_' + fechaABM.replace(/[^0-9]/g, '') + '_' + Math.random().toString(36).slice(2, 6));
+    const usuario = String(meta.usuario || '').trim();
+    const archivo = String(meta.archivo || '').trim();
+    const aplicarBajas = meta.aplicarBajas !== false;
+    const movimientos = [];
+
+    function txtGestion(tiene, cantInt, tieneOct) {
+      if (!tiene) return 'No';
+      if (cantInt) return 'Si (' + cantInt + ' int.)';
+      if (tieneOct) return 'Si (PDF Oct)';
+      return 'Si';
+    }
+
+    (diff.altas || []).forEach(function (v) {
+      movimientos.push({
+        loteId: loteId, fechaABM: fechaABM, usuario: usuario, archivo: archivo,
+        tipo: 'ALTA',
+        cuit: v.cuit, empleador: v.empleador, nroEstab: v.nroEstab,
+        ambito: normAmbito(v.ambito || v.provincia), localidad: zonaVisita(v),
+        tareasAntes: '', tareasDespues: formatearTareas(v.tareas),
+        tareasAgregadas: formatearTareas(v.tareas), tareasQuitadas: '',
+        fechaMaxAntes: '', fechaMaxDespues: v.fechaMax || '',
+        teniaGestion: 'No',
+        detalle: 'Alta de visita (' + (v.cohorte || cohorte(v.fechaMax)) + ')'
+      });
+    });
+
+    (diff.cambiosTareas || []).forEach(function (m) {
+      const av = m.anterior, nv = m.nueva, dt = m.diffTareas || diffTareas(av.tareas, nv.tareas);
+      const partes = [];
+      if (dt.agregadas.length) partes.push('+ ' + dt.agregadas.join(', '));
+      if (dt.quitadas.length) partes.push('- ' + dt.quitadas.join(', '));
+      if (av.fechaMax !== nv.fechaMax) partes.push('Plazo: ' + aDMY(av.fechaMax) + ' → ' + aDMY(nv.fechaMax));
+      movimientos.push({
+        loteId: loteId, fechaABM: fechaABM, usuario: usuario, archivo: archivo,
+        tipo: 'CAMBIO_TAREA',
+        cuit: nv.cuit, empleador: nv.empleador, nroEstab: nv.nroEstab,
+        ambito: normAmbito(nv.ambito || nv.provincia), localidad: zonaVisita(nv),
+        tareasAntes: formatearTareas(av.tareas), tareasDespues: formatearTareas(nv.tareas),
+        tareasAgregadas: dt.agregadas.join(' · '), tareasQuitadas: dt.quitadas.join(' · '),
+        fechaMaxAntes: av.fechaMax || '', fechaMaxDespues: nv.fechaMax || '',
+        teniaGestion: txtGestion(m.tieneGestion, m.cantIntentos, m.tieneCruceOct),
+        detalle: partes.join(' | ') || 'Actualización de tareas'
+      });
+    });
+
+    if (aplicarBajas) {
+      const bajasOrd = (diff.bajas || []).slice().sort(function (a, b) {
+        return (b.tieneGestion ? 1 : 0) - (a.tieneGestion ? 1 : 0);
+      });
+      bajasOrd.forEach(function (b) {
+        const v = b.visita;
+        movimientos.push({
+          loteId: loteId, fechaABM: fechaABM, usuario: usuario, archivo: archivo,
+          tipo: 'BAJA',
+          cuit: v.cuit, empleador: v.empleador, nroEstab: v.nroEstab,
+          ambito: normAmbito(v.ambito || v.provincia), localidad: zonaVisita(v),
+          tareasAntes: formatearTareas(v.tareas), tareasDespues: '',
+          tareasAgregadas: '', tareasQuitadas: formatearTareas(v.tareas),
+          fechaMaxAntes: v.fechaMax || '', fechaMaxDespues: '',
+          teniaGestion: txtGestion(b.tieneGestion, b.cantIntentos, b.tieneCruceOct),
+          detalle: 'Baja del padrón' + (b.tieneGestion ? ' (tenía gestión previa)' : '')
+        });
+      });
+    }
+
+    (diff.otrasModificadas || []).forEach(function (m) {
+      const av = m.anterior, nv = m.nueva;
+      const cambioPlazo = av.fechaMax !== nv.fechaMax;
+      const descCambios = (m.cambios || []).map(function (c) {
+        const va = c.key === 'fechaMax' ? aDMY(c.antes) : c.antes;
+        const vb = c.key === 'fechaMax' ? aDMY(c.despues) : c.despues;
+        return c.campo + ': ' + (va || '–') + ' → ' + (vb || '–');
+      }).join(' | ');
+      movimientos.push({
+        loteId: loteId, fechaABM: fechaABM, usuario: usuario, archivo: archivo,
+        tipo: cambioPlazo ? 'CAMBIO_PLAZO' : 'MODIFICACION',
+        cuit: nv.cuit, empleador: nv.empleador, nroEstab: nv.nroEstab,
+        ambito: normAmbito(nv.ambito || nv.provincia), localidad: zonaVisita(nv),
+        tareasAntes: formatearTareas(av.tareas), tareasDespues: formatearTareas(nv.tareas),
+        tareasAgregadas: '', tareasQuitadas: '',
+        fechaMaxAntes: av.fechaMax || '', fechaMaxDespues: nv.fechaMax || '',
+        teniaGestion: txtGestion(m.tieneGestion, m.cantIntentos, m.tieneCruceOct),
+        detalle: descCambios
+      });
+    });
+
+    return {
+      loteId: loteId,
+      fechaABM: fechaABM,
+      usuario: usuario,
+      archivo: archivo,
+      resumen: {
+        altas: (diff.altas || []).length,
+        bajas: aplicarBajas ? (diff.bajas || []).length : 0,
+        bajasConGestion: aplicarBajas ? (diff.bajasConGestion || []).length : 0,
+        cambiosTareas: (diff.cambiosTareas || []).length,
+        otrasModificadas: (diff.otrasModificadas || []).length,
+        totalMovimientos: movimientos.length
+      },
+      movimientos: movimientos
     };
   }
 
@@ -1288,7 +1493,7 @@
     cuentaObjetivo, estaCerrada, validarIntento, requiereAdjunto, esPDF,
     indexarCruceOctubre, armarVisitas, agendadasPorMes, cerradasPorMes,
     metaConsolidadaMes, tablero, cumplimientoYParticipacion,
-    validarColumnasPadron, parsearFilasPadron, compararPadron
+    validarColumnasPadron, parsearFilasPadron, diffTareas, compararPadron, construirLoteABM
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
   else root.SegCore = API;

@@ -294,4 +294,55 @@ t('observaciones y deteccion de visitas potencialmente fallidas', () => {
   const resEt = C.resumenEtiquetas(vs.filter(v => !v.cerrada), '2026-11-24');
   assert.strictEqual(resEt.find(x => x.id === 'potencial_fallida').count, 168);
 });
+
+t('ABM: diffTareas, 3ra pasada de cambios de tareas (no-obras vs obras), migracionesId y construirLoteABM', () => {
+  // 1. diffTareas insensible a tildes y mayúsculas, formateado en oración
+  const dt = C.diffTareas('VISITA TECNICA//CAPACITACIÓN BASICA', 'Visita Tecnica//Verosimilitud RGRL');
+  assert.deepStrictEqual(dt.agregadas, ['Verosimilitud rgrl']);
+  assert.deepStrictEqual(dt.quitadas, ['Capacitación basica']);
+  assert.deepStrictEqual(dt.sinCambio, ['Visita tecnica']);
+
+  // 2. Mismo CUIT + Estab (no-obra) que cambia tareas -> CAMBIO_TAREA (no Alta + Baja) y migra intentos
+  const idViejo = '20555555555|1|visita tecnica|2026-10-15';
+  const actuales = [
+    { id: idViejo, cuit: '20555555555', empleador: 'METALURGICA SUR', contrato: '500', establecimiento: 'Planta 1', localidad: 'Avellaneda', provincia: 'Buenos Aires', domicilio: 'Mitre 100', nroEstabIAPART: '1', nroEstab: '1', programa: 'P', trabajadores: '25', preventor: 'Prev', tareas: 'Visita Tecnica', fechaMax: '2026-10-15', planificacion: 'Etapa 1', ambito: 'GBA', departamento: 'Avellaneda', obs: 'Contacto Juan', obsCS: '', obsIAPSER: '', cohorte: 'Emergente', esObra: false },
+    { id: '20666666666|3|visita de obra|2026-11-05', cuit: '20666666666', empleador: 'CONSTRUCTORA NORTE', contrato: '600', establecimiento: 'Obra Centro', localidad: 'Rosario', provincia: 'Santa Fe', domicilio: 'San Martin 50', nroEstabIAPART: '3', nroEstab: '3', programa: 'P', trabajadores: '12', preventor: 'Prev', tareas: 'Visita de Obra', fechaMax: '2026-11-05', planificacion: 'Etapa 1 - Urgente', ambito: 'Santa Fe', departamento: 'Rosario', obs: '', obsCS: '', obsIAPSER: '', cohorte: 'Emergente', esObra: true },
+    { id: '20777777777|1|ddjj|2026-08-20', cuit: '20777777777', empleador: 'BAJA REAL SA', contrato: '700', establecimiento: 'Unico', localidad: 'Parana', provincia: 'Entre Rios', domicilio: 'Urquiza 10', nroEstabIAPART: '1', nroEstab: '1', programa: 'P', trabajadores: '4', preventor: 'Prev', tareas: 'DDJJ', fechaMax: '2026-08-20', planificacion: 'Etapa 1', ambito: 'Entre Rios', departamento: 'Parana', obs: '', obsCS: '', obsIAPSER: '', cohorte: 'Residual', esObra: false }
+  ];
+  const rows = [
+    C.COLUMNAS_PADRON,
+    // Cambió tareas en establecimiento no-obra (agregó Capacitación Básica y cambió plazo) -> debe heredar Etapa 1 y obs enriquecidas
+    ['20555555555', 'METALURGICA SUR', '500', 'Planta 1', 'Avellaneda', 'Buenos Aires', '1870', 'Mitre 100', 'NULL', 'NULL', 'NULL', '1', '1', 'P', '25', 'Prev', 'Visita Tecnica//CAPACITACIÓN BASICA', '20/11/2026', '', '', '', '', ''],
+    // Obra original se mantiene + nueva obra en mismo CUIT|Estab con otra tarea de obra -> la segunda debe ser ALTA (no pisar obra)
+    ['20666666666', 'CONSTRUCTORA NORTE', '600', 'Obra Centro', 'Rosario', 'Santa Fe', '2000', 'San Martin 50', 'NULL', 'NULL', 'NULL', '3', '3', 'P', '12', 'Prev', 'Visita de Obra', '05/11/2026', '', '', '', '', ''],
+    ['20666666666', 'CONSTRUCTORA NORTE', '600', 'Obra Centro', 'Rosario', 'Santa Fe', '2000', 'San Martin 50', 'NULL', 'NULL', 'NULL', '3', '3', 'P', '12', 'Prev', 'Visita de Obra//SEG. 363 PRS', '18/12/2026', '', '', '', '', '']
+  ];
+  const val = C.validarColumnasPadron(rows[0]);
+  const parsed = C.parsearFilasPadron(rows, val, actuales);
+  // Metalúrgica Sur heredó observaciones enriquecidas por prevPorCE
+  assert.strictEqual(parsed.visitas[0].obs, 'Contacto Juan');
+  assert.strictEqual(parsed.visitas[0].ambito, 'GBA');
+
+  const ints = { [idViejo]: [{ n: 1, fechaAgendada: '2026-11-28' }] };
+  const diff = C.compararPadron(actuales, parsed.visitas, ints, {});
+  assert.strictEqual(diff.cambiosTareas.length, 1);
+  assert.strictEqual(diff.otrasModificadas.length, 0);
+  assert.strictEqual(diff.altas.length, 1); // la 2da visita de obra entra como ALTA
+  assert.strictEqual(diff.bajas.length, 1); // solo BAJA REAL SA
+  assert.strictEqual(diff.migracionesId.length, 1);
+  assert.strictEqual(diff.migracionesId[0].idAnterior, idViejo);
+  assert.strictEqual(diff.migracionesId[0].idNuevo, parsed.visitas[0].id);
+
+  // 3. construirLoteABM genera movimientos con Fecha de ABM
+  const lote = C.construirLoteABM(diff, { fechaABM: '2026-11-25 09:30', archivo: 'sharepoint_utf8.csv', usuario: 'Guido', aplicarBajas: true });
+  assert.strictEqual(lote.fechaABM, '2026-11-25 09:30');
+  assert.strictEqual(lote.resumen.altas, 1);
+  assert.strictEqual(lote.resumen.bajas, 1);
+  assert.strictEqual(lote.resumen.cambiosTareas, 1);
+  assert.strictEqual(lote.movimientos.length, 3);
+  const movTarea = lote.movimientos.find(m => m.tipo === 'CAMBIO_TAREA');
+  assert.strictEqual(movTarea.cuit, '20555555555');
+  assert.strictEqual(movTarea.tareasAgregadas, 'Capacitación basica');
+  assert.strictEqual(movTarea.teniaGestion, 'Si (1 int.)');
+});
 console.log('\n' + ok + ' pruebas OK');

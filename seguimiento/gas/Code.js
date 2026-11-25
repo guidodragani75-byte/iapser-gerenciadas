@@ -17,6 +17,7 @@ var CFG = {
   HOJA_GENERAL: 'Detalle Visitas con Tareas CS (10-11-26)(General)',
   HOJA_EMERGENTES: 'Visitas emergentes mensuales',
   HOJA_BAJAS: 'Bajas_Historico',
+  HOJA_ABM: 'Historial_ABM',
   CORTE_RESIDUAL: '2026-10-01',
   CARPETA_PRINCIPAL_ID: '1RDkZA4EIjPxdvBZqPCcgu5k6vnz6eAUq',
   PREFIJO_MES: 'IAPSER_Visitas_',
@@ -24,6 +25,11 @@ var CFG = {
   GEMINI_MODEL: 'gemini-2.5-flash',
   ENCABEZADOS: ['ID Visita', 'Nro Intento', 'Fecha Agendada', 'Fecha Real', 'Resultado', 'Motivo',
                 'Reprograma', 'Adjunto Drive', 'Cargado por', 'Timestamp'],
+  ENCABEZADOS_ABM: [
+    'ID Lote', 'Fecha ABM', 'Usuario', 'Archivo', 'Tipo', 'CUIT', 'Empleador', 'Estab (M)',
+    'Ambito', 'Localidad', 'Tareas Antes', 'Tareas Despues', 'Tareas Agregadas', 'Tareas Quitadas',
+    'Fecha Max Antes', 'Fecha Max Despues', 'Tenia Gestion', 'Detalle'
+  ],
   COLUMNAS_PADRON: [
     'Cuit', 'Empleador', 'Contrato IAPART', 'Establecimiento', 'Localidad', 'Provincia', 'CP',
     'Domicilio estab.', 'Responsable', 'Telefono', 'E-mail', 'Nro Estab IAPART', 'Nro Estab Intercambio',
@@ -77,19 +83,29 @@ function getPadronUpdatedAt_() {
   }
 }
 
+function getAbmUpdatedAt_() {
+  try {
+    return (PropertiesService.getScriptProperties().getProperty('ABM_UPDATED_AT') || '').trim();
+  } catch (e) {
+    return '';
+  }
+}
+
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'getState';
-  if (action === 'ping') return json_({ ok: true, ts: new Date().toISOString(), geminiConfigured: !!getGeminiKey_(), padronUpdatedAt: getPadronUpdatedAt_() });
-  if (action === 'getState') return json_({ ok: true, intentos: leerIntentos_(), geminiConfigured: !!getGeminiKey_(), padronUpdatedAt: getPadronUpdatedAt_() });
+  if (action === 'ping') return json_({ ok: true, ts: new Date().toISOString(), geminiConfigured: !!getGeminiKey_(), padronUpdatedAt: getPadronUpdatedAt_(), abmUpdatedAt: getAbmUpdatedAt_() });
+  if (action === 'getState') return json_({ ok: true, intentos: leerIntentos_(), geminiConfigured: !!getGeminiKey_(), padronUpdatedAt: getPadronUpdatedAt_(), abmUpdatedAt: getAbmUpdatedAt_() });
   if (action === 'getPadron') return json_(leerPadron_());
+  if (action === 'getHistorialABM') return json_(leerHistorialABM_());
   return json_({ ok: false, error: 'Acción no reconocida: ' + action });
 }
 
 function doPost(e) {
   try {
     var p = JSON.parse(e.postData.contents);
-    if (p.action === 'getState') return json_({ ok: true, intentos: leerIntentos_(), geminiConfigured: !!getGeminiKey_(), padronUpdatedAt: getPadronUpdatedAt_() });
+    if (p.action === 'getState') return json_({ ok: true, intentos: leerIntentos_(), geminiConfigured: !!getGeminiKey_(), padronUpdatedAt: getPadronUpdatedAt_(), abmUpdatedAt: getAbmUpdatedAt_() });
     if (p.action === 'getPadron') return json_(leerPadron_());
+    if (p.action === 'getHistorialABM') return json_(leerHistorialABM_());
     if (p.action === 'saveIntento') return json_(guardarIntento_(p));
     if (p.action === 'analyzePdf') return json_(analizarPdfGemini_(p));
     if (p.action === 'syncPadron') return json_(sincronizarPadron_(p));
@@ -475,6 +491,7 @@ function sincronizarPadron_(p) {
     var existList = [];
     var porId = {};
     var porCET = {};
+    var porCE = {};
     var contactoPorCE = {};
     var vistosEx = {};
 
@@ -490,16 +507,18 @@ function sincronizarPadron_(p) {
       vistosEx[base] = n;
       var vid = base + (n > 1 ? ('#' + n) : '');
       var cet = [cuit, estab, sinTildes_(tareas).toLowerCase()].join('|');
-      var rec = { rowNum: i + 2, id: vid, cet: cet, vals: v, forms: f, matched: false };
+      var ceKey = cuit + '|' + estab;
+      var esObraEx = /obra/i.test(sinTildes_(tareas));
+      var rec = { rowNum: i + 2, id: vid, cet: cet, ce: ceKey, esObra: esObraEx, vals: v, forms: f, matched: false };
       existList.push(rec);
       if (!(vid in porId)) porId[vid] = rec;
       (porCET[cet] = porCET[cet] || []).push(rec);
+      if (!esObraEx) (porCE[ceKey] = porCE[ceKey] || []).push(rec);
 
       // Guardar contactos enriquecidos AG..AJ por CUIT+Estab para reutilizar en altas nuevas
       if (tieneAG) {
-        var ce = cuit + '|' + estab;
-        if (!(ce in contactoPorCE) && (esValorReal_(v[32]) || esValorReal_(v[33]) || esValorReal_(v[34]))) {
-          contactoPorCE[ce] = { ag: v[32], ah: v[33], ai: v[34], aj: lastCol > 35 ? v[35] : '' };
+        if (!(ceKey in contactoPorCE) && (esValorReal_(v[32]) || esValorReal_(v[33]) || esValorReal_(v[34]))) {
+          contactoPorCE[ceKey] = { ag: v[32], ah: v[33], ai: v[34], aj: lastCol > 35 ? v[35] : '' };
         }
       }
     }
@@ -566,8 +585,9 @@ function sincronizarPadron_(p) {
       return false;
     }
 
-    // 1. Emparejar por ID exacto primero, luego por CUIT|Estab|Tareas
+    // 1. Emparejar por ID exacto primero, luego por CUIT|Estab|Tareas y luego por CUIT|Estab (no obras)
     var pendientes = [];
+    var cambiosTareas = 0;
     for (var j = 0; j < filas.length; j++) {
       var it = filas[j];
       var match = porId[it.id];
@@ -579,6 +599,7 @@ function sincronizarPadron_(p) {
         pendientes.push(it);
       }
     }
+    var pendientesCE = [];
     for (var q = 0; q < pendientes.length; q++) {
       var it2 = pendientes[q];
       var lista = porCET[it2.cet] || [];
@@ -591,9 +612,28 @@ function sincronizarPadron_(p) {
         modificadas++;
         outRows.push(buildRow(it2, match2, outRows.length + 2));
       } else {
+        pendientesCE.push(it2);
+      }
+    }
+    for (var r2 = 0; r2 < pendientesCE.length; r2++) {
+      var it3 = pendientesCE[r2];
+      var aw3 = it3.colsAW || [];
+      var ce3 = it3.ce || (String(aw3[0] || '').replace(/[^\d]/g, '') + '|' + String(aw3[12] || '').trim());
+      var esOb3 = it3.esObra != null ? !!it3.esObra : /obra/i.test(sinTildes_(aw3[16] || ''));
+      var listaCE = !esOb3 ? (porCE[ce3] || []) : [];
+      var match3 = null;
+      for (var m3 = 0; m3 < listaCE.length; m3++) {
+        if (!listaCE[m3].matched) { match3 = listaCE[m3]; break; }
+      }
+      if (match3) {
+        match3.matched = true;
+        modificadas++;
+        cambiosTareas++;
+        outRows.push(buildRow(it3, match3, outRows.length + 2));
+      } else {
         altas++;
-        altasItems.push(it2);
-        outRows.push(buildRow(it2, null, outRows.length + 2));
+        altasItems.push(it3);
+        outRows.push(buildRow(it3, null, outRows.length + 2));
       }
     }
 
@@ -645,19 +685,150 @@ function sincronizarPadron_(p) {
       emergentesAgregadas = agregarAltasAEmergentes_(ss, altasItems, mesEmergente, contactoPorCE, ss.getSpreadsheetTimeZone());
     }
 
+    // Migrar IDs en Seguimiento_Intentos si cambió Fecha Programada o Tareas
+    var intentosMigrados = migrarIntentosIds_(ss, p.migracionesId);
+
+    // Guardar movimientos en Historial_ABM con Fecha de ABM
+    var abmGuardados = guardarMovimientosABM_(ss, p.movimientosABM);
+
     var nowIso = new Date().toISOString();
     PropertiesService.getScriptProperties().setProperty('PADRON_UPDATED_AT', nowIso);
+    if (abmGuardados > 0) {
+      PropertiesService.getScriptProperties().setProperty('ABM_UPDATED_AT', nowIso);
+    }
     return {
       ok: true,
       totalFinal: outRows.length,
       altas: altas,
       modificadas: modificadas,
+      cambiosTareas: cambiosTareas,
       bajas: bajasRows.length,
       emergentesAgregadas: emergentesAgregadas,
+      intentosMigrados: intentosMigrados,
+      abmGuardados: abmGuardados,
       mesEmergente: mesEmergente,
       ts: nowIso
     };
   } finally {
     lock.releaseLock();
   }
+}
+
+function migrarIntentosIds_(ss, migracionesId) {
+  if (!Array.isArray(migracionesId) || !migracionesId.length) return 0;
+  var shI = ss.getSheetByName(CFG.HOJA);
+  if (!shI || shI.getLastRow() < 2) return 0;
+  var mapa = {};
+  migracionesId.forEach(function (m) {
+    if (m && m.idAnterior && m.idNuevo && m.idAnterior !== m.idNuevo) {
+      mapa[String(m.idAnterior)] = String(m.idNuevo);
+    }
+  });
+  if (!Object.keys(mapa).length) return 0;
+  var cm = colMap_(shI);
+  var colId = cm['ID Visita'] + 1;
+  var nRows = shI.getLastRow() - 1;
+  var rng = shI.getRange(2, colId, nRows, 1);
+  var vals = rng.getValues();
+  var cambiados = 0;
+  for (var i = 0; i < vals.length; i++) {
+    var cur = String(vals[i][0] || '');
+    if (mapa[cur]) {
+      vals[i][0] = mapa[cur];
+      cambiados++;
+    }
+  }
+  if (cambiados > 0) rng.setValues(vals);
+  return cambiados;
+}
+
+function hojaABM_(ss) {
+  ss = ss || SpreadsheetApp.openById(CFG.SPREADSHEET_ID);
+  var sh = ss.getSheetByName(CFG.HOJA_ABM);
+  if (!sh) {
+    sh = ss.insertSheet(CFG.HOJA_ABM);
+    sh.getRange(1, 1, 1, CFG.ENCABEZADOS_ABM.length).setValues([CFG.ENCABEZADOS_ABM]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function guardarMovimientosABM_(ss, movimientos) {
+  if (!Array.isArray(movimientos) || !movimientos.length) return 0;
+  var sh = hojaABM_(ss);
+  var rows = movimientos.map(function (m) {
+    return [
+      String(m.loteId || ''),
+      String(m.fechaABM || ''),
+      String(m.usuario || ''),
+      String(m.archivo || ''),
+      String(m.tipo || ''),
+      String(m.cuit || ''),
+      String(m.empleador || ''),
+      String(m.nroEstab || ''),
+      String(m.ambito || ''),
+      String(m.localidad || ''),
+      String(m.tareasAntes || ''),
+      String(m.tareasDespues || ''),
+      String(m.tareasAgregadas || ''),
+      String(m.tareasQuitadas || ''),
+      String(m.fechaMaxAntes || ''),
+      String(m.fechaMaxDespues || ''),
+      String(m.teniaGestion || 'No'),
+      String(m.detalle || '')
+    ];
+  });
+  var startR = sh.getLastRow() + 1;
+  sh.getRange(startR, 6, rows.length, 3).setNumberFormat('@'); // CUIT, Empleador, Estab (M) como texto
+  sh.getRange(startR, 1, rows.length, CFG.ENCABEZADOS_ABM.length).setValues(rows);
+  return rows.length;
+}
+
+function leerHistorialABM_() {
+  var ss = SpreadsheetApp.openById(CFG.SPREADSHEET_ID);
+  var sh = ss.getSheetByName(CFG.HOJA_ABM);
+  if (!sh || sh.getLastRow() < 2) {
+    return { ok: true, abmUpdatedAt: getAbmUpdatedAt_(), movimientos: [] };
+  }
+  var lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
+  var data = sh.getRange(1, 1, lastRow, lastCol).getValues();
+  var hdr = data[0].map(function (h) { return String(h || '').trim(); });
+  var idx = {};
+  hdr.forEach(function (h, i) { if (h && !(h in idx)) idx[h] = i; });
+  function cel(r, col) {
+    var i = idx[col];
+    return (i != null && i < r.length && r[i] != null) ? String(r[i]).trim() : '';
+  }
+  var out = [];
+  for (var rIdx = 1; rIdx < data.length; rIdx++) {
+    var r = data[rIdx];
+    var cuit = cel(r, 'CUIT');
+    var tipo = cel(r, 'Tipo');
+    if (!cuit && !tipo) continue;
+    var fAbmRaw = idx['Fecha ABM'] != null ? r[idx['Fecha ABM']] : '';
+    var fAbm = fAbmRaw instanceof Date
+      ? Utilities.formatDate(fAbmRaw, 'America/Argentina/Buenos_Aires', 'yyyy-MM-dd HH:mm')
+      : String(fAbmRaw || '').trim();
+    out.push({
+      loteId: cel(r, 'ID Lote'),
+      fechaABM: fAbm,
+      usuario: cel(r, 'Usuario'),
+      archivo: cel(r, 'Archivo'),
+      tipo: tipo,
+      cuit: cuit,
+      empleador: cel(r, 'Empleador'),
+      nroEstab: cel(r, 'Estab (M)'),
+      ambito: cel(r, 'Ambito'),
+      localidad: cel(r, 'Localidad'),
+      tareasAntes: cel(r, 'Tareas Antes'),
+      tareasDespues: cel(r, 'Tareas Despues'),
+      tareasAgregadas: cel(r, 'Tareas Agregadas'),
+      tareasQuitadas: cel(r, 'Tareas Quitadas'),
+      fechaMaxAntes: fechaISO_(idx['Fecha Max Antes'] != null ? r[idx['Fecha Max Antes']] : '', ss.getSpreadsheetTimeZone()),
+      fechaMaxDespues: fechaISO_(idx['Fecha Max Despues'] != null ? r[idx['Fecha Max Despues']] : '', ss.getSpreadsheetTimeZone()),
+      teniaGestion: cel(r, 'Tenia Gestion') || 'No',
+      detalle: cel(r, 'Detalle')
+    });
+  }
+  return { ok: true, abmUpdatedAt: getAbmUpdatedAt_(), movimientos: out };
 }

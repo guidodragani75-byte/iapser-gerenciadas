@@ -2,8 +2,8 @@
 (function () {
   'use strict';
   const C = window.SegCore, E = C.ESTADOS, OCR = window.SegOCR;
-  const D = window.SEG_DATA || { visitas: [], historico: [] };
-  const LS_INT = 'SEG_INTENTOS_V1', LS_COLA = 'SEG_COLA_V1', LS_URL = 'SEG_URL_V1', LS_USER = 'SEG_USER_V1', LS_PADRON = 'SEG_PADRON_V1';
+  const D = window.SEG_DATA || { visitas: [], historico: [], historialABM: [] };
+  const LS_INT = 'SEG_INTENTOS_V1', LS_COLA = 'SEG_COLA_V1', LS_URL = 'SEG_URL_V1', LS_USER = 'SEG_USER_V1', LS_PADRON = 'SEG_PADRON_V1', LS_ABM = 'SEG_ABM_V1';
   const MOTIVOS = ['Establecimiento cerrado', 'No atiende nadie / sin responsable', 'Domicilio inexistente o incorrecto',
     'Empleador sin personal', 'Rechazo de la visita', 'Dificultad de acceso / clima', 'Otro'];
   const PAGE = 100;
@@ -19,6 +19,9 @@
   let INTENTOS = load(LS_INT, {});
   let COLA = load(LS_COLA, []);
   let PADRON_LOCAL = load(LS_PADRON, null);
+  let ABM_LOCAL = load(LS_ABM, { ts: '', movimientos: [] });
+  let ULTIMO_LOTE_ABM = null;
+  let abmPopTab = 'resumen';
   let VISITAS_TODAS = [];
   let VISITAS = [];
   let HIST_VISITAS = [];
@@ -46,6 +49,36 @@
     excluirMay27: true
   };
   const LOG = { etiqueta: '', zona: '', soloPendientes: true, orden: 'prioridad', q: '', verTodasZonas: false, pagina: 1 };
+  const ABM_F = { lote: '', tipo: '', ambito: '', q: '', pagina: 1 };
+
+  function claveMovABM(m) {
+    return [m.loteId || '', m.fechaABM || '', m.tipo || '', m.cuit || '', m.nroEstab || '', m.tareasAntes || '', m.tareasDespues || '', m.fechaMaxAntes || '', m.fechaMaxDespues || ''].join('|');
+  }
+
+  function movimientosABMUnificados() {
+    const vistos = {};
+    const out = [];
+    const push = m => {
+      if (!m || (!m.cuit && !m.tipo)) return;
+      const k = claveMovABM(m);
+      if (vistos[k]) return;
+      vistos[k] = true;
+      out.push(m);
+    };
+    (D.historialABM || []).forEach(push);
+    ((ABM_LOCAL && ABM_LOCAL.movimientos) || []).forEach(push);
+    const pesoTipo = m => {
+      if (m.tipo === 'ALTA') return 0;
+      if (m.tipo === 'CAMBIO_TAREA') return 1;
+      if (m.tipo === 'BAJA') return (m.teniaGestion && m.teniaGestion !== 'No') ? 2 : 3;
+      return 4;
+    };
+    return out.sort((a, b) =>
+      String(b.fechaABM || '').localeCompare(String(a.fechaABM || '')) ||
+      (pesoTipo(a) - pesoTipo(b)) ||
+      String(a.empleador || '').localeCompare(String(b.empleador || ''))
+    );
+  }
 
   function baseVisitas() {
     return (PADRON_LOCAL && Array.isArray(PADRON_LOCAL.visitas) && PADRON_LOCAL.visitas.length) ? PADRON_LOCAL.visitas : (D.visitas || []);
@@ -363,6 +396,7 @@
       ${item('pot_fallidas', '⚡', 'Pot. fallidas', nPot, true)}
       ${item('todas', '🗂', 'Padrón vigente', rows.length)}
       <div class="grp">Control</div>
+      ${item('abm', '📋', 'Historial ABM', movimientosABMUnificados().length)}
       ${item('revisar', '🔎', 'Errores / A revisar', nRev, nRev > 0)}
       <button type="button" class="nav" onclick="App.abrirConfig()"><span>⚙</span><span>Configurar</span></button>
       <a class="nav" href="../index.html"><span>↩</span><span>Plataforma anterior</span></a>
@@ -1252,6 +1286,7 @@
     if (vista === 'resumen') renderResumen();
     else if (vista === 'metas') renderMetas();
     else if (vista === 'logistica') renderLogistica();
+    else if (vista === 'abm') renderHistorialABM();
     else renderLista();
 
     const pend = COLA.length;
@@ -1722,6 +1757,18 @@
     $('dlgPadron').showModal();
   }
 
+  async function decodificarTextoCSV(file) {
+    if (typeof file.arrayBuffer === 'function' && typeof TextDecoder !== 'undefined') {
+      const buf = await file.arrayBuffer();
+      const utf8 = new TextDecoder('utf-8').decode(buf);
+      if (utf8.indexOf('\uFFFD') >= 0) {
+        try { return new TextDecoder('windows-1252').decode(buf); } catch (e) { /* fallback */ }
+      }
+      return utf8;
+    }
+    return file.text();
+  }
+
   async function cargarArchivoPadron(file) {
     if (!file) return;
     mostrarStatusPadron('');
@@ -1730,13 +1777,13 @@
       const hojas = {};
       let nombresHojas = [];
       if (/\.csv$/i.test(nombre)) {
-        const txt = await file.text();
+        const txt = await decodificarTextoCSV(file);
         const rows = parsearCSVTexto(txt.replace(/^\uFEFF/, ''));
         hojas['CSV'] = rows;
         nombresHojas = ['CSV'];
-      } else if (/\.(xlsx|xls)$/i.test(nombre)) {
+      } else if (/\.(xlsx|xls|ods)$/i.test(nombre)) {
         if (!window.XLSX) {
-          return mostrarStatusPadron('No se cargó la librería XLSX (revisá tu conexión a internet o subí el archivo como CSV).');
+          return mostrarStatusPadron('No se cargó la librería XLSX (revisá tu conexión a internet o subí el archivo como CSV UTF-8).');
         }
         const buf = await file.arrayBuffer();
         const wb = window.XLSX.read(buf, { type: 'array', cellDates: false });
@@ -1745,7 +1792,7 @@
           hojas[sn] = window.XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '', raw: true });
         });
       } else {
-        return mostrarStatusPadron('Formato no soportado. Subí un archivo .xlsx, .xls o .csv.');
+        return mostrarStatusPadron('Formato no soportado. Subí un archivo .csv (UTF-8), .xlsx, .xls o .ods.');
       }
       if (!nombresHojas.length) return mostrarStatusPadron('El archivo no contiene hojas con datos.');
 
@@ -1792,8 +1839,10 @@
       const diff = C.compararPadron(actuales, parsed.visitas, INTENTOS, mapaOct);
       PADRON_UI.parsed = parsed;
       PADRON_UI.diff = diff;
-      if (diff.bajas.length && !diff.altas.length && !diff.modificadas.length) PADRON_UI.diffTab = 'bajas';
-      else if (diff.modificadas.length && !diff.altas.length) PADRON_UI.diffTab = 'modificadas';
+      if (diff.altas.length) PADRON_UI.diffTab = 'altas';
+      else if (diff.bajas.length) PADRON_UI.diffTab = 'bajas';
+      else if (diff.cambiosTareas.length) PADRON_UI.diffTab = 'tareas';
+      else if (diff.otrasModificadas.length) PADRON_UI.diffTab = 'otras';
     } else {
       PADRON_UI.parsed = null;
       PADRON_UI.diff = null;
@@ -1836,7 +1885,7 @@
       btnOk.disabled = true;
       btnCsv.style.display = 'none';
       btnJs.style.display = 'none';
-      $('padronResumen').textContent = 'Subí un archivo .xlsx o .csv para iniciar la validación';
+      $('padronResumen').textContent = 'Subí un archivo .csv (UTF-8), .xlsx o .ods para iniciar la validación';
       return;
     }
 
@@ -1919,56 +1968,67 @@
 
     if (val.ok && parsed && diff) {
       h += `<div class="cards" style="margin:12px 0 8px">
-        <div class="card"><div class="k">Sin cambios</div><div class="v">${fmt(diff.sinCambios.length)}</div><div class="s">se conservan intactas</div></div>
-        <div class="card ok"><div class="k">Altas (nuevas)</div><div class="v" style="color:var(--ok)">+${fmt(diff.altas.length)}</div><div class="s">nuevas en el archivo</div></div>
-        <div class="card warn"><div class="k">Modificadas</div><div class="v" style="color:var(--amber)">${fmt(diff.modificadas.length)}</div><div class="s">cambió algún dato o fecha máx.</div></div>
+        <div class="card ok"><div class="k">Altas (nuevas)</div><div class="v" style="color:var(--ok)">+${fmt(diff.altas.length)}</div><div class="s">ingresan al padrón</div></div>
         <div class="card bad"><div class="k">Bajas (eliminadas)</div><div class="v" style="color:var(--bad)">-${fmt(diff.bajas.length)}</div><div class="s">${diff.bajasConGestion.length ? `<span class="venc">${diff.bajasConGestion.length} con gestión/PDF</span>` : 'sin gestión cargada'}</div></div>
+        <div class="card warn"><div class="k">Cambios de tareas</div><div class="v" style="color:#5B21B6">${fmt(diff.cambiosTareas.length)}</div><div class="s">mismo CUIT + Estab (conserva agenda)</div></div>
+        <div class="card"><div class="k">Cambios de plazo / datos</div><div class="v">${fmt(diff.otrasModificadas.length)}</div><div class="s">${fmt(diff.sinCambios.length)} sin cambios</div></div>
       </div>`;
 
       if (diff.bajasConGestion.length) {
-        h += `<div class="val-box bad"><strong>⚠ Atención: ${diff.bajasConGestion.length} visita(s) eliminada(s) del Excel ya tienen gestión o PDF cargado.</strong>
-          <div class="note" style="margin-top:3px">Sus registros en <code>Seguimiento_Intentos</code> nunca se borran, y si sincronizás con Sheets las bajas se respaldan en la pestaña <code>Bajas_Historico</code>. Revisá la pestaña "Bajas" abajo antes de confirmar.</div></div>`;
+        h += `<div class="val-box bad"><strong>⚠ Atención: ${diff.bajasConGestion.length} visita(s) eliminada(s) del archivo ya tienen gestión o PDF cargado.</strong>
+          <div class="note" style="margin-top:3px">Sus registros en <code>Seguimiento_Intentos</code> nunca se borran, y se registran en <code>Historial_ABM</code> y <code>Bajas_Historico</code>. Revisá la pestaña "Bajas" antes de confirmar.</div></div>`;
       }
       if (parsed.duplicadosOmitidos.length || parsed.filasSinFecha) {
         h += `<div class="note" style="margin:4px 0">Avisos del archivo: ${parsed.duplicadosOmitidos.length ? `<b>${parsed.duplicadosOmitidos.length} duplicado(s) exacto(s)</b> fuera de obras omitidos. ` : ''}${parsed.filasSinFecha ? `<b>${parsed.filasSinFecha} fila(s)</b> sin Fecha máxima válida en columna R.` : ''}</div>`;
       }
 
       h += `<div class="opt-row">
-        <label><input type="checkbox" ${PADRON_UI.aplicarBajas ? 'checked' : ''} onchange="App.setPadronOpt('aplicarBajas',this.checked)"> Aplicar bajas (quitar las ${diff.bajas.length} eliminadas del padrón${PADRON_UI.syncSheets ? ' y respaldarlas en Bajas_Historico' : ''})</label>
-        <label><input type="checkbox" ${PADRON_UI.syncSheets ? 'checked' : ''} ${url() ? '' : 'disabled'} onchange="App.setPadronOpt('syncSheets',this.checked)"> Sincronizar también con Google Sheets (preserva X..AJ, fórmulas =AG/AH/AI y Seguimiento_Intentos)</label>
+        <label><input type="checkbox" ${PADRON_UI.aplicarBajas ? 'checked' : ''} onchange="App.setPadronOpt('aplicarBajas',this.checked)"> Aplicar bajas (quitar las ${diff.bajas.length} eliminadas${PADRON_UI.syncSheets ? ' y respaldarlas en Bajas_Historico + Historial_ABM' : ''})</label>
+        <label><input type="checkbox" ${PADRON_UI.syncSheets ? 'checked' : ''} ${url() ? '' : 'disabled'} onchange="App.setPadronOpt('syncSheets',this.checked)"> Sincronizar con Google Sheets (actualiza General, Historial_ABM y preserva X..AJ)</label>
         <label><input type="checkbox" ${PADRON_UI.registrarEmergentes ? 'checked' : ''} onchange="App.setPadronOpt('registrarEmergentes',this.checked)"> Alimentar <b>Visitas emergentes mensuales</b> con las ${diff.altas.length} alta(s) · Mes: <input style="width:74px;padding:2px 6px;font-size:12px" value="${esc(PADRON_UI.mesEmergente)}" onchange="App.setPadronOpt('mesEmergente',this.value.trim())"></label>
       </div>`;
 
       const dt = PADRON_UI.diffTab;
       h += `<div class="diff-tabs">
-        <button type="button" class="${dt === 'altas' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','altas')">Altas (${diff.altas.length})</button>
-        <button type="button" class="${dt === 'modificadas' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','modificadas')">Modificadas (${diff.modificadas.length})</button>
-        <button type="button" class="${dt === 'bajas' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','bajas')">Bajas (${diff.bajas.length})</button>
+        <button type="button" class="${dt === 'altas' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','altas')">Altas (+${diff.altas.length})</button>
+        <button type="button" class="${dt === 'bajas' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','bajas')">Bajas (-${diff.bajas.length})</button>
+        <button type="button" class="${dt === 'tareas' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','tareas')">Cambios de tareas (${diff.cambiosTareas.length})</button>
+        <button type="button" class="${dt === 'otras' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','otras')">Otros cambios (${diff.otrasModificadas.length})</button>
         ${parsed.duplicadosOmitidos.length ? `<button type="button" class="${dt === 'dups' ? 'on' : ''}" onclick="App.setPadronOpt('diffTab','dups')">Duplicados omitidos (${parsed.duplicadosOmitidos.length})</button>` : ''}
       </div>`;
 
-      h += '<div style="max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px">';
+      h += '<div style="max-height:250px;overflow:auto;border:1px solid var(--line);border-radius:8px">';
       if (dt === 'altas') {
         h += `<table class="diff-tbl"><thead><tr><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Localidad</th><th>Tareas</th><th>Fecha máx. (R)</th></tr></thead><tbody>` +
-          (diff.altas.length ? diff.altas.slice(0, 100).map(v => `<tr style="cursor:default"><td>${esc(v.cuit)}</td><td>${esc(v.empleador)}</td><td>${esc(v.nroEstab)}</td><td>${esc(v.localidad)}</td><td>${esc(C.formatearTareas(v.tareas))}</td><td>${C.aDMY(v.fechaMax)}</td></tr>`).join('') : '<tr><td colspan="6" class="note">Sin altas nuevas.</td></tr>') +
-          '</tbody></table>';
-      } else if (dt === 'modificadas') {
-        h += `<table class="diff-tbl"><thead><tr><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Cambios detectados</th></tr></thead><tbody>` +
-          (diff.modificadas.length ? diff.modificadas.slice(0, 100).map(m => `<tr style="cursor:default"><td>${esc(m.nueva.cuit)}</td><td>${esc(m.nueva.empleador)}</td><td>${esc(m.nueva.nroEstab)}</td><td>${m.cambios.map(c => `<b>${esc(c.campo)}:</b> ${esc(c.key === 'fechaMax' ? C.aDMY(c.antes) : c.antes) || '–'} → <b>${esc(c.key === 'fechaMax' ? C.aDMY(c.despues) : c.despues) || '–'}</b>`).join('<br>')}</td></tr>`).join('') : '<tr><td colspan="4" class="note">Sin filas modificadas.</td></tr>') +
+          (diff.altas.length ? diff.altas.slice(0, 120).map(v => `<tr style="cursor:default"><td>${esc(v.cuit)}</td><td>${esc(v.empleador)}</td><td>${esc(v.nroEstab)}</td><td>${esc(v.localidad)}</td><td>${esc(C.formatearTareas(v.tareas))}</td><td>${C.aDMY(v.fechaMax)}</td></tr>`).join('') : '<tr><td colspan="6" class="note">Sin altas nuevas.</td></tr>') +
           '</tbody></table>';
       } else if (dt === 'bajas') {
         h += `<table class="diff-tbl"><thead><tr><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Tareas</th><th>Fecha máx. (R)</th><th>Gestión</th></tr></thead><tbody>` +
-          (diff.bajas.length ? diff.bajas.slice(0, 100).map(b => `<tr style="cursor:default"><td>${esc(b.visita.cuit)}</td><td>${esc(b.visita.empleador)}</td><td>${esc(b.visita.nroEstab)}</td><td>${esc(C.formatearTareas(b.visita.tareas))}</td><td>${C.aDMY(b.visita.fechaMax)}</td><td>${b.tieneGestion ? `<span class="pill p-bad">⚠ ${b.cantIntentos ? b.cantIntentos + ' intento(s)' : 'PDF Oct'}</span>` : '<span class="pill p-sin">Sin gestión</span>'}</td></tr>`).join('') : '<tr><td colspan="6" class="note">Sin bajas.</td></tr>') +
+          (diff.bajas.length ? diff.bajas.slice(0, 120).map(b => `<tr style="cursor:default"><td>${esc(b.visita.cuit)}</td><td>${esc(b.visita.empleador)}</td><td>${esc(b.visita.nroEstab)}</td><td>${esc(C.formatearTareas(b.visita.tareas))}</td><td>${C.aDMY(b.visita.fechaMax)}</td><td>${b.tieneGestion ? `<span class="pill p-bad">⚠ ${b.cantIntentos ? b.cantIntentos + ' intento(s)' : 'PDF Oct'}</span>` : '<span class="pill p-sin">Sin gestión</span>'}</td></tr>`).join('') : '<tr><td colspan="6" class="note">Sin bajas.</td></tr>') +
+          '</tbody></table>';
+      } else if (dt === 'tareas') {
+        h += `<table class="diff-tbl"><thead><tr><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Diff de tareas</th><th>Plazo (R)</th><th>Gestión</th></tr></thead><tbody>` +
+          (diff.cambiosTareas.length ? diff.cambiosTareas.slice(0, 120).map(m => {
+            const dTar = m.diffTareas || C.diffTareas(m.anterior.tareas, m.nueva.tareas);
+            const chips = dTar.agregadas.map(t => `<span class="diff-add">+ ${esc(t)}</span>`).join('') +
+                          dTar.quitadas.map(t => `<span class="diff-del">− ${esc(t)}</span>`).join('');
+            const plazoTxt = m.anterior.fechaMax !== m.nueva.fechaMax ? `${C.aDMY(m.anterior.fechaMax)} → <b>${C.aDMY(m.nueva.fechaMax)}</b>` : C.aDMY(m.nueva.fechaMax);
+            return `<tr style="cursor:default"><td>${esc(m.nueva.cuit)}</td><td>${esc(m.nueva.empleador)}</td><td>${esc(m.nueva.nroEstab)}</td><td>${chips || esc(C.formatearTareas(m.nueva.tareas))}<div class="note">Ahora: ${esc(C.formatearTareas(m.nueva.tareas))}</div></td><td>${plazoTxt}</td><td>${m.tieneGestion ? '<span class="pill p-ag">Conserva agenda</span>' : '<span class="note">–</span>'}</td></tr>`;
+          }).join('') : '<tr><td colspan="6" class="note">Sin cambios de tareas en establecimientos existentes.</td></tr>') +
+          '</tbody></table>';
+      } else if (dt === 'otras') {
+        h += `<table class="diff-tbl"><thead><tr><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Cambios detectados</th></tr></thead><tbody>` +
+          (diff.otrasModificadas.length ? diff.otrasModificadas.slice(0, 120).map(m => `<tr style="cursor:default"><td>${esc(m.nueva.cuit)}</td><td>${esc(m.nueva.empleador)}</td><td>${esc(m.nueva.nroEstab)}</td><td>${m.cambios.map(c => `<b>${esc(c.campo)}:</b> ${esc(c.key === 'fechaMax' ? C.aDMY(c.antes) : c.antes) || '–'} → <b>${esc(c.key === 'fechaMax' ? C.aDMY(c.despues) : c.despues) || '–'}</b>`).join('<br>')}</td></tr>`).join('') : '<tr><td colspan="4" class="note">Sin otros cambios de plazo o datos.</td></tr>') +
           '</tbody></table>';
       } else {
-        h += `<table class="diff-tbl"><thead><tr><th>Fila Excel</th><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Tareas</th><th>Fecha máx.</th></tr></thead><tbody>` +
+        h += `<table class="diff-tbl"><thead><tr><th>Fila</th><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Tareas</th><th>Fecha máx.</th></tr></thead><tbody>` +
           parsed.duplicadosOmitidos.slice(0, 100).map(d => `<tr style="cursor:default"><td>${d.fila}</td><td>${esc(d.cuit)}</td><td>${esc(d.empleador)}</td><td>${esc(d.nroEstab)}</td><td>${esc(d.tareas)}</td><td>${C.aDMY(d.fechaMax)}</td></tr>`).join('') +
           '</tbody></table>';
       }
       h += '</div>';
 
       const totalFinal = parsed.visitas.length + (PADRON_UI.aplicarBajas ? 0 : diff.bajas.length);
-      $('padronResumen').textContent = `Resultado: ${fmt(totalFinal)} visitas (+${diff.altas.length} altas · ${diff.modificadas.length} modif. · ${PADRON_UI.aplicarBajas ? '-' + diff.bajas.length + ' bajas' : diff.bajas.length + ' bajas conservadas'})`;
+      $('padronResumen').textContent = `Resultado: ${fmt(totalFinal)} visitas (+${diff.altas.length} altas · ${PADRON_UI.aplicarBajas ? '-' + diff.bajas.length + ' bajas' : diff.bajas.length + ' bajas conservadas'} · ${diff.cambiosTareas.length} cambios de tareas · ${diff.otrasModificadas.length} otros)`;
       btnOk.disabled = false;
       btnCsv.style.display = 'inline-block';
       btnJs.style.display = 'inline-block';
@@ -2001,12 +2061,17 @@
 
   function descargarDiffCSV() {
     if (!PADRON_UI || !PADRON_UI.diff) return;
-    const { altas, modificadas, bajas } = PADRON_UI.diff;
+    const { altas, cambiosTareas, otrasModificadas, bajas } = PADRON_UI.diff;
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
     const lineas = [['Tipo', 'CUIT', 'Empleador', 'Estab (M)', 'Tareas', 'Fecha Max (Col R)', 'Detalle Cambios / Gestion'].map(q).join(',')];
-    altas.forEach(v => lineas.push(['ALTA', v.cuit, v.empleador, v.nroEstab, v.tareas, C.aDMY(v.fechaMax), 'Registro nuevo'].map(q).join(',')));
-    modificadas.forEach(m => lineas.push(['MODIFICADA', m.nueva.cuit, m.nueva.empleador, m.nueva.nroEstab, m.nueva.tareas, C.aDMY(m.nueva.fechaMax), m.cambios.map(c => `${c.campo}: ${c.antes} -> ${c.despues}`).join(' | ')].map(q).join(',')));
-    bajas.forEach(b => lineas.push(['BAJA', b.visita.cuit, b.visita.empleador, b.visita.nroEstab, b.visita.tareas, C.aDMY(b.visita.fechaMax), b.tieneGestion ? 'CON GESTION/PDF' : 'Sin gestion'].map(q).join(',')));
+    altas.forEach(v => lineas.push(['ALTA', v.cuit, v.empleador, v.nroEstab, C.formatearTareas(v.tareas), C.aDMY(v.fechaMax), 'Registro nuevo'].map(q).join(',')));
+    cambiosTareas.forEach(m => {
+      const dt = m.diffTareas || C.diffTareas(m.anterior.tareas, m.nueva.tareas);
+      const det = (dt.agregadas.length ? '+ ' + dt.agregadas.join(', ') : '') + (dt.quitadas.length ? (dt.agregadas.length ? ' | ' : '') + '- ' + dt.quitadas.join(', ') : '');
+      lineas.push(['CAMBIO_TAREA', m.nueva.cuit, m.nueva.empleador, m.nueva.nroEstab, C.formatearTareas(m.nueva.tareas), C.aDMY(m.nueva.fechaMax), det].map(q).join(','));
+    });
+    otrasModificadas.forEach(m => lineas.push(['MODIFICADA', m.nueva.cuit, m.nueva.empleador, m.nueva.nroEstab, C.formatearTareas(m.nueva.tareas), C.aDMY(m.nueva.fechaMax), m.cambios.map(c => `${c.campo}: ${c.antes} -> ${c.despues}`).join(' | ')].map(q).join(',')));
+    bajas.forEach(b => lineas.push(['BAJA', b.visita.cuit, b.visita.empleador, b.visita.nroEstab, C.formatearTareas(b.visita.tareas), C.aDMY(b.visita.fechaMax), b.tieneGestion ? 'CON GESTION/PDF' : 'Sin gestion'].map(q).join(',')));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob(['\ufeff' + lineas.join('\n')], { type: 'text/csv;charset=utf-8' }));
     a.download = 'reporte_cambios_padron_' + C.hoyISO() + '.csv';
@@ -2017,11 +2082,91 @@
     if (!PADRON_UI || !PADRON_UI.parsed) return;
     const ahora = new Date();
     const gen = C.hoyISO(ahora) + ' ' + String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
-    const payload = { generado: gen, visitas: construirVisitasFinalesPadron(), historico: D.historico || [] };
+    const payload = { generado: gen, visitas: construirVisitasFinalesPadron(), historico: D.historico || [], historialABM: movimientosABMUnificados() };
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob(['window.SEG_DATA = ' + JSON.stringify(payload) + ';\n'], { type: 'application/javascript;charset=utf-8' }));
     a.download = 'datos.js';
     a.click();
+  }
+
+  function pillTipoABM(tipo) {
+    if (tipo === 'ALTA') return '<span class="pill p-ok">✔ Alta</span>';
+    if (tipo === 'BAJA') return '<span class="pill p-bad">✖ Baja</span>';
+    if (tipo === 'CAMBIO_TAREA') return '<span class="pill p-chg">⇄ Cambio de tareas</span>';
+    if (tipo === 'CAMBIO_PLAZO') return '<span class="pill p-ag">📅 Cambio de plazo</span>';
+    return '<span class="pill p-warn">✎ Modificación</span>';
+  }
+
+  function celdaDetalleABM(m) {
+    if (m.tipo === 'CAMBIO_TAREA') {
+      const adds = (m.tareasAgregadas || '').split(' · ').filter(Boolean).map(t => `<span class="diff-add">+ ${esc(t)}</span>`).join('');
+      const dels = (m.tareasQuitadas || '').split(' · ').filter(Boolean).map(t => `<span class="diff-del">− ${esc(t)}</span>`).join('');
+      return `${adds}${dels}<div class="note">Quedó: ${esc(m.tareasDespues || '–')}</div>`;
+    }
+    if (m.tipo === 'ALTA') return esc(m.tareasDespues || m.detalle || '–');
+    if (m.tipo === 'BAJA') return `<span style="color:var(--mut)">${esc(m.tareasAntes || '–')}</span>`;
+    return `${esc(m.detalle || '')}${m.tareasDespues ? `<div class="note">${esc(m.tareasDespues)}</div>` : ''}`;
+  }
+
+  function celdaPlazoABM(m) {
+    if (m.fechaMaxAntes && m.fechaMaxDespues && m.fechaMaxAntes !== m.fechaMaxDespues) {
+      return `${C.aDMY(m.fechaMaxAntes)} → <b>${C.aDMY(m.fechaMaxDespues)}</b>`;
+    }
+    return C.aDMY(m.fechaMaxDespues || m.fechaMaxAntes) || '–';
+  }
+
+  function renderPopupResumenABM() {
+    const lote = ULTIMO_LOTE_ABM;
+    if (!lote || !$('abmPopBody')) return;
+    const r = lote.resumen;
+    $('abmPopTitulo').textContent = `Novedades del Padrón Registradas · ${lote.fechaABM}`;
+    $('abmPopSub').textContent = `Archivo: ${lote.archivo || 'Padrón'} ${lote.usuario ? '· Cargado por: ' + lote.usuario : ''}`;
+
+    const movs = lote.movimientos || [];
+    const filtrados = movs.filter(m => {
+      if (abmPopTab === 'altas') return m.tipo === 'ALTA';
+      if (abmPopTab === 'bajas') return m.tipo === 'BAJA';
+      if (abmPopTab === 'tareas') return m.tipo === 'CAMBIO_TAREA';
+      if (abmPopTab === 'otras') return m.tipo === 'CAMBIO_PLAZO' || m.tipo === 'MODIFICACION';
+      return true;
+    });
+
+    let h = `<div class="cards" style="margin:0 0 12px">
+      <div class="card ok"><div class="k">Altas registradas</div><div class="v" style="color:var(--ok)">+${fmt(r.altas)}</div><div class="s">nuevas visitas incorporadas</div></div>
+      <div class="card bad"><div class="k">Bajas registradas</div><div class="v" style="color:var(--bad)">-${fmt(r.bajas)}</div><div class="s">${r.bajasConGestion ? `<span class="venc">${r.bajasConGestion} tenían gestión</span>` : 'sin gestión previa'}</div></div>
+      <div class="card warn"><div class="k">Cambios de tareas</div><div class="v" style="color:#5B21B6">${fmt(r.cambiosTareas)}</div><div class="s">actualizadas manteniendo historial</div></div>
+      <div class="card"><div class="k">Otros cambios</div><div class="v">${fmt(r.otrasModificadas)}</div><div class="s">plazos (col. R) o datos</div></div>
+    </div>`;
+
+    h += `<div class="diff-tabs">
+      <button type="button" class="${abmPopTab === 'resumen' ? 'on' : ''}" onclick="App.setAbmPopTab('resumen')">Todos (${movs.length})</button>
+      <button type="button" class="${abmPopTab === 'altas' ? 'on' : ''}" onclick="App.setAbmPopTab('altas')">Altas (+${r.altas})</button>
+      <button type="button" class="${abmPopTab === 'bajas' ? 'on' : ''}" onclick="App.setAbmPopTab('bajas')">Bajas (-${r.bajas})</button>
+      <button type="button" class="${abmPopTab === 'tareas' ? 'on' : ''}" onclick="App.setAbmPopTab('tareas')">Cambios de tareas (${r.cambiosTareas})</button>
+      <button type="button" class="${abmPopTab === 'otras' ? 'on' : ''}" onclick="App.setAbmPopTab('otras')">Otros (${r.otrasModificadas})</button>
+    </div>`;
+
+    h += `<div style="max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:8px"><table class="diff-tbl"><thead><tr>
+      <th>Tipo</th><th>CUIT</th><th>Empleador</th><th>Estab (M)</th><th>Ámbito</th><th>Tareas / Detalle</th><th>Fecha máx. (R)</th><th>Gestión</th>
+    </tr></thead><tbody>`;
+    if (filtrados.length) {
+      filtrados.slice(0, 150).forEach(m => {
+        h += `<tr style="cursor:default">
+          <td>${pillTipoABM(m.tipo)}</td>
+          <td>${esc(m.cuit)}</td>
+          <td>${esc(m.empleador)}</td>
+          <td>${esc(m.nroEstab)}</td>
+          <td>${esc(m.ambito)}</td>
+          <td>${celdaDetalleABM(m)}</td>
+          <td>${celdaPlazoABM(m)}</td>
+          <td>${m.teniaGestion && m.teniaGestion !== 'No' ? `<span class="pill p-warn">${esc(m.teniaGestion)}</span>` : '<span class="note">No</span>'}</td>
+        </tr>`;
+      });
+    } else {
+      h += '<tr><td colspan="8" class="note" style="padding:18px;text-align:center">No hubo movimientos de este tipo en el listado cargado.</td></tr>';
+    }
+    h += '</tbody></table></div>';
+    $('abmPopBody').innerHTML = h;
   }
 
   async function aplicarPadron() {
@@ -2032,39 +2177,218 @@
     const finales = construirVisitasFinalesPadron();
     const ahora = new Date();
     const gen = C.hoyISO(ahora) + ' ' + String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
-    const nuevoLocal = { generado: gen, ts: ahora.toISOString(), archivo: PADRON_UI.archivo, visitas: finales };
+    const usuario = load(LS_USER, '');
+    const loteABM = C.construirLoteABM(PADRON_UI.diff, {
+      fechaABM: gen,
+      archivo: PADRON_UI.archivo,
+      usuario: usuario,
+      aplicarBajas: !!PADRON_UI.aplicarBajas
+    });
 
+    // 1. Migrar IDs en INTENTOS y COLA locales cuando cambió Tareas o Fecha máx.
+    (PADRON_UI.diff.migracionesId || []).forEach(m => {
+      if (INTENTOS[m.idAnterior] && m.idAnterior !== m.idNuevo) {
+        const comb = (INTENTOS[m.idNuevo] || []).concat(INTENTOS[m.idAnterior]);
+        const porN = {};
+        comb.forEach(x => { porN[x.n] = x; });
+        INTENTOS[m.idNuevo] = Object.values(porN).sort((a, b) => a.n - b.n);
+        delete INTENTOS[m.idAnterior];
+      }
+      COLA.forEach(q => { if (q.id === m.idAnterior) q.id = m.idNuevo; });
+    });
+    save(LS_INT, INTENTOS);
+    save(LS_COLA, COLA);
+
+    // 2. Guardar movimientos en el historial ABM local
+    if (loteABM.movimientos.length) {
+      ABM_LOCAL = ABM_LOCAL || { ts: '', movimientos: [] };
+      ABM_LOCAL.movimientos = (ABM_LOCAL.movimientos || []).concat(loteABM.movimientos);
+      ABM_LOCAL.ts = ahora.toISOString();
+      save(LS_ABM, ABM_LOCAL);
+    }
+
+    // 3. Actualizar padrón local inmediatamente
+    const nuevoLocal = { generado: gen, ts: ahora.toISOString(), archivo: PADRON_UI.archivo, visitas: finales };
     PADRON_LOCAL = nuevoLocal;
     save(LS_PADRON, PADRON_LOCAL);
     recalcular();
     render();
 
+    // 4. Mostrar el Pop-up de Novedades ABM con Fecha de ABM
+    ULTIMO_LOTE_ABM = loteABM;
+    abmPopTab = 'resumen';
+    renderPopupResumenABM();
+    $('dlgPadron').close();
+    if ($('dlgResumenABM')) {
+      $('abmPopSyncInfo').textContent = PADRON_UI.syncSheets && url()
+        ? 'Sincronizando padrón e Historial_ABM con Google Sheets…'
+        : `Guardado en la app (${loteABM.movimientos.length} movimiento(s) ABM con fecha ${gen}).`;
+      $('dlgResumenABM').showModal();
+    }
+
+    // 5. Sincronizar con Google Sheets (General + Bajas_Historico + Visitas emergentes + Historial_ABM)
     if (PADRON_UI.syncSheets && url()) {
-      mostrarStatusPadron('Actualizado en pantalla. Sincronizando cambios con Google Sheets (preservando X..AJ y fórmulas)…', true);
       try {
         const res = await post({
           action: 'syncPadron',
           archivo: PADRON_UI.archivo,
-          usuario: load(LS_USER, ''),
+          usuario: usuario,
           aplicarBajas: !!PADRON_UI.aplicarBajas,
           registrarEmergentes: !!PADRON_UI.registrarEmergentes,
           mesEmergente: (PADRON_UI.mesEmergente || C.mesEmergenteActual()).trim(),
+          migracionesId: PADRON_UI.diff.migracionesId || [],
+          movimientosABM: loteABM.movimientos || [],
           filas: PADRON_UI.parsed.filasRaw
         });
         if (res && res.ok) {
-          if (res.ts) { PADRON_LOCAL.ts = res.ts; save(LS_PADRON, PADRON_LOCAL); }
-          const emTxt = res.emergentesAgregadas ? `, <b>+${res.emergentesAgregadas}</b> en <code>Visitas emergentes mensuales</code> (${esc(res.mesEmergente || '')})` : '';
-          mostrarStatusPadron(`✅ Padrón actualizado y sincronizado con Google Sheets: <b>${res.totalFinal}</b> filas (+${res.altas} altas, ${res.modificadas} modificadas, ${res.bajas} bajas respaldadas en <code>Bajas_Historico</code>${emTxt}).`, true);
-        } else {
-          mostrarStatusPadron('⚠ Aplicado en esta app, pero Google Sheets respondió: ' + esc((res && res.error) || 'actualizá el Apps Script para habilitar syncPadron') + '. Podés descargar <code>datos.js</code> desde el botón de abajo.', false);
+          if (res.ts) {
+            PADRON_LOCAL.ts = res.ts; save(LS_PADRON, PADRON_LOCAL);
+            ABM_LOCAL.ts = res.ts; save(LS_ABM, ABM_LOCAL);
+          }
+          if ($('abmPopSyncInfo')) {
+            $('abmPopSyncInfo').innerHTML = `✅ Guardado en Google Sheets (<code>Historial_ABM</code>: ${res.abmGuardados != null ? res.abmGuardados : loteABM.movimientos.length} mov. · <code>General</code>: ${res.totalFinal} filas).`;
+          }
+        } else if ($('abmPopSyncInfo')) {
+          $('abmPopSyncInfo').innerHTML = '⚠ Guardado en la app; Google Sheets respondió: ' + esc((res && res.error) || 'actualizá el código de Apps Script');
         }
       } catch (e) {
-        mostrarStatusPadron('⚠ Aplicado en esta app, pero no se pudo conectar con Google Sheets (' + esc(e && e.message || 'sin conexión') + ').', false);
+        if ($('abmPopSyncInfo')) {
+          $('abmPopSyncInfo').textContent = '⚠ Guardado en la app; sin conexión con Google Sheets en este momento.';
+        }
       }
-    } else {
-      mostrarStatusPadron(`✅ Padrón actualizado en la app (${fmt(finales.length)} visitas). Podés descargar <code>datos.js</code> o activar la sincronización con Google Sheets.`, true);
     }
     btn.disabled = false;
+  }
+
+  /* ---------- 5. VISTA INDEPENDIENTE: HISTORIAL ABM ---------- */
+  function filtrarMovimientosABM() {
+    const todos = movimientosABMUnificados();
+    const q = C.sinTildes(ABM_F.q).toLowerCase().trim();
+    return todos.filter(m => {
+      if (ABM_F.lote && (m.loteId || m.fechaABM) !== ABM_F.lote) return false;
+      if (ABM_F.tipo) {
+        if (ABM_F.tipo === 'OTROS') {
+          if (m.tipo !== 'CAMBIO_PLAZO' && m.tipo !== 'MODIFICACION') return false;
+        } else if (m.tipo !== ABM_F.tipo) return false;
+      }
+      if (ABM_F.ambito && m.ambito !== ABM_F.ambito) return false;
+      if (q) {
+        const h = C.sinTildes([m.cuit, m.empleador, m.nroEstab, m.ambito, m.localidad, m.tareasAntes, m.tareasDespues, m.detalle, m.archivo, m.usuario].join(' ')).toLowerCase();
+        if (h.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+  }
+
+  function renderHistorialABM() {
+    destruirCharts();
+    const todos = movimientosABMUnificados();
+    const filtrados = filtrarMovimientosABM();
+    const pags = Math.max(1, Math.ceil(filtrados.length / PAGE));
+    if (ABM_F.pagina > pags) ABM_F.pagina = pags;
+    const sl = filtrados.slice((ABM_F.pagina - 1) * PAGE, ABM_F.pagina * PAGE);
+
+    // Agrupar lotes por loteId o fechaABM
+    const lotesMap = {};
+    todos.forEach(m => {
+      const k = m.loteId || m.fechaABM || 'sin_lote';
+      if (!lotesMap[k]) lotesMap[k] = { key: k, fechaABM: m.fechaABM || '–', archivo: m.archivo || 'Padrón', count: 0 };
+      lotesMap[k].count++;
+    });
+    const lotes = Object.values(lotesMap).sort((a, b) => String(b.fechaABM).localeCompare(String(a.fechaABM)));
+    const ambitosABM = Array.from(new Set(todos.map(m => m.ambito).filter(Boolean))).sort();
+
+    const baseLote = ABM_F.lote ? todos.filter(m => (m.loteId || m.fechaABM) === ABM_F.lote) : todos;
+    const nAltas = baseLote.filter(m => m.tipo === 'ALTA').length;
+    const nBajas = baseLote.filter(m => m.tipo === 'BAJA').length;
+    const nBajasGest = baseLote.filter(m => m.tipo === 'BAJA' && m.teniaGestion && m.teniaGestion !== 'No').length;
+    const nTareas = baseLote.filter(m => m.tipo === 'CAMBIO_TAREA').length;
+    const nOtros = baseLote.filter(m => m.tipo === 'CAMBIO_PLAZO' || m.tipo === 'MODIFICACION').length;
+    const hayFil = !!(ABM_F.lote || ABM_F.tipo || ABM_F.ambito || ABM_F.q);
+
+    let h = `<div class="page-head">
+      <div><h1>Historial ABM del Padrón</h1><div class="sub">Registro histórico con Fecha de ABM de altas, bajas y cambios de tareas entre listados (sincronizado con hoja <code>Historial_ABM</code>).</div></div>
+      <div style="display:flex;gap:8px">
+        ${ULTIMO_LOTE_ABM ? '<button type="button" class="btn sec" onclick="App.verUltimoPopupABM()">🔔 Ver último resumen</button>' : ''}
+        <button type="button" class="btn" onclick="App.abrirPadron()">📥 Subir nuevo listado</button>
+      </div>
+    </div>`;
+
+    h += `<div class="cards" style="margin-top:14px">
+      <div class="card"><div class="k">Cortes registrados</div><div class="v">${fmt(lotes.length)}</div><div class="s">${lotes.length ? 'último: ' + esc(lotes[0].fechaABM) : 'sin cargas aún'}</div></div>
+      <div class="card ok"><div class="k">Altas</div><div class="v" style="color:var(--ok)">+${fmt(nAltas)}</div><div class="s">incorporadas al padrón</div></div>
+      <div class="card bad"><div class="k">Bajas</div><div class="v" style="color:var(--bad)">-${fmt(nBajas)}</div><div class="s">${nBajasGest ? `<span class="venc">${fmt(nBajasGest)} tenían gestión/PDF</span>` : 'dadas de baja'}</div></div>
+      <div class="card warn"><div class="k">Cambios de tareas</div><div class="v" style="color:#5B21B6">${fmt(nTareas)}</div><div class="s">${nOtros ? `+ ${fmt(nOtros)} cambio(s) de plazo/datos` : 'mismo CUIT + Estab'}</div></div>
+    </div>`;
+
+    const segBtn = (k, lbl) => `<button type="button" class="${ABM_F.tipo === k ? 'on' : ''}" onclick="App.abmFiltro('tipo','${k}')">${lbl}</button>`;
+    h += `<div class="filters" style="margin-top:6px">
+      <div class="seg">
+        ${segBtn('', `Todos (${fmt(baseLote.length)})`)}
+        ${segBtn('ALTA', `Altas (${fmt(nAltas)})`)}
+        ${segBtn('BAJA', `Bajas (${fmt(nBajas)})`)}
+        ${segBtn('CAMBIO_TAREA', `Cambios de tareas (${fmt(nTareas)})`)}
+        ${segBtn('OTROS', `Plazos / otros (${fmt(nOtros)})`)}
+      </div>
+      <select class="${ABM_F.lote ? 'act' : ''}" onchange="App.abmFiltro('lote',this.value)">
+        <option value="">Fecha ABM / Corte: todos (${lotes.length})</option>
+        ${lotes.map(l => `<option value="${esc(l.key)}" ${ABM_F.lote === l.key ? 'selected' : ''}>${esc(l.fechaABM)} · ${esc(l.archivo)} (${l.count})</option>`).join('')}
+      </select>
+      <select class="${ABM_F.ambito ? 'act' : ''}" onchange="App.abmFiltro('ambito',this.value)">
+        <option value="">Ámbito: todos</option>
+        ${ambitosABM.map(a => `<option value="${esc(a)}" ${ABM_F.ambito === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}
+      </select>
+      <input type="search" id="abmSearch" placeholder="Buscar CUIT, empleador, tarea…" value="${esc(ABM_F.q)}" oninput="App.abmBuscar(this.value)">
+      ${hayFil ? '<button type="button" class="btn sec sm" onclick="App.abmLimpiar()">Limpiar</button>' : ''}
+      <button type="button" class="btn sec sm" style="margin-left:auto" onclick="App.exportarHistorialABM()">⬇ Exportar Historial ABM (.csv)</button>
+    </div>`;
+
+    h += `<div class="tw"><div style="overflow:auto;max-height:66vh"><table class="grid-op"><thead><tr>
+      <th>Fecha ABM</th><th>Tipo</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Ámbito / Localidad</th><th>Tareas / Cambios detectados</th><th>Fecha máx. (R)</th><th>Gestión previa</th><th>Archivo / Usuario</th>
+    </tr></thead><tbody>`;
+
+    if (sl.length) {
+      sl.forEach(m => {
+        const archUsr = [m.archivo, m.usuario].filter(Boolean).join(' · ');
+        h += `<tr style="cursor:default">
+          <td><b>${esc(m.fechaABM || '–')}</b></td>
+          <td>${pillTipoABM(m.tipo)}</td>
+          <td>${esc(m.cuit)}</td>
+          <td class="clip" style="max-width:185px" title="${esc(m.empleador)}">${esc(m.empleador)}</td>
+          <td>${esc(m.nroEstab)}</td>
+          <td class="clip" style="max-width:150px" title="${esc(m.ambito + ' / ' + m.localidad)}">${esc(m.ambito)} <span class="note">/ ${esc(m.localidad)}</span></td>
+          <td style="white-space:normal;min-width:250px;max-width:360px">${celdaDetalleABM(m)}</td>
+          <td>${celdaPlazoABM(m)}</td>
+          <td>${m.teniaGestion && m.teniaGestion !== 'No' ? `<span class="pill p-warn">${esc(m.teniaGestion)}</span>` : '<span class="note">No</span>'}</td>
+          <td class="clip note" style="max-width:165px" title="${esc(archUsr)}">${esc(archUsr || '–')}</td>
+        </tr>`;
+      });
+    } else {
+      h += `<tr><td colspan="10" class="note" style="padding:28px;text-align:center">${todos.length ? 'Sin movimientos para los filtros seleccionados.' : 'Todavía no hay movimientos ABM registrados. Al subir un listado nuevo desde "📥 Padrón", las altas, bajas y cambios de tareas quedarán guardados acá con su Fecha de ABM.'}</td></tr>`;
+    }
+    h += `</tbody></table></div><div class="pager"><span style="margin-right:auto">${fmt(filtrados.length)} movimiento(s)</span><button type="button" class="btn sec sm" onclick="App.abmPag(-1)">‹</button> Página ${ABM_F.pagina} de ${pags} <button type="button" class="btn sec sm" onclick="App.abmPag(1)">›</button></div></div>`;
+    $('main').innerHTML = h;
+  }
+
+  function exportarHistorialABM() {
+    const lista = filtrarMovimientosABM();
+    const cols = [
+      ['fechaABM', 'Fecha ABM'], ['loteId', 'ID Lote'], ['tipo', 'Tipo'], ['cuit', 'CUIT'],
+      ['empleador', 'Empleador'], ['nroEstab', 'Estab (M)'], ['ambito', 'Ambito'], ['localidad', 'Localidad'],
+      ['tareasAntes', 'Tareas Antes'], ['tareasDespues', 'Tareas Despues'],
+      ['tareasAgregadas', 'Tareas Agregadas'], ['tareasQuitadas', 'Tareas Quitadas'],
+      ['fechaMaxAntes', 'Fecha Max Antes'], ['fechaMaxDespues', 'Fecha Max Despues'],
+      ['teniaGestion', 'Tenia Gestion'], ['detalle', 'Detalle'], ['archivo', 'Archivo'], ['usuario', 'Usuario']
+    ];
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const csv = '\ufeff' + cols.map(c => q(c[1])).join(',') + '\n' + lista.map(m => cols.map(([k]) => {
+      if (k === 'fechaMaxAntes' || k === 'fechaMaxDespues') return q(C.aDMY(m[k]));
+      return q(m[k]);
+    }).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'historial_abm_' + C.hoyISO() + '.csv';
+    a.click();
   }
 
   function restaurarPadronBase() {
@@ -2124,6 +2448,21 @@
               save(LS_PADRON, PADRON_LOCAL);
             }
           } catch (e2) { /* silencioso si backend anterior no tiene getPadron */ }
+        }
+        if (r.abmUpdatedAt && (!ABM_LOCAL || !ABM_LOCAL.ts || r.abmUpdatedAt > ABM_LOCAL.ts)) {
+          try {
+            const ra = await (await fetch(url() + '?action=getHistorialABM')).json();
+            if (ra && ra.ok && Array.isArray(ra.movimientos)) {
+              const vistos = {};
+              const comb = [];
+              ra.movimientos.concat((ABM_LOCAL && ABM_LOCAL.movimientos) || []).forEach(m => {
+                const k = claveMovABM(m);
+                if (!vistos[k]) { vistos[k] = true; comb.push(m); }
+              });
+              ABM_LOCAL = { ts: ra.abmUpdatedAt || r.abmUpdatedAt, movimientos: comb };
+              save(LS_ABM, ABM_LOCAL);
+            }
+          } catch (e3) { /* silencioso si backend anterior no tiene getHistorialABM */ }
         }
       }
       await flush();
@@ -2282,8 +2621,15 @@
     abrir, guardar, toggleRes, analizarPdfIndividual,
     abrirMasiva, agregarArchivosMasiva, updLote, quitarLote, limpiarMasiva, confirmarLote, verPdfLote,
     abrirPadron, cargarArchivoPadron, cambiarHojaPadron, remapearColumnaPadron, setPadronOpt, aplicarPadron, descargarDiffCSV, descargarDatosJS, restaurarPadronBase,
+    setAbmPopTab(t) { abmPopTab = t; renderPopupResumenABM(); },
+    verUltimoPopupABM() { if (ULTIMO_LOTE_ABM && $('dlgResumenABM')) { renderPopupResumenABM(); $('dlgResumenABM').showModal(); } },
+    abmFiltro(k, val) { ABM_F[k] = val; ABM_F.pagina = 1; renderHistorialABM(); },
+    abmBuscar(val) { ABM_F.q = val; ABM_F.pagina = 1; renderHistorialABM(); const i = $('abmSearch'); if (i) { i.focus(); i.setSelectionRange(val.length, val.length); } },
+    abmPag(d) { ABM_F.pagina = Math.max(1, ABM_F.pagina + d); renderHistorialABM(); },
+    abmLimpiar() { Object.assign(ABM_F, { lote: '', tipo: '', ambito: '', q: '', pagina: 1 }); renderHistorialABM(); },
+    exportarHistorialABM,
     sincronizar, abrirConfig, guardarConfig, exportar,
-    _estado: () => ({ VISITAS, INTENTOS, COLA, LOTE, PADRON_LOCAL, PADRON_UI, geminiActivo, F, LOG, vista, subTab })
+    _estado: () => ({ VISITAS, INTENTOS, COLA, LOTE, PADRON_LOCAL, PADRON_UI, ABM_LOCAL, ULTIMO_LOTE_ABM, geminiActivo, F, LOG, ABM_F, vista, subTab })
   };
   /* ---------- HINT FLOTANTE DE OBSERVACIONES ---------- */
   function buscarPorIdCualquiera(id) {
@@ -2333,7 +2679,7 @@
     document.addEventListener('scroll', ocultarObsTip, true);
   }
 
-  window.dlgVisita = $('dlgVisita'); window.dlgCfg = $('dlgCfg'); window.dlgMasiva = $('dlgMasiva'); window.dlgPadron = $('dlgPadron');
+  window.dlgVisita = $('dlgVisita'); window.dlgCfg = $('dlgCfg'); window.dlgMasiva = $('dlgMasiva'); window.dlgPadron = $('dlgPadron'); window.dlgResumenABM = $('dlgResumenABM');
   $('dlgVisita').addEventListener('close', () => {
     if (blobUrlIndividual) { URL.revokeObjectURL(blobUrlIndividual); blobUrlIndividual = ''; }
     $('dlgVisita').classList.remove('wide');

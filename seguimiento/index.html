@@ -258,6 +258,9 @@
   .diff-tabs button.on{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600}
   .diff-tbl{font-size:12px;margin-top:4px}
   .diff-tbl td,.diff-tbl th{padding:5px 8px}
+  .diff-add{display:inline-block;background:#E4F3EA;color:#1E7B4B;border:1px solid #B5DCC4;border-radius:10px;padding:1px 7px;font-size:11.5px;margin:1px 3px 1px 0}
+  .diff-del{display:inline-block;background:#FBE9E7;color:#B3261E;border:1px solid #F2C0BA;border-radius:10px;padding:1px 7px;font-size:11.5px;margin:1px 3px 1px 0;text-decoration:line-through}
+  .p-chg{background:#EDE9FE;color:#5B21B6;border-color:#C4B5FD}
   .opt-row{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:10px 0;padding:8px 12px;background:#F5F6F3;border:1px solid var(--line);border-radius:8px;font-size:12.5px}
   .opt-row label{display:inline-flex;align-items:center;gap:6px;margin:0;color:var(--ink);cursor:pointer}
   .opt-row input[type=checkbox]{width:auto;margin:0}
@@ -302,7 +305,7 @@
       <span class="sp"></span>
       <span id="sync">…</span>
       <button class="btn sec sm" onclick="App.sincronizar()" title="Sincronizar con Google Sheets">🔄 Sincronizar</button>
-      <button class="btn sec" onclick="App.abrirPadron()">📥 Padrón (.xlsx)</button>
+      <button class="btn sec" onclick="App.abrirPadron()">📥 Padrón</button>
       <button class="btn amb" id="btnMasivaHdr" onclick="App.abrirMasiva()">⬆ Subida masiva (OCR / IA)</button>
     </header>
     <main id="main"></main>
@@ -344,26 +347,39 @@
 
 <dialog id="dlgPadron" class="wide">
   <div class="mh">
-    <div><strong>Actualizar Padrón desde Excel / CSV</strong><div style="font-size:11.5px;color:#cbd5e1">Validador automático de columnas (A..W) · Detecta columnas nuevas, renombradas o faltantes · Vista previa de altas, bajas y modificaciones</div></div>
+    <div><strong>Actualizar Padrón (CSV UTF-8 / Excel / ODS)</strong><div style="font-size:11.5px;color:#cbd5e1">Detecta Altas, Bajas y Cambios de tareas · Guarda el lote con Fecha de ABM en Historial_ABM</div></div>
     <button class="btn sec sm" onclick="dlgPadron.close()">✕</button>
   </div>
   <div class="mb">
     <div class="dropzone" id="dropPadron" onclick="document.getElementById('inPadron').click()">
-      <strong style="font-size:15px;color:var(--teal)">Arrastrá el archivo .XLSX o .CSV de SharePoint acá o hacé clic para elegirlo</strong>
-      <div class="note" style="margin-top:4px">Se valida el esquema de columnas antes de tocar nada. Preserva tus intentos/PDFs y las columnas enriquecidas (X..AJ) de Google Sheets.</div>
+      <strong style="font-size:15px;color:var(--teal)">Arrastrá el archivo .CSV (UTF-8), .XLSX o .ODS de SharePoint acá o hacé clic para elegirlo</strong>
+      <div class="note" style="margin-top:4px">Desde SharePoint / Excel Online elegí <b>Descargar como CSV UTF-8</b> (o .xlsx / .ods). Preserva tus intentos/PDFs y las columnas enriquecidas (X..AJ).</div>
     </div>
-    <input type="file" id="inPadron" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" style="display:none" onchange="App.cargarArchivoPadron(this.files[0]); this.value=''">
+    <input type="file" id="inPadron" accept=".csv,.xlsx,.xls,.ods,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.oasis.opendocument.spreadsheet" style="display:none" onchange="App.cargarArchivoPadron(this.files[0]); this.value=''">
     <div id="padronHojaWrap" style="display:none;margin-top:10px" class="opt-row"></div>
     <div id="padronContenido"></div>
     <div id="padronStatus" class="err"></div>
   </div>
   <div class="mf">
-    <span class="note" id="padronResumen" style="margin-right:auto">Subí un archivo .xlsx o .csv para iniciar la validación</span>
+    <span class="note" id="padronResumen" style="margin-right:auto">Subí un archivo .csv, .xlsx o .ods para iniciar la validación</span>
     <button class="btn sec sm" id="btnPadronRestaurar" style="display:none" onclick="App.restaurarPadronBase()">Volver al padrón base</button>
     <button class="btn sec" id="btnPadronDiffCsv" style="display:none" onclick="App.descargarDiffCSV()">Exportar diff CSV</button>
     <button class="btn sec" id="btnPadronDatosJs" style="display:none" onclick="App.descargarDatosJS()">Descargar datos.js</button>
     <button class="btn sec" onclick="dlgPadron.close()">Cerrar</button>
-    <button class="btn" id="btnAplicarPadron" onclick="App.aplicarPadron()" disabled>Confirmar y Actualizar Padrón</button>
+    <button class="btn" id="btnAplicarPadron" onclick="App.aplicarPadron()" disabled>Confirmar y Guardar ABM</button>
+  </div>
+</dialog>
+
+<dialog id="dlgResumenABM" class="wide">
+  <div class="mh">
+    <div><strong id="abmPopTitulo">Novedades del Padrón Registradas (ABM)</strong><div id="abmPopSub" style="font-size:11.5px;color:#cbd5e1">Resumen de altas, bajas y cambios de tareas guardados con Fecha de ABM</div></div>
+    <button class="btn sec sm" onclick="dlgResumenABM.close()">✕</button>
+  </div>
+  <div class="mb" id="abmPopBody"></div>
+  <div class="mf">
+    <span class="note" id="abmPopSyncInfo" style="margin-right:auto"></span>
+    <button class="btn sec" onclick="dlgResumenABM.close()">Cerrar</button>
+    <button class="btn" onclick="dlgResumenABM.close(); App.ir('abm')">📋 Ir a Historial ABM →</button>
   </div>
 </dialog>
 
