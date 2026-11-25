@@ -141,7 +141,16 @@
     return v.estado === E.EFECTIVA_SIN_DOC || v.estado === E.FALLIDA_SIN_DOC;
   }
 
-  function pasaGlobal(v, ignorarAmbito) {
+  function pasaFiltroObs(v) {
+    if (!F.obsFiltro) return true;
+    if (F.obsFiltro === 'riesgo') return !!v.riesgoFallida;
+    if (F.obsFiltro === 'alto') return !!(v.riesgoFallida && v.riesgoFallida.nivel === 'alto');
+    if (F.obsFiltro === 'medio') return !!(v.riesgoFallida && v.riesgoFallida.nivel === 'medio');
+    if (F.obsFiltro === 'con_obs') return !!v.textoObs;
+    return true;
+  }
+
+  function pasaGlobal(v, ignorarAmbito, ignorarObs) {
     if (F.cohorte && v.cohorte !== F.cohorte) return false;
     if (F.etapas.length < 3) {
       if (v.esHistorico && !v.tieneEtapaPadron) return false;
@@ -151,6 +160,7 @@
       const ambV = v.esHistorico ? v.ambito : C.normAmbito(v.ambito || v.provincia);
       if (ambV !== F.ambito) return false;
     }
+    if (!ignorarObs && !pasaFiltroObs(v)) return false;
     if (F.q) {
       const q = C.sinTildes(F.q).toLowerCase().trim();
       if (q) {
@@ -165,8 +175,8 @@
     return true;
   }
 
-  function baseGlobal(ignorarAmbito) {
-    return VISITAS.filter(v => pasaGlobal(v, ignorarAmbito));
+  function baseGlobal(ignorarAmbito, ignorarObs) {
+    return VISITAS.filter(v => pasaGlobal(v, ignorarAmbito, ignorarObs));
   }
 
   /** Todas las realizadas sin doble conteo: nuevas cargadas en el padrón (!cerradaPorCruceOct) + histórico Sep–Oct. */
@@ -177,7 +187,7 @@
   }
 
   function hayFiltroGlobal(ignorarCohorte) {
-    return !!((!ignorarCohorte && F.cohorte) || F.etapas.length < 3 || F.ambito || (F.q && F.q.trim()));
+    return !!((!ignorarCohorte && F.cohorte) || F.etapas.length < 3 || F.ambito || F.obsFiltro || (F.q && F.q.trim()));
   }
 
   function contarEstados(rows, rowsRealizadasExtra) {
@@ -217,6 +227,7 @@
     agendadas: esAgendada,
     realizadas: esRealizada,
     vencidas: v => v.vencida,
+    pot_fallidas: v => !v.cerrada && !!v.riesgoFallida,
     pendientes: v => !v.cerrada,
     revisar: v => v.revisarDuplicada
   };
@@ -264,6 +275,9 @@
       if (F.sub === 'sin') return esSinAgendar(v);
       if (F.sub === 'ag') return esAgendada(v);
       if (F.sub === 'sd') return esSinDoc(v);
+    } else if (vista === 'pot_fallidas') {
+      if (F.sub === 'alto') return !!(v.riesgoFallida && v.riesgoFallida.nivel === 'alto');
+      if (F.sub === 'medio') return !!(v.riesgoFallida && v.riesgoFallida.nivel === 'medio');
     }
     return true;
   }
@@ -283,30 +297,19 @@
 
   function badgeObsHTML(v) {
     const rf = v.riesgoFallida;
-    const tipPlain = (rf ? ('Potencialmente fallida (' + rf.motivo + ') — ') : '') + (v.textoObs || '');
     if (rf) {
       const cls = rf.nivel === 'alto' ? 'p-bad' : 'p-warn';
-      return `<span class="pill ${cls} obs-trig" data-obs-id="${esc(v.id)}" title="${esc(tipPlain)}">⚠ ${esc(rf.motivo)}</span>`;
+      return `<span class="pill ${cls} obs-trig" data-obs-id="${esc(v.id)}">⚠ ${esc(rf.motivo)}</span>`;
     }
     if (v.textoObs) {
-      return `<span class="pill p-sin obs-trig" data-obs-id="${esc(v.id)}" title="${esc(tipPlain)}">💬 Obs.</span>`;
+      return `<span class="pill p-sin obs-trig" data-obs-id="${esc(v.id)}">💬 Obs.</span>`;
     }
     return '<span class="note">–</span>';
-  }
-
-  function pasaFiltroObs(v) {
-    if (!F.obsFiltro) return true;
-    if (F.obsFiltro === 'riesgo') return !!v.riesgoFallida;
-    if (F.obsFiltro === 'alto') return !!(v.riesgoFallida && v.riesgoFallida.nivel === 'alto');
-    if (F.obsFiltro === 'medio') return !!(v.riesgoFallida && v.riesgoFallida.nivel === 'medio');
-    if (F.obsFiltro === 'con_obs') return !!v.textoObs;
-    return true;
   }
 
   function filtrar() {
     return baseListaSinSub().filter(v => {
       if (!pasaSubfiltro(v)) return false;
-      if (!pasaFiltroObs(v)) return false;
       if (F.estado && v.estado !== F.estado) return false;
       if (F.mes && C.mesDe(v.fechaMax || v.fechaReal) !== F.mes) return false;
       if (F.venc && v.catVenc !== F.venc) return false;
@@ -340,6 +343,7 @@
     const rows = baseGlobal(false);
     const reals = realizadasUnificadas(false);
     const s = contarEstados(rows, reals);
+    const nPot = rows.filter(v => !v.cerrada && v.riesgoFallida).length;
     const nRev = rows.filter(v => v.revisarDuplicada).length;
     const excluidas = VISITAS_TODAS.length - C.filtrarCorteFuturo(VISITAS_TODAS, true).length;
     const item = (k, ico, lbl, cnt, alerta) =>
@@ -356,6 +360,7 @@
       ${item('agendadas', '📅', 'Agendadas', s.A)}
       ${item('realizadas', '✅', 'Realizadas', s.Re)}
       ${item('vencidas', '⚠', 'Vencidas (col. R)', s.V, true)}
+      ${item('pot_fallidas', '⚡', 'Pot. fallidas', nPot, true)}
       ${item('todas', '🗂', 'Padrón vigente', rows.length)}
       <div class="grp">Control</div>
       ${item('revisar', '🔎', 'Errores / A revisar', nRev, nRev > 0)}
@@ -371,8 +376,13 @@
   }
 
   function barraFiltrosGlobalHTML(totalMostrado) {
-    const ambitosDisp = Array.from(new Set(baseGlobal(true).map(v => C.normAmbito(v.ambito || v.provincia)).filter(Boolean))).sort();
+    const ambitosDisp = Array.from(new Set(baseGlobal(true, true).map(v => C.normAmbito(v.ambito || v.provincia)).filter(Boolean))).sort();
     if (F.ambito && ambitosDisp.indexOf(F.ambito) < 0) ambitosDisp.push(F.ambito);
+    const baseSinObs = baseGlobal(false, true);
+    const nRiesgoG = baseSinObs.filter(v => v.riesgoFallida).length;
+    const nAltoG = baseSinObs.filter(v => v.riesgoFallida && v.riesgoFallida.nivel === 'alto').length;
+    const nMedioG = baseSinObs.filter(v => v.riesgoFallida && v.riesgoFallida.nivel === 'medio').length;
+    const nConObsG = baseSinObs.filter(v => v.textoObs).length;
     const btnU = (val, lbl, cls) => `<button type="button" class="${cls} ${F.cohorte === val ? 'on' : ''}" onclick="App.setCohorte('${val}')">${lbl}</button>`;
     const hayAct = hayFiltroGlobal(false);
     return `<div class="fbar">
@@ -394,6 +404,16 @@
         <select class="${F.ambito ? 'act' : ''}" onchange="App.setAmbito(this.value)">
           <option value="">Todos (${ambitosDisp.length})</option>
           ${ambitosDisp.map(a => `<option value="${esc(a)}" ${F.ambito === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Obs. / Riesgo</label>
+        <select class="${F.obsFiltro ? 'act' : ''}" onchange="App.setObsFiltro(this.value)">
+          <option value="">Todas</option>
+          <option value="riesgo" ${F.obsFiltro === 'riesgo' ? 'selected' : ''}>⚠ Pot. fallidas (${fmt(nRiesgoG)})</option>
+          <option value="alto" ${F.obsFiltro === 'alto' ? 'selected' : ''}>↳ Riesgo alto (${fmt(nAltoG)})</option>
+          <option value="medio" ${F.obsFiltro === 'medio' ? 'selected' : ''}>↳ Riesgo medio (${fmt(nMedioG)})</option>
+          <option value="con_obs" ${F.obsFiltro === 'con_obs' ? 'selected' : ''}>💬 Con observaciones (${fmt(nConObsG)})</option>
         </select>
       </div>
       ${hayAct ? `<button type="button" class="clear-lnk" onclick="App.limpiarGlobal()">limpiar filtros</button>` : ''}
@@ -481,7 +501,7 @@
         <div class="ls">
           <div class="clickable ${s.sinV ? 'bad' : ''}" onclick="event.stopPropagation();App.irLista('sin_agendar',{sub:'venc'})"><i style="background:${COL.agV}"></i>Vencidas (col. R)<b>${fmt(s.sinV)}</b></div>
           <div class="clickable" onclick="event.stopPropagation();App.irLista('sin_agendar',{sub:'plazo'})"><i style="background:${COL.sin}"></i>En plazo<b>${fmt(s.sin)}</b></div>
-          ${s.sinPot ? `<div class="clickable" onclick="event.stopPropagation();App.irLista('sin_agendar',{obsFiltro:'riesgo'})"><i style="background:${COL.sd}"></i>Potencialmente fallidas (obs.)<b>${fmt(s.sinPot)}</b></div>` : ''}
+          ${s.sinPot ? `<div class="clickable" onclick="event.stopPropagation();App.ir('pot_fallidas')"><i style="background:${COL.sd}"></i>Potencialmente fallidas (obs.)<b>${fmt(s.sinPot)}</b></div>` : ''}
           ${s.reprog ? `<div class="clickable" onclick="event.stopPropagation();App.irLista('sin_agendar',{sub:'reprog'})"><i style="background:${COL.sd}"></i>Fallidas a reprogramar<b>${fmt(s.reprog)}</b></div>` : ''}
         </div>
       </div>
@@ -1082,6 +1102,7 @@
     agendadas: ['Agendadas', 'Visitas con fecha programada por preventor, aún sin resultado cargado.'],
     realizadas: ['Realizadas', 'Todas las visitas realizadas (ciclo vigente + Sep–Oct sin doble conteo). Solo suman al objetivo las que tienen PDF.'],
     vencidas: ['Vencidas (col. R)', 'Visitas abiertas cuya fecha máxima (columna R) ya fue superada.'],
+    pot_fallidas: ['Potencialmente fallidas', 'Visitas abiertas con alertas en sus observaciones (cerrado, fallecido, sin actividad AFIP/pública o domicilio dudoso).'],
     todas: ['Padrón vigente', 'Planilla operativa vigente completa con todos los filtros.'],
     pendientes: ['Pendientes', 'Visitas aún no cerradas con documento PDF.'],
     revisar: ['Errores / A revisar', 'Posibles duplicadas por fecha o tareas repetidas entre año anterior y actual.']
@@ -1089,6 +1110,16 @@
 
   function subtabsVistaHTML(baseRows) {
     if (F.etiqueta) return '';
+    if (vista === 'pot_fallidas') {
+      const nA = baseRows.filter(v => v.riesgoFallida && v.riesgoFallida.nivel === 'alto').length;
+      const nM = baseRows.filter(v => v.riesgoFallida && v.riesgoFallida.nivel === 'medio').length;
+      const defs = [
+        ['', `Todas (${fmt(baseRows.length)})`],
+        ['alto', `Riesgo alto (${fmt(nA)})`],
+        ['medio', `Riesgo medio (${fmt(nM)})`]
+      ];
+      return `<div class="seg">${defs.map(([k, l]) => `<button type="button" class="${F.sub === k ? 'on' : ''}" onclick="App.f('sub','${k}')">${l}</button>`).join('')}</div>`;
+    }
     if (vista === 'realizadas') {
       const c = contarEstados([], baseRows);
       const defs = [
@@ -1131,14 +1162,9 @@
     const tareaOpts = tareasCat.map(t => `<option value="${esc(t.key)}" ${F.tarea === t.key ? 'selected' : ''}>${esc(t.label)} (${t.total})</option>`).join('') +
       (F.tarea && !tareasCat.some(t => t.key === F.tarea) ? `<option value="${esc(F.tarea)}" selected>${esc(F.tarea)} (0)</option>` : '');
 
-    const nRiesgo = baseVista.filter(v => v.riesgoFallida).length;
-    const nAlto = baseVista.filter(v => v.riesgoFallida && v.riesgoFallida.nivel === 'alto').length;
-    const nMedio = baseVista.filter(v => v.riesgoFallida && v.riesgoFallida.nivel === 'medio').length;
-    const nConObs = baseVista.filter(v => v.textoObs).length;
-
     const etObj = F.etiqueta ? C.ETIQUETAS_LOGISTICA.find(x => x.id === F.etiqueta) : null;
     const [tit, desc] = etObj ? [etObj.label, 'Prioridad crítica seleccionada desde Resumen.'] : (META_VISTA[vista] || ['Visitas', '']);
-    const hayFiltrosLocales = !!(F.sub || F.etiqueta || F.obsFiltro || F.tarea || F.venc || F.mes || F.estado || F.cruceOct || F.errTipo);
+    const hayFiltrosLocales = !!(F.sub || F.etiqueta || F.tarea || F.venc || F.mes || F.estado || F.cruceOct || F.errTipo);
 
     let h = `<div class="page-head"><div><h1>${esc(tit)}</h1><div class="sub">${esc(desc)}</div></div></div>`;
     h += barraFiltrosGlobalHTML(total);
@@ -1152,13 +1178,6 @@
 
     h += `<div class="filters">
       ${subtabsVistaHTML(baseVista)}
-      <select class="${F.obsFiltro ? 'act' : ''}" onchange="App.f('obsFiltro',this.value)" title="Filtrar según observaciones y riesgo de visita fallida">
-        <option value="">Observaciones: todas</option>
-        <option value="riesgo" ${F.obsFiltro === 'riesgo' ? 'selected' : ''}>⚠ Potencialmente fallidas (${fmt(nRiesgo)})</option>
-        <option value="alto" ${F.obsFiltro === 'alto' ? 'selected' : ''}>↳ Riesgo alto: cerrado / domicilio / AFIP (${fmt(nAlto)})</option>
-        <option value="medio" ${F.obsFiltro === 'medio' ? 'selected' : ''}>↳ Riesgo medio: sin act. pública / alerta (${fmt(nMedio)})</option>
-        <option value="con_obs" ${F.obsFiltro === 'con_obs' ? 'selected' : ''}>💬 Con cualquier observación (${fmt(nConObs)})</option>
-      </select>
       <select class="${F.tarea ? 'act' : ''}" onchange="App.f('tarea',this.value)" title="Filtrar por tarea (columna Q)">
         <option value="">Tarea: todas</option>
         ${tareaOpts}
@@ -2135,7 +2154,7 @@
   }
 
   function resetSubfiltrosLista() {
-    Object.assign(F, { sub: '', etiqueta: '', obsFiltro: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '' });
+    Object.assign(F, { sub: '', etiqueta: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '' });
     pagina = 1;
   }
 
@@ -2148,6 +2167,7 @@
     F.cohorte = '';
     F.etapas = ['U', '1', '2'];
     F.ambito = '';
+    F.obsFiltro = '';
     F.q = '';
     LOG.zona = '';
     pagina = 1;
@@ -2205,6 +2225,11 @@
       pagina = 1; LOG.pagina = 1;
       render();
     },
+    setObsFiltro(val) {
+      F.obsFiltro = val || '';
+      pagina = 1; LOG.pagina = 1;
+      render();
+    },
     buscarGlobal(val, forzarInput) {
       F.q = val || '';
       pagina = 1; LOG.pagina = 1;
@@ -2215,9 +2240,13 @@
     togTareasResumen() { verTodasTareasResumen = !verTodasTareasResumen; renderResumen(); },
     verEtiqueta(id) {
       resetSubfiltrosLista();
-      F.etiqueta = id;
-      const esVenc = /venc/.test(id) && id !== 'vence_mes' && id !== 'vence_prox';
-      vista = esVenc ? 'vencidas' : 'todas';
+      if (id === 'potencial_fallida') {
+        vista = 'pot_fallidas';
+      } else {
+        F.etiqueta = id;
+        const esVenc = /venc/.test(id) && id !== 'vence_mes' && id !== 'vence_prox';
+        vista = esVenc ? 'vencidas' : 'todas';
+      }
       render();
       if ($('main')) $('main').scrollTop = 0;
     },
@@ -2280,8 +2309,8 @@
     }
     const partes = v.partesObs && v.partesObs.length ? v.partesObs : (v.textoObs ? [{ fuente: 'Observaciones', texto: v.textoObs }] : []);
     html += partes.map(p => `<div class="ot-item"><span class="ot-src">${esc(p.fuente)}:</span> ${esc(p.texto)}</div>`).join('');
-    const ctc = [v.responsable, v.telefono, v.email].filter(Boolean).join(' · ');
-    if (ctc) html += `<div class="ot-ctc">📞 ${esc(ctc)}</div>`;
+    const ctcUnicos = Array.from(new Set([v.responsable, v.telefono, v.email].map(x => String(x || '').trim()).filter(Boolean)));
+    if (ctcUnicos.length) html += `<div class="ot-ctc">📞 ${esc(ctcUnicos.join(' · '))}</div>`;
     tip.innerHTML = html;
     tip.style.display = 'block';
     if (typeof targetEl.getBoundingClientRect === 'function') {
