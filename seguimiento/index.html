@@ -263,6 +263,17 @@
   .opt-row input[type=checkbox]{width:auto;margin:0}
   .donut-wrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
 
+  /* Hint flotante de observaciones */
+  .obs-trig{cursor:help}
+  #obsTip{position:fixed;z-index:9999;pointer-events:none;display:none;max-width:390px;background:#17202A;color:#F3F4F1;padding:10px 13px;border-radius:9px;box-shadow:0 10px 28px rgba(0,0,0,.32);font-size:12.5px;line-height:1.45;border:1px solid #2E3A46}
+  #obsTip .ot-risk{font-weight:600;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid #2E3A46}
+  #obsTip .ot-risk.alto{color:#FCA5A5}
+  #obsTip .ot-risk.medio{color:#FCD34D}
+  #obsTip .ot-item{margin-top:4px;word-break:break-word}
+  #obsTip .ot-item:first-child{margin-top:0}
+  #obsTip .ot-src{color:#9FB0BC;font-weight:600}
+  #obsTip .ot-ctc{margin-top:6px;padding-top:5px;border-top:1px dashed #2E3A46;color:#cbd5e1;font-size:12px}
+
   @media(max-width:1150px){
     .two,.two.w,.three,.grid2{grid-template-columns:1fr}
     .split-preview{grid-template-columns:1fr}
@@ -297,6 +308,7 @@
     <main id="main"></main>
   </div>
 </div>
+<div id="obsTip" role="tooltip"></div>
 
 <dialog id="dlgVisita"><div class="mh"><strong id="dvTitulo">Visita</strong><button class="btn sec sm" onclick="dlgVisita.close()">✕</button></div><div class="mb" id="dvBody"></div><div class="mf" id="dvFoot"></div></dialog>
 

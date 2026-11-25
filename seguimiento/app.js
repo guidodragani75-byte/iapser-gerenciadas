@@ -41,6 +41,7 @@
     venc: '',
     tarea: '',
     cruceOct: '',
+    obsFiltro: '',          // '' | 'riesgo' | 'alto' | 'medio' | 'con_obs'
     errTipo: '',
     excluirMay27: true
   };
@@ -106,7 +107,10 @@
         fechaAgendada: '',
         fechaReal: fReal,
         resultadoActual: esEf ? 'Efectiva' : 'Fallida',
-        intentos: []
+        intentos: [],
+        partesObs: h.observaciones ? [{ fuente: 'Observaciones', texto: String(h.observaciones).trim() }] : [],
+        textoObs: h.observaciones ? String(h.observaciones).trim() : '',
+        riesgoFallida: null
       };
     });
   }
@@ -152,7 +156,8 @@
       if (q) {
         const h = C.sinTildes([
           v.cuit, v.empleador, v.contrato, v.establecimiento, v.localidad,
-          v.departamento, v.provincia, v.ambito, v.domicilio, v.tareas, v.nroEstab, v.cp, v.observacionesHist
+          v.departamento, v.provincia, v.ambito, v.domicilio, v.tareas, v.nroEstab, v.cp,
+          v.obs, v.obsCS, v.obsIAPSER, v.observacionesHist
         ].join(' ')).toLowerCase();
         if (h.indexOf(q) < 0) return false;
       }
@@ -176,10 +181,11 @@
   }
 
   function contarEstados(rows, rowsRealizadasExtra) {
-    const s = { sin: 0, sinV: 0, reprog: 0, ag: 0, agV: 0, ef: 0, fa: 0, sd: 0 };
+    const s = { sin: 0, sinV: 0, sinPot: 0, reprog: 0, ag: 0, agV: 0, ef: 0, fa: 0, sd: 0 };
     (rows || []).forEach(v => {
       if (esSinAgendar(v)) {
         if (v.vencida) s.sinV++; else s.sin++;
+        if (v.riesgoFallida) s.sinPot++;
         if (v.estado === E.FALLIDA_REPROGRAMAR) s.reprog++;
       } else if (esAgendada(v)) {
         if (v.vencida) s.agV++; else s.ag++;
@@ -275,9 +281,32 @@
     return arr;
   }
 
+  function badgeObsHTML(v) {
+    const rf = v.riesgoFallida;
+    const tipPlain = (rf ? ('Potencialmente fallida (' + rf.motivo + ') — ') : '') + (v.textoObs || '');
+    if (rf) {
+      const cls = rf.nivel === 'alto' ? 'p-bad' : 'p-warn';
+      return `<span class="pill ${cls} obs-trig" data-obs-id="${esc(v.id)}" title="${esc(tipPlain)}">⚠ ${esc(rf.motivo)}</span>`;
+    }
+    if (v.textoObs) {
+      return `<span class="pill p-sin obs-trig" data-obs-id="${esc(v.id)}" title="${esc(tipPlain)}">💬 Obs.</span>`;
+    }
+    return '<span class="note">–</span>';
+  }
+
+  function pasaFiltroObs(v) {
+    if (!F.obsFiltro) return true;
+    if (F.obsFiltro === 'riesgo') return !!v.riesgoFallida;
+    if (F.obsFiltro === 'alto') return !!(v.riesgoFallida && v.riesgoFallida.nivel === 'alto');
+    if (F.obsFiltro === 'medio') return !!(v.riesgoFallida && v.riesgoFallida.nivel === 'medio');
+    if (F.obsFiltro === 'con_obs') return !!v.textoObs;
+    return true;
+  }
+
   function filtrar() {
     return baseListaSinSub().filter(v => {
       if (!pasaSubfiltro(v)) return false;
+      if (!pasaFiltroObs(v)) return false;
       if (F.estado && v.estado !== F.estado) return false;
       if (F.mes && C.mesDe(v.fechaMax || v.fechaReal) !== F.mes) return false;
       if (F.venc && v.catVenc !== F.venc) return false;
@@ -452,6 +481,7 @@
         <div class="ls">
           <div class="clickable ${s.sinV ? 'bad' : ''}" onclick="event.stopPropagation();App.irLista('sin_agendar',{sub:'venc'})"><i style="background:${COL.agV}"></i>Vencidas (col. R)<b>${fmt(s.sinV)}</b></div>
           <div class="clickable" onclick="event.stopPropagation();App.irLista('sin_agendar',{sub:'plazo'})"><i style="background:${COL.sin}"></i>En plazo<b>${fmt(s.sin)}</b></div>
+          ${s.sinPot ? `<div class="clickable" onclick="event.stopPropagation();App.irLista('sin_agendar',{obsFiltro:'riesgo'})"><i style="background:${COL.sd}"></i>Potencialmente fallidas (obs.)<b>${fmt(s.sinPot)}</b></div>` : ''}
           ${s.reprog ? `<div class="clickable" onclick="event.stopPropagation();App.irLista('sin_agendar',{sub:'reprog'})"><i style="background:${COL.sd}"></i>Fallidas a reprogramar<b>${fmt(s.reprog)}</b></div>` : ''}
         </div>
       </div>
@@ -862,7 +892,7 @@
       const zonaKey = ambKey + '|' + C.sinTildes(C.zonaVisita(v)).toLowerCase();
       if (LOG.zona && zonaKey !== LOG.zona) return false;
       if (q) {
-        const h = C.sinTildes([v.cuit, v.empleador, v.establecimiento, v.domicilio, v.localidad, v.departamento, v.ambito, v.tareas, v.cp].join(' ')).toLowerCase();
+        const h = C.sinTildes([v.cuit, v.empleador, v.establecimiento, v.domicilio, v.localidad, v.departamento, v.ambito, v.tareas, v.cp, v.obs, v.obsCS, v.obsIAPSER].join(' ')).toLowerCase();
         if (h.indexOf(q) < 0) return false;
       }
       return true;
@@ -993,7 +1023,7 @@
 
     h += `<div class="tw"><div style="overflow:auto;max-height:58vh"><table class="grid-op"><thead><tr>
       <th>Ámbito</th><th>Depto / Localidad</th><th>Domicilio</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Etapa</th><th>Tareas</th>
-      <th title="Fecha máxima según Columna R de la planilla">Fecha máx. (R)</th><th title="Fecha programada cargada por el preventor">F. programada</th><th>Estado</th><th>Acción</th>
+      <th title="Observaciones y alerta de visita potencialmente fallida">Obs. / Riesgo</th><th title="Fecha máxima según Columna R de la planilla">Fecha máx. (R)</th><th title="Fecha programada cargada por el preventor">F. programada</th><th>Estado</th><th>Acción</th>
     </tr></thead><tbody>`;
     sl.forEach(v => {
       const tareasTxt = C.formatearTareas(v.tareas);
@@ -1002,20 +1032,21 @@
       const fechaCelda = C.aDMY(v.fechaMax) + (v.vencida ? ' <span class="pill p-bad">Vencida</span>' : '');
       h += `<tr class="${v.vencida ? 'is-venc' : ''}" data-id="${esc(v.id)}" onclick="App.abrir(this.dataset.id)">
         <td>${esc(ambTxt)}</td>
-        <td class="clip" style="max-width:130px" title="${esc(zonaTxt)}">${esc(zonaTxt)}</td>
-        <td class="clip" style="max-width:170px" title="${esc(v.domicilio)}">${esc(v.domicilio)}</td>
+        <td class="clip" style="max-width:125px" title="${esc(zonaTxt)}">${esc(zonaTxt)}</td>
+        <td class="clip" style="max-width:165px" title="${esc(v.domicilio)}">${esc(v.domicilio)}</td>
         <td>${esc(v.cuit)}</td>
-        <td class="clip" style="max-width:175px" title="${esc(v.empleador)}">${esc(v.empleador)}</td>
+        <td class="clip${v.textoObs ? ' obs-trig' : ''}" ${v.textoObs ? `data-obs-id="${esc(v.id)}"` : `title="${esc(v.empleador)}"`} style="max-width:170px">${esc(v.empleador)}</td>
         <td>${esc(v.nroEstab)}</td>
         <td>${esc(v.planificacion)}</td>
-        <td class="clip" style="max-width:220px" title="${esc(tareasTxt)}">${esc(tareasTxt)}</td>
+        <td class="clip" style="max-width:205px" title="${esc(tareasTxt)}">${esc(tareasTxt)}</td>
+        <td>${badgeObsHTML(v)}</td>
         <td class="${v.vencida ? 'venc' : ''}">${fechaCelda}</td>
         <td>${C.aDMY(v.fechaAgendada)}</td>
         <td>${pillEstado(v.estado, v.vencida)}</td>
         <td><button type="button" class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📅 Programar</button></td>
       </tr>`;
     });
-    if (!sl.length) h += '<tr><td colspan="12" class="note" style="padding:20px;text-align:center">Sin visitas para esta selección.</td></tr>';
+    if (!sl.length) h += '<tr><td colspan="13" class="note" style="padding:20px;text-align:center">Sin visitas para esta selección.</td></tr>';
     h += `</tbody></table></div><div class="pager"><button type="button" class="btn sec sm" onclick="App.logPag(-1)">‹</button> Página ${LOG.pagina} de ${pags} <button type="button" class="btn sec sm" onclick="App.logPag(1)">›</button></div></div>`;
     $('main').innerHTML = h;
   }
@@ -1026,13 +1057,16 @@
       ['ambitoNorm', 'Ambito'], ['zonaNorm', 'Depto / Localidad'], ['cp', 'CP'], ['domicilio', 'Domicilio'],
       ['cuit', 'CUIT'], ['empleador', 'Empleador'], ['nroEstab', 'Estab (M)'], ['establecimiento', 'Establecimiento'],
       ['planificacion', 'Etapa'], ['tareas', 'Tareas'], ['fechaMax', 'Fecha Maxima (Col R)'], ['vencida', 'Vencida'],
-      ['fechaAgendada', 'Fecha Programada (Preventor)'], ['estado', 'Estado'], ['obsCS', 'Obs CS'], ['obsIAPSER', 'Obs IAPSER']
+      ['fechaAgendada', 'Fecha Programada (Preventor)'], ['estado', 'Estado'],
+      ['riesgoTxt', 'Potencialmente Fallida'], ['obsTodo', 'Observaciones']
     ];
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
     const csv = '\ufeff' + cols.map(c => q(c[1])).join(',') + '\n' + lista.map(v => cols.map(([k]) => {
       if (k === 'ambitoNorm') return q(C.normAmbito(v.ambito || v.provincia));
       if (k === 'zonaNorm') return q(C.zonaVisita(v));
       if (k === 'vencida') return q(v.vencida ? 'Si' : 'No');
+      if (k === 'riesgoTxt') return q(v.riesgoFallida ? ('Si (' + v.riesgoFallida.nivel + ': ' + v.riesgoFallida.motivo + ')') : 'No');
+      if (k === 'obsTodo') return q(v.textoObs || '');
       if (k === 'fechaMax' || k === 'fechaAgendada') return q(C.aDMY(v[k]));
       return q(v[k]);
     }).join(',')).join('\n');
@@ -1097,9 +1131,14 @@
     const tareaOpts = tareasCat.map(t => `<option value="${esc(t.key)}" ${F.tarea === t.key ? 'selected' : ''}>${esc(t.label)} (${t.total})</option>`).join('') +
       (F.tarea && !tareasCat.some(t => t.key === F.tarea) ? `<option value="${esc(F.tarea)}" selected>${esc(F.tarea)} (0)</option>` : '');
 
+    const nRiesgo = baseVista.filter(v => v.riesgoFallida).length;
+    const nAlto = baseVista.filter(v => v.riesgoFallida && v.riesgoFallida.nivel === 'alto').length;
+    const nMedio = baseVista.filter(v => v.riesgoFallida && v.riesgoFallida.nivel === 'medio').length;
+    const nConObs = baseVista.filter(v => v.textoObs).length;
+
     const etObj = F.etiqueta ? C.ETIQUETAS_LOGISTICA.find(x => x.id === F.etiqueta) : null;
     const [tit, desc] = etObj ? [etObj.label, 'Prioridad crítica seleccionada desde Resumen.'] : (META_VISTA[vista] || ['Visitas', '']);
-    const hayFiltrosLocales = !!(F.sub || F.etiqueta || F.tarea || F.venc || F.mes || F.estado || F.cruceOct || F.errTipo);
+    const hayFiltrosLocales = !!(F.sub || F.etiqueta || F.obsFiltro || F.tarea || F.venc || F.mes || F.estado || F.cruceOct || F.errTipo);
 
     let h = `<div class="page-head"><div><h1>${esc(tit)}</h1><div class="sub">${esc(desc)}</div></div></div>`;
     h += barraFiltrosGlobalHTML(total);
@@ -1113,6 +1152,13 @@
 
     h += `<div class="filters">
       ${subtabsVistaHTML(baseVista)}
+      <select class="${F.obsFiltro ? 'act' : ''}" onchange="App.f('obsFiltro',this.value)" title="Filtrar según observaciones y riesgo de visita fallida">
+        <option value="">Observaciones: todas</option>
+        <option value="riesgo" ${F.obsFiltro === 'riesgo' ? 'selected' : ''}>⚠ Potencialmente fallidas (${fmt(nRiesgo)})</option>
+        <option value="alto" ${F.obsFiltro === 'alto' ? 'selected' : ''}>↳ Riesgo alto: cerrado / domicilio / AFIP (${fmt(nAlto)})</option>
+        <option value="medio" ${F.obsFiltro === 'medio' ? 'selected' : ''}>↳ Riesgo medio: sin act. pública / alerta (${fmt(nMedio)})</option>
+        <option value="con_obs" ${F.obsFiltro === 'con_obs' ? 'selected' : ''}>💬 Con cualquier observación (${fmt(nConObs)})</option>
+      </select>
       <select class="${F.tarea ? 'act' : ''}" onchange="App.f('tarea',this.value)" title="Filtrar por tarea (columna Q)">
         <option value="">Tarea: todas</option>
         ${tareaOpts}
@@ -1142,7 +1188,7 @@
 
     h += `<div class="tw"><div style="overflow:auto;max-height:70vh"><table class="grid-op"><thead><tr>
       <th>Universo</th><th>Prioridad</th><th>CUIT</th><th>Empleador</th><th>Estab. (M)</th><th>Ámbito / Localidad</th><th>Tareas</th>
-      <th title="Fecha máxima según Columna R de la planilla">Fecha máx. (R)</th><th title="Fecha programada cargada por el preventor">F. programada</th><th title="Fecha en que se realizó efectivamente la visita">Fecha real</th><th>Estado</th><th>Acción</th>
+      <th title="Observaciones y alerta de visita potencialmente fallida">Obs. / Riesgo</th><th title="Fecha máxima según Columna R de la planilla">Fecha máx. (R)</th><th title="Fecha programada cargada por el preventor">F. programada</th><th title="Fecha en que se realizó efectivamente la visita">Fecha real</th><th>Estado</th><th>Acción</th>
     </tr></thead><tbody>`;
 
     sl.forEach(v => {
@@ -1161,10 +1207,11 @@
         <td class="${v.cohorte === 'Emergente' ? 'tE' : 'tR'}">${v.cohorte}</td>
         <td>${esc(v.planificacion)}</td>
         <td>${esc(v.cuit)}</td>
-        <td class="clip" style="max-width:185px" title="${esc(v.empleador)}">${esc(v.empleador)}</td>
-        <td class="clip" style="max-width:135px" title="${esc(estabTxt)}">${esc(estabTxt)}</td>
-        <td class="clip" style="max-width:150px" title="${esc(locTxt)}">${esc(ambTxt)}${zonaTxt ? ` <span class="note">/ ${esc(zonaTxt)}</span>` : ''}</td>
-        <td class="clip" style="max-width:240px" title="${esc(tareasTxt)}">${errTag}${cruceTag ? cruceTag + ' ' : ''}${esc(tareasTxt)}</td>
+        <td class="clip${v.textoObs ? ' obs-trig' : ''}" ${v.textoObs ? `data-obs-id="${esc(v.id)}"` : `title="${esc(v.empleador)}"`} style="max-width:180px">${esc(v.empleador)}</td>
+        <td class="clip" style="max-width:130px" title="${esc(estabTxt)}">${esc(estabTxt)}</td>
+        <td class="clip" style="max-width:145px" title="${esc(locTxt)}">${esc(ambTxt)}${zonaTxt ? ` <span class="note">/ ${esc(zonaTxt)}</span>` : ''}</td>
+        <td class="clip" style="max-width:225px" title="${esc(tareasTxt)}">${errTag}${cruceTag ? cruceTag + ' ' : ''}${esc(tareasTxt)}</td>
+        <td>${badgeObsHTML(v)}</td>
         <td class="${v.vencida ? 'venc' : ''}">${fechaCelda}</td>
         <td>${C.aDMY(v.fechaAgendada) || '–'}</td>
         <td>${C.aDMY(v.fechaReal) || '–'}</td>
@@ -1172,7 +1219,7 @@
         <td><button type="button" class="btn sec sm" data-id="${esc(v.id)}" onclick="event.stopPropagation();App.abrir(this.dataset.id)">📄 PDF</button></td>
       </tr>`;
     });
-    if (!sl.length) h += '<tr><td colspan="12" class="note" style="padding:24px;text-align:center">Sin visitas para los filtros actuales.</td></tr>';
+    if (!sl.length) h += '<tr><td colspan="13" class="note" style="padding:24px;text-align:center">Sin visitas para los filtros actuales.</td></tr>';
     h += `</tbody></table></div><div class="pager"><span style="margin-right:auto">${fmt(total)} visita(s)</span><button type="button" class="btn sec sm" onclick="App.pag(-1)">‹</button> Página ${pagina} de ${pags} <button type="button" class="btn sec sm" onclick="App.pag(1)">›</button></div></div>`;
     $('main').innerHTML = h;
   }
@@ -1275,14 +1322,18 @@
     const detalle = (it.motivo || '').indexOf(' - ') > 0 ? it.motivo.split(' - ').slice(1).join(' - ') : (motivoBase ? '' : (it.motivo || ''));
     const cruceHtml = v.cruceOct ? `<div class="info-box"><strong>Cruce con PDF de Octubre (CUIT + Estab ${esc(v.nroEstab)}):</strong><br>${v.cruceOct.items.map(x => `• ${esc(x.fecha)} — <b>${esc(x.resultado)}</b> (${esc(x.tarea)}) · <a href="${esc(x.url)}" target="_blank">Abrir PDF en Drive ↗</a>`).join('<br>')}</div>` : '';
     const errHtml = v.revisarDuplicada ? `<div class="err" style="display:block"><strong>Error / A revisar:</strong> ${v.errores && v.errores.indexOf('misma_tarea_anios') >= 0 ? `Misma tarea repetida entre año anterior y actual (${esc((v.tareasRepetidasAnio || []).join(', '))})` : 'Misma tarea y establecimiento con fecha máxima distinta'} · Fecha original planilla: <b>${C.aDMY(v.fechaMax)}</b></div>` : '';
+    const riesgoHtml = v.riesgoFallida ? `<div class="val-box ${v.riesgoFallida.nivel === 'alto' ? 'bad' : 'warn'}"><strong>⚠ Potencialmente fallida (${esc(v.riesgoFallida.motivo)}):</strong> revisá las observaciones antes de asignar o enviar al preventor.</div>` : '';
+    const contactoTxt = [v.responsable, v.telefono, v.email].filter(Boolean).join(' · ');
 
     $('dvTitulo').textContent = v.empleador + ' · Estab ' + v.nroEstab;
     $('dvBody').innerHTML = `<div id="dvSplit"><div><div class="kv">
       ${dato('CUIT / Contrato', v.cuit + ' / ' + v.contrato)}${dato('Establecimiento', v.establecimiento + ' — ' + v.domicilio)}
       ${dato('Localidad', v.localidad + ', ' + v.provincia)}${dato('Tareas', C.formatearTareas(v.tareas))}
       ${dato('Cohorte / Etapa', v.cohorte + ' · ' + v.planificacion)}
+      ${contactoTxt ? dato('Contacto', contactoTxt) : ''}
       <b>Fecha máxima (col. R)</b><span class="${v.vencida ? 'venc' : ''}">${C.aDMY(v.fechaMax)}${v.vencida ? ' <span class="pill p-bad">Vencida</span>' : ''}</span>
-      <b>Estado</b><span>${pillEstado(v.estado, v.vencida)}</span>${v.obsCS ? dato('Obs. CS', v.obsCS) : ''}${v.obsIAPSER ? dato('Obs. IAPSER', v.obsIAPSER) : ''}</div>
+      <b>Estado</b><span>${pillEstado(v.estado, v.vencida)}</span>${v.obsCS ? dato('Obs. CS', v.obsCS) : ''}${v.obsIAPSER ? dato('Obs. IAPSER', v.obsIAPSER) : ''}${v.obs ? dato('Observaciones', v.obs) : ''}</div>
+      ${riesgoHtml}
       ${errHtml}
       ${cruceHtml}
       ${previos.length ? `<table class="hist"><thead><tr><th>#</th><th>Programada</th><th>Real</th><th>Resultado</th><th>Motivo</th><th>PDF</th></tr></thead><tbody>${previos.map(p => `<tr style="cursor:default"><td>${p.n}</td><td>${C.aDMY(p.fechaAgendada)}</td><td>${C.aDMY(p.fechaReal)}</td><td>${esc(p.resultado)}</td><td>${esc(p.motivo)}</td><td>${p.adjunto ? `<a href="${esc(p.adjunto)}" target="_blank">ver</a>` : '–'}</td></tr>`).join('')}</tbody></table>` : ''}
@@ -2069,17 +2120,22 @@
       ['id', 'ID'], ['cohorte', 'Cohorte'], ['planificacion', 'Etapa'], ['cuit', 'CUIT'], ['empleador', 'Empleador'],
       ['contrato', 'Contrato'], ['nroEstab', 'Estab (M)'], ['establecimiento', 'Establecimiento'], ['localidad', 'Localidad'],
       ['provincia', 'Provincia'], ['tareas', 'Tareas'], ['fechaMax', 'Fecha Maxima (Col R)'], ['vencida', 'Vencida'],
-      ['fechaAgendada', 'Fecha Programada (Preventor)'], ['fechaReal', 'Fecha Real'], ['estado', 'Estado']
+      ['fechaAgendada', 'Fecha Programada (Preventor)'], ['fechaReal', 'Fecha Real'], ['estado', 'Estado'],
+      ['riesgoTxt', 'Potencialmente Fallida'], ['textoObs', 'Observaciones']
     ];
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const csv = '\ufeff' + cols.map(c => q(c[1])).join(',') + '\n' + filtrar().map(v => cols.map(([k]) => q(k === 'vencida' ? (v.vencida ? 'Si' : 'No') : v[k])).join(',')).join('\n');
+    const csv = '\ufeff' + cols.map(c => q(c[1])).join(',') + '\n' + filtrar().map(v => cols.map(([k]) => {
+      if (k === 'vencida') return q(v.vencida ? 'Si' : 'No');
+      if (k === 'riesgoTxt') return q(v.riesgoFallida ? ('Si (' + v.riesgoFallida.nivel + ': ' + v.riesgoFallida.motivo + ')') : 'No');
+      return q(v[k]);
+    }).join(',')).join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     a.download = 'seguimiento_' + vista + '_' + C.hoyISO() + '.csv'; a.click();
   }
 
   function resetSubfiltrosLista() {
-    Object.assign(F, { sub: '', etiqueta: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '' });
+    Object.assign(F, { sub: '', etiqueta: '', obsFiltro: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '' });
     pagina = 1;
   }
 
@@ -2200,6 +2256,54 @@
     sincronizar, abrirConfig, guardarConfig, exportar,
     _estado: () => ({ VISITAS, INTENTOS, COLA, LOTE, PADRON_LOCAL, PADRON_UI, geminiActivo, F, LOG, vista, subTab })
   };
+  /* ---------- HINT FLOTANTE DE OBSERVACIONES ---------- */
+  function buscarPorIdCualquiera(id) {
+    if (!id) return null;
+    if (String(id).indexOf('hist|') === 0) return HIST_VISITAS.find(x => x.id === id) || null;
+    return VISITAS.find(x => x.id === id) || null;
+  }
+
+  function ocultarObsTip() {
+    const tip = $('obsTip');
+    if (tip) tip.style.display = 'none';
+  }
+
+  function mostrarObsTip(targetEl) {
+    const tip = $('obsTip');
+    if (!tip || !targetEl) return;
+    const id = targetEl.getAttribute('data-obs-id');
+    const v = buscarPorIdCualquiera(id);
+    if (!v || (!v.textoObs && !v.riesgoFallida)) { ocultarObsTip(); return; }
+    let html = '';
+    if (v.riesgoFallida) {
+      html += `<div class="ot-risk ${v.riesgoFallida.nivel}">⚠ Potencialmente fallida · ${esc(v.riesgoFallida.motivo)}</div>`;
+    }
+    const partes = v.partesObs && v.partesObs.length ? v.partesObs : (v.textoObs ? [{ fuente: 'Observaciones', texto: v.textoObs }] : []);
+    html += partes.map(p => `<div class="ot-item"><span class="ot-src">${esc(p.fuente)}:</span> ${esc(p.texto)}</div>`).join('');
+    const ctc = [v.responsable, v.telefono, v.email].filter(Boolean).join(' · ');
+    if (ctc) html += `<div class="ot-ctc">📞 ${esc(ctc)}</div>`;
+    tip.innerHTML = html;
+    tip.style.display = 'block';
+    if (typeof targetEl.getBoundingClientRect === 'function') {
+      const r = targetEl.getBoundingClientRect();
+      const tw = tip.offsetWidth || 340, th = tip.offsetHeight || 90;
+      const vw = window.innerWidth || 1280, vh = window.innerHeight || 800;
+      let left = Math.min(vw - tw - 14, Math.max(12, r.left));
+      let top = r.bottom + 8;
+      if (top + th > vh - 12) top = Math.max(12, r.top - th - 8);
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+    }
+  }
+
+  if (typeof document.addEventListener === 'function') {
+    document.addEventListener('mouseover', e => {
+      const el = e.target && e.target.closest ? e.target.closest('[data-obs-id]') : null;
+      if (el) mostrarObsTip(el); else ocultarObsTip();
+    });
+    document.addEventListener('scroll', ocultarObsTip, true);
+  }
+
   window.dlgVisita = $('dlgVisita'); window.dlgCfg = $('dlgCfg'); window.dlgMasiva = $('dlgMasiva'); window.dlgPadron = $('dlgPadron');
   $('dlgVisita').addEventListener('close', () => {
     if (blobUrlIndividual) { URL.revokeObjectURL(blobUrlIndividual); blobUrlIndividual = ''; }

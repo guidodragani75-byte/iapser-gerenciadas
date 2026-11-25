@@ -41,8 +41,11 @@ def leer_csv(texto):
     filas = list(csv.reader(io.StringIO(texto)))
     enc = [h.strip() for h in filas[0]]
     idx = {}
+    idx_all = {}
     for i, h in enumerate(enc):
-        idx.setdefault(h, i)  # primera aparicion gana (hay encabezados repetidos pasada la col. W)
+        idx.setdefault(h, i)  # primera aparicion para columnas fijas A..W
+        idx_all.setdefault(h, []).append(i)
+    idx['_all'] = idx_all
     return idx, filas[1:]
 
 
@@ -64,6 +67,15 @@ def descargar(hoja):
 def get(fila, idx, col):
     i = idx.get(col)
     return (fila[i].strip() if i is not None and i < len(fila) else '')
+
+
+def get_pref_last(fila, idx, col):
+    """Para columnas enriquecidas repetidas a la derecha (Responsable, Telefono, E-mail), toma el último valor no vacío."""
+    posiciones = idx.get('_all', {}).get(col, [])
+    for i in reversed(posiciones):
+        if i < len(fila) and fila[i].strip():
+            return fila[i].strip()
+    return get(fila, idx, col)
 
 
 def main():
@@ -115,7 +127,11 @@ def main():
             'cuit': get(f, idx, 'Cuit'), 'empleador': get(f, idx, 'Empleador'),
             'contrato': get(f, idx, 'Contrato IAPART'), 'establecimiento': get(f, idx, 'Establecimiento'),
             'localidad': get(f, idx, 'Localidad'), 'provincia': get(f, idx, 'Provincia'),
+            'cp': get(f, idx, 'CP'),
             'domicilio': get(f, idx, 'Domicilio estab.'),
+            'responsable': get_pref_last(f, idx, 'Responsable'),
+            'telefono': get_pref_last(f, idx, 'Telefono'),
+            'email': get_pref_last(f, idx, 'E-mail'),
             'nroEstabIAPART': get(f, idx, 'Nro Estab IAPART'),
             'nroEstab': get(f, idx, 'Nro Estab Intercambio'),
             'programa': get(f, idx, 'Programa'),
@@ -125,7 +141,9 @@ def main():
             'fechaMax': fecha,
             'planificacion': get(f, idx, 'Planificacion'),
             'ambito': get(f, idx, 'Ambito'), 'departamento': get(f, idx, 'Departamento'),
-            'obsCS': get(f, idx, 'Observaciones CS'), 'obsIAPSER': get(f, idx, 'Observaciones IAPSER'),
+            'obsCS': get(f, idx, 'Observaciones CS'),
+            'obsIAPSER': get(f, idx, 'Observaciones IAPSER'),
+            'obs': get(f, idx, 'Observaciones'),
             'cohorte': 'Residual' if fecha and fecha < CORTE_RESIDUAL else 'Emergente',
             'mesEmergente': emerg.get(k, ''),
             'revisarDuplicada': False,

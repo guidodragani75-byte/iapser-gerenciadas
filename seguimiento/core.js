@@ -140,12 +140,80 @@
     return z;
   }
 
+  /** Extrae las observaciones disponibles de una visita (CS, IAPSER, col. AJ Observaciones e histórico). */
+  function partesObservaciones(v) {
+    if (!v) return [];
+    const out = [];
+    const add = function (fuente, txt) {
+      const s = String(txt == null ? '' : txt).trim();
+      if (s) out.push({ fuente: fuente, texto: s });
+    };
+    add('Obs. CS', v.obsCS);
+    add('Obs. IAPSER', v.obsIAPSER);
+    add('Observaciones', v.obs);
+    add('Observaciones', v.observacionesHist);
+    return out;
+  }
+
+  function textoObservaciones(v) {
+    return partesObservaciones(v).map(function (p) {
+      return p.fuente === 'Observaciones' ? p.texto : (p.fuente + ': ' + p.texto);
+    }).join(' · ');
+  }
+
+  /**
+   * Detecta si las observaciones (o razón social en liquidación) advierten que la visita
+   * es potencialmente fallida (cerrado, fallecido, baja/sin actividad AFIP, error de domicilio, etc.).
+   * Devuelve null o { nivel: 'alto' | 'medio', motivo: string }.
+   */
+  function evaluarRiesgoFallida(v) {
+    if (!v) return null;
+    const raw = [v.obsCS, v.obsIAPSER, v.obs].filter(Boolean).join(' | ').trim();
+    const emp = String(v.empleador || '');
+    if (!raw && !/\ben liquidaci[oó]n\b/i.test(emp)) return null;
+    const t = sinTildes(raw).toLowerCase();
+    const te = sinTildes(emp).toLowerCase();
+
+    // Nivel ALTO: cierre, fallecimiento/jubilación, liquidación, error de domicilio o baja registral AFIP
+    if (/local cerrado|cerrado definitiv|establecimiento cerrado|no enviar tecnico|dado de baja|cese de actividad|obra finalizada|obra paralizada|sin personal|rechaz[oa] (de )?la visita|terreno baldio|demolid/.test(t)) {
+      return { nivel: 'alto', motivo: 'Cerrado / sin personal' };
+    }
+    if (/fallecid|titular jubilad|renuncio y se jubilo/.test(t)) {
+      return { nivel: 'alto', motivo: 'Titular fallecido / jubilado' };
+    }
+    if (/estado de liquidacion|en liquidacion|quiebra|concurso preventivo/.test(t) || /\ben liquidacion\b/.test(te)) {
+      return { nivel: 'alto', motivo: 'En liquidación / quiebra' };
+    }
+    if (/revisar (domicilio|altura|direccion|localidad|jurisdiccion)|posible error de domicilio|domicilio inexistente|direccion inexistente|se mudo de |no coincide con la sede|figura en registros como [^.|]*no en /.test(t)) {
+      return { nivel: 'alto', motivo: 'Domicilio / localidad erróneos' };
+    }
+    if (/no registra regimenes activos|sin actividad economica verificable|actividades no poseidas|actividad afip ni?existente/.test(t)) {
+      return { nivel: 'alto', motivo: 'Sin actividad activa AFIP' };
+    }
+
+    // Nivel MEDIO: alertas de Maps / sucesión / zona residencial sin comercio / sin actividad indexada
+    if (/sucesion de /.test(t)) {
+      return { nivel: 'medio', motivo: 'Sucesión / verificar vigencia' };
+    }
+    if (/(^|\|\s*)alerta:/.test(t)) {
+      return { nivel: 'medio', motivo: 'Alerta de validación en domicilio' };
+    }
+    if (/zona residencial[^.|]*sin (indicios|un local)|no presenta (carteleria|coincidencia con un comercio)/.test(t)) {
+      return { nivel: 'medio', motivo: 'Zona residencial sin comercio' };
+    }
+    if (/sin actividad ni datos publicos indexados|sin registros comerciales (abiertos|digitalizados)|sin actividad comercial (activa|digitalizada|publica)|sin presencia comercial (indexada|digitalizada)|no presenta (actividad economica verificable|registros de actividad comercial)|no se ha podido validar un establecimiento fisico|sin actividad en regimenes de afip/.test(t)) {
+      return { nivel: 'medio', motivo: 'Sin actividad comercial pública' };
+    }
+    return null;
+  }
+
   const ETIQUETAS_LOGISTICA = [
     // Prioridad y etapas
     { id: 'etapa1_all',        grupo: 'prioridad', tono: 'teal', label: 'Etapa 1 + Urgente',             fn: function (v) { return !v.cerrada && esEtapa1(v); } },
     { id: 'venc_prioritarias', grupo: 'prioridad', tono: 'bad',  label: 'Vencidas prioritarias (Urgente)', fn: function (v) { return v.vencida && esUrgente(v); } },
     { id: 'urgentes_todas',    grupo: 'prioridad', tono: 'warn', label: 'Etapa 1 - Urgente (todas)',     fn: function (v) { return !v.cerrada && esUrgente(v); } },
     { id: 'vencidas_todas',    grupo: 'prioridad', tono: 'bad',  label: 'Todas las vencidas (col. R)',   fn: function (v) { return v.vencida; } },
+    { id: 'potencial_fallida', grupo: 'prioridad', tono: 'warn', label: 'Potencialmente fallidas (obs.)', fn: function (v) { return !v.cerrada && !!v.riesgoFallida; } },
     { id: 'sin_programar',     grupo: 'prioridad', tono: 'sin',  label: 'Sin programar',                 fn: function (v) { return v.estado === ESTADOS.SIN_AGENDAR || v.estado === ESTADOS.FALLIDA_REPROGRAMAR; } },
     { id: 'vence_mes',         grupo: 'prioridad', tono: 'warn', label: 'Vencen mes actual',             fn: function (v) { return v.catVenc === 'mes_actual'; } },
     { id: 'vence_prox',        grupo: 'prioridad', tono: 'ag',   label: 'Vencen mes próximo',            fn: function (v, hoy) { return !v.cerrada && mesDe(v.fechaMax) === sumarMeses(mesDe(hoy || hoyISO()), 1); } },
@@ -496,6 +564,9 @@
       const catVenc = cerradaFinal || !plazo ? 'cerrada' : (plazo < hoy ? 'vencida' : (mesDe(plazo) === mesDe(hoy) ? 'mes_actual' : 'otro_mes'));
       const errInfo = mapaErr[b.id] || null;
       const errTipos = errInfo ? errInfo.tipos : (b.revisarDuplicada ? ['duplicada_fecha'] : []);
+      const partesObs = partesObservaciones(b);
+      const textoObs = textoObservaciones(b);
+      const riesgoFallida = evaluarRiesgoFallida(b);
       return Object.assign({}, b, {
         intentos: intentos,
         estado: estadoFinal,
@@ -511,7 +582,10 @@
         cruceOct: cruceOct,
         revisarDuplicada: errTipos.length > 0,
         errores: errTipos,
-        tareasRepetidasAnio: errInfo ? errInfo.tareasComunes : []
+        tareasRepetidasAnio: errInfo ? errInfo.tareasComunes : [],
+        partesObs: partesObs,
+        textoObs: textoObs,
+        riesgoFallida: riesgoFallida
       });
     });
   }
@@ -1076,8 +1150,9 @@
         planificacion: celAux(r, 'Planificacion') || (prev ? prev.planificacion : ''),
         ambito: celAux(r, 'Ambito') || (prev ? prev.ambito : prov),
         departamento: celAux(r, 'Departamento') || (prev ? prev.departamento : ''),
-        obsCS: cel(r, 'Observaciones CS'),
-        obsIAPSER: cel(r, 'Observaciones IAPSER'),
+        obsCS: cel(r, 'Observaciones CS') || (prev ? (prev.obsCS || '') : ''),
+        obsIAPSER: cel(r, 'Observaciones IAPSER') || (prev ? (prev.obsIAPSER || '') : ''),
+        obs: celAux(r, 'Observaciones') || (prev ? (prev.obs || '') : ''),
         cohorte: cohorte(fecha),
         mesEmergente: prev ? (prev.mesEmergente || '') : '',
         revisarDuplicada: false
@@ -1205,7 +1280,8 @@
     CONFIG, ESTADOS, COLUMNAS_PADRON, COLUMNAS_OBLIGATORIAS, COLUMNAS_AUXILIARES, ETIQUETAS_LOGISTICA,
     aISO, aDMY, mesDe, hoyISO, sumarMeses, diffMeses, sinTildes, formatoOracion, formatearTareas, labelMes, mesEmergenteActual, letraCol,
     cohorte, esObra, esTecnica, esATEP, esPese363, esRgrlVerosim, esCapacitacion, esUrgente, esEtapa1,
-    normAmbito, zonaVisita, resumenEtiquetas, filtrarPorEtiqueta, agruparLogistica, prioridadLogistica,
+    normAmbito, zonaVisita, partesObservaciones, textoObservaciones, evaluarRiesgoFallida,
+    resumenEtiquetas, filtrarPorEtiqueta, agruparLogistica, prioridadLogistica,
     subtareasNorm, subtareasLimpias, catalogoTareas, coincideTarea, detectarErroresVisitas,
     esMayo2027OAdelante, filtrarCorteFuturo, categoriaVencimiento,
     plazoVisita, ultimoIntento, estadoVisita,

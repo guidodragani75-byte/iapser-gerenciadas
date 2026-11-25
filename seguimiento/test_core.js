@@ -277,4 +277,21 @@ t('logistica: etiquetas dinamicas, normalizacion de ambito y agrupacion por ambi
   const gbaZonas = geo.zonas.filter(z => z.ambKey === 'gba');
   assert.ok(gbaZonas.some(z => z.zona === 'Vicente López' && z.esDepto));
 });
+
+t('observaciones y deteccion de visitas potencialmente fallidas', () => {
+  const vs = C.armarVisitas(D.visitas, {}, '2026-11-24', D.historico);
+  const conObs = vs.filter(v => v.textoObs);
+  const conRiesgo = vs.filter(v => v.riesgoFallida);
+  assert.ok(conObs.length >= 1100);
+  assert.strictEqual(conRiesgo.length, 168);
+  assert.strictEqual(conRiesgo.filter(v => v.riesgoFallida.nivel === 'alto').length, 25);
+  assert.strictEqual(conRiesgo.filter(v => v.riesgoFallida.nivel === 'medio').length, 143);
+  // Sin falsos positivos en entidades sin fines de lucro u observaciones operativas normales
+  assert.strictEqual(C.evaluarRiesgoFallida({ obs: 'El CUIT corresponde a una entidad sin fines de lucro' }), null);
+  assert.strictEqual(C.evaluarRiesgoFallida({ obsIAPSER: '05/11/26 - Fernanda - Se solicita realización urgente' }), null);
+  assert.deepStrictEqual(C.evaluarRiesgoFallida({ obs: 'ALERTA: Local cerrado definitivamente. No enviar técnico.' }), { nivel: 'alto', motivo: 'Cerrado / sin personal' });
+  assert.deepStrictEqual(C.evaluarRiesgoFallida({ obs: 'Revisar domicilio: altura inexistente' }), { nivel: 'alto', motivo: 'Domicilio / localidad erróneos' });
+  const resEt = C.resumenEtiquetas(vs.filter(v => !v.cerrada), '2026-11-24');
+  assert.strictEqual(resEt.find(x => x.id === 'potencial_fallida').count, 168);
+});
 console.log('\n' + ok + ' pruebas OK');

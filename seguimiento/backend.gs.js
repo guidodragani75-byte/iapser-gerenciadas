@@ -353,6 +353,7 @@ function leerPadron_() {
       departamento: cel(r, 'Departamento'),
       obsCS: cel(r, 'Observaciones CS'),
       obsIAPSER: cel(r, 'Observaciones IAPSER'),
+      obs: cel(r, 'Observaciones'),
       cohorte: (fecha && fecha < CFG.CORTE_RESIDUAL) ? 'Residual' : 'Emergente',
       mesEmergente: emergMap[ek2] || '',
       revisarDuplicada: false
