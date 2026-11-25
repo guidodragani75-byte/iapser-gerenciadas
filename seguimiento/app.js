@@ -49,14 +49,16 @@
     obsFiltro: '',          // '' | 'riesgo' | 'alto' | 'medio' | 'con_obs'
     errTipo: '',
     localidad: '',          // filtro de localidad / departamento en vistas de lista
-    incOrig: true,          // incluir versiones originales en cursiva de visitas que cambiaron
-    incBajas: false,        // en vistas operativas: ocultar bajas por defecto (toggleable)
-    incBajasTodas: true,    // en Padrón total ('todas'): mostrar bajas en rojo por defecto
-    soloModificadas: false, // ver únicamente pares original (cursiva) + modificada
+    incOrig: false,         // en vistas operativas (Sin agendar, etc.): excluir duplicadas originales por defecto (toggleable y/o)
+    incBajas: false,        // en vistas operativas: excluir bajas por defecto (toggleable y/o)
+    incOrigTodas: true,     // en Padrón total ('todas'): incluir originales en cursiva por defecto
+    incBajasTodas: true,    // en Padrón total ('todas'): incluir bajas en rojo por defecto
+    abmSolo: '',            // '' (listado completo + toggles y/o) | 'altas' | 'modif' | 'bajas'
+    abmMeses: [],           // multi-selección de meses ABM ['YYYY-MM', ...]; [] = todos los meses
     excluirMay27: true
   };
   const LOG = { etiqueta: '', zona: '', soloPendientes: true, orden: 'prioridad', q: '', verTodasZonas: false, pagina: 1 };
-  const ABM_F = { lote: '', tipo: '', ambito: '', q: '', pagina: 1 };
+  const ABM_F = { lote: '', tipo: '', ambito: '', meses: [], q: '', pagina: 1 };
 
   function claveMovABM(m) {
     return [m.loteId || m.fechaABM || '', m.tipo || '', m.cuit || '', m.nroEstab || '', m.tareasAntes || '', m.tareasDespues || '', m.fechaMaxAntes || '', m.fechaMaxDespues || '', m.detalle || ''].join('|');
@@ -155,23 +157,27 @@
     });
   }
 
+  function mesDeABM(m) {
+    const s = String((m && m.fechaABM) || '');
+    const match = s.match(/^(\d{4}-\d{2})/);
+    return match ? match[1] : '';
+  }
+
   function enriquecerConABM() {
     const todos = movimientosABMUnificados();
     BAJAS_DISCONTINUADAS = [];
     ORIGINALES_MODIFICADAS = [];
     if (!todos.length) return;
 
-    const ultimoLoteKey = todos[0].loteId || todos[0].fechaABM || '';
-    const delUltimo = todos.filter(m => (m.loteId || m.fechaABM || '') === ultimoLoteKey && m.tipo !== 'BAJA');
-
-    // Indexar novedades del último lote por clave exacta (CUIT|Estab|TareasFormateadas|FechaMax) y por CUIT|Estab en no-obras únicas
+    // Indexar TODOS los movimientos no-BAJA por clave exacta (CUIT|Estab|TareasDespues|FechaMaxDespues) y por CUIT|Estab en no-obras únicas
     const porExacta = {};
     const porCE = {};
-    delUltimo.forEach(m => {
+    todos.forEach(m => {
+      if (m.tipo === 'BAJA') return;
       const kEx = [m.cuit || '', m.nroEstab || '', C.sinTildes(m.tareasDespues || '').toLowerCase(), m.fechaMaxDespues || ''].join('|');
       (porExacta[kEx] = porExacta[kEx] || []).push(m);
       const ce = (m.cuit || '') + '|' + (m.nroEstab || '');
-      if (!porCE[ce]) porCE[ce] = m;
+      (porCE[ce] = porCE[ce] || []).push(m);
     });
 
     const conteoNoObraCE = {};
@@ -189,30 +195,36 @@
       const tFmt = C.sinTildes(C.formatearTareas(v.tareas)).toLowerCase();
       const kEx = [v.cuit || '', v.nroEstab || '', tFmt, v.fechaMax || ''].join('|');
       activasSet[kEx] = true;
-      let hit = null;
+      let evs = [];
       const cands = porExacta[kEx];
       if (cands && cands.length) {
-        if (cands.length === 1) {
-          hit = cands[0];
+        if (!v.esObra) {
+          evs = cands.slice();
         } else {
-          // Si hay varias obras el mismo día en el mismo estab, desempatar por el valor nuevo en Obs. IAPSER / Domicilio
+          // Si hay varias obras el mismo día en el mismo estab, desempatar por Obs. IAPSER / detalles
           const idxMatch = cands.findIndex(m => v.obsIAPSER && String(m.detalle || '').indexOf(v.obsIAPSER) >= 0);
-          hit = idxMatch >= 0 ? cands.splice(idxMatch, 1)[0] : cands.shift();
+          evs = [idxMatch >= 0 ? cands.splice(idxMatch, 1)[0] : cands.shift()];
         }
       } else if (!v.esObra && conteoNoObraCE[v.cuit + '|' + v.nroEstab] === 1) {
-        hit = porCE[v.cuit + '|' + v.nroEstab] || null;
+        evs = (porCE[v.cuit + '|' + v.nroEstab] || []).slice();
       }
-      v.ultimoABM = hit;
+      v.abmEventos = evs;
+      v.ultimoABM = evs.length ? evs[0] : null;
+      v.esAltaABM = evs.some(m => m.tipo === 'ALTA');
+      v.esModificadaABM = evs.some(m => m.tipo === 'CAMBIO_TAREA' || m.tipo === 'CAMBIO_PLAZO' || m.tipo === 'MODIFICACION');
+      v.mesesAlta = evs.filter(m => m.tipo === 'ALTA').map(mesDeABM).filter(Boolean);
+      v.mesesModif = evs.filter(m => m.tipo !== 'ALTA' && m.tipo !== 'BAJA').map(mesDeABM).filter(Boolean);
     });
 
     // Construir filas originales (en cursiva) solo cuando cambia la tarea o la fecha máxima (CAMBIO_TAREA / CAMBIO_PLAZO)
     // Si solo cambió un dato informativo (ej. Obs. IAPSER), sigue siendo la misma visita y no se duplica.
     const origVistas = {};
-    delUltimo.forEach((m, idx) => {
+    todos.forEach((m, idx) => {
       if (m.tipo !== 'CAMBIO_TAREA' && m.tipo !== 'CAMBIO_PLAZO') return;
       const tOrig = m.tareasAntes || m.tareasDespues || 'Visita';
       const fOrig = m.fechaMaxAntes || m.fechaMaxDespues || '';
-      const kOrig = [m.cuit || '', m.nroEstab || '', C.sinTildes(tOrig).toLowerCase(), fOrig, m.detalle || ''].join('|');
+      const ym = mesDeABM(m);
+      const kOrig = [m.cuit || '', m.nroEstab || '', C.sinTildes(tOrig).toLowerCase(), fOrig, m.detalle || '', ym].join('|');
       if (origVistas[kOrig]) return;
       origVistas[kOrig] = true;
 
@@ -246,6 +258,7 @@
         cp: ref.cp || '',
         tareas: tOrig,
         fechaMax: fOrig,
+        fechaSortABM: m.fechaMaxDespues || fOrig,
         plazo: fOrig,
         fechaAgendada: u && u.fechaAgendada ? u.fechaAgendada : '',
         fechaReal: u && u.fechaReal ? u.fechaReal : '',
@@ -260,6 +273,7 @@
         partesObs: [{ fuente: 'Original antes ABM (' + (m.fechaABM || '') + ')', texto: (m.detalle || 'Versión anterior al cambio') }],
         textoObs: '',
         riesgoFallida: null,
+        mesABM: ym,
         ultimoABM: m
       });
     });
@@ -307,6 +321,7 @@
         partesObs: [{ fuente: 'Baja ABM (' + (m.fechaABM || '') + ')', texto: (m.detalle || 'Dada de baja del padrón') + (teniaGest ? ' · Gestión previa: ' + m.teniaGestion : '') }],
         textoObs: '',
         riesgoFallida: null,
+        mesABM: mesDeABM(m),
         ultimoABM: m
       });
     });
@@ -483,6 +498,19 @@
     return true;
   }
 
+  function mesesABMDisponibles() {
+    const s = new Set();
+    movimientosABMUnificados().forEach(m => {
+      const ym = mesDeABM(m);
+      if (ym) s.add(ym);
+    });
+    return Array.from(s).sort();
+  }
+
+  function mostrarOrigEnVista(vName) {
+    return (vName === 'todas') ? !!F.incOrigTodas : !!F.incOrig;
+  }
+
   function mostrarBajasEnVista(vName) {
     return (vName === 'todas') ? !!F.incBajasTodas : !!F.incBajas;
   }
@@ -496,17 +524,24 @@
     return arr;
   }
 
+  function coincideMesesABM(mesesLista) {
+    if (!F.abmMeses || !F.abmMeses.length) return true;
+    return (mesesLista || []).some(m => F.abmMeses.indexOf(m) >= 0);
+  }
+
   function scopeABMVista(vName) {
     const vig = (vName === 'realizadas' && !F.etiqueta)
       ? realizadasUnificadas(false)
       : filtrarPorVistaBase(baseGlobal(false), vName);
-    const origs = filtrarPorVistaBase(ORIGINALES_MODIFICADAS.filter(o => pasaGlobal(o, false)), vName);
-    const bajas = filtrarPorVistaBase(BAJAS_DISCONTINUADAS.filter(b => pasaGlobal(b, false)), vName);
-    const modifVigs = vig.filter(v => !!v.ultimoABM);
+    const origs = filtrarPorVistaBase(ORIGINALES_MODIFICADAS.filter(o => pasaGlobal(o, false) && coincideMesesABM([o.mesABM])), vName);
+    const bajas = filtrarPorVistaBase(BAJAS_DISCONTINUADAS.filter(b => pasaGlobal(b, false) && coincideMesesABM([b.mesABM])), vName);
+    const altasVigs = vig.filter(v => v.esAltaABM && coincideMesesABM(v.mesesAlta));
+    const modifVigs = vig.filter(v => v.esModificadaABM && coincideMesesABM(v.mesesModif));
     return {
       vig,
       origs,
       bajas,
+      altasVigs,
       modifVigs,
       paresMod: modifVigs.length + origs.length
     };
@@ -514,9 +549,11 @@
 
   function baseListaSinSub() {
     const sc = scopeABMVista(vista);
-    if (F.soloModificadas) return sc.modifVigs.concat(sc.origs);
+    if (F.abmSolo === 'altas') return sc.altasVigs;
+    if (F.abmSolo === 'modif') return sc.modifVigs.concat(sc.origs);
+    if (F.abmSolo === 'bajas') return sc.bajas;
     let out = sc.vig.slice();
-    if (F.incOrig && sc.origs.length) out = out.concat(sc.origs);
+    if (mostrarOrigEnVista(vista) && sc.origs.length) out = out.concat(sc.origs);
     if (mostrarBajasEnVista(vista) && sc.bajas.length) out = out.concat(sc.bajas);
     return out;
   }
@@ -534,6 +571,7 @@
   }
 
   function filtrar() {
+    const intercalarPairs = (F.abmSolo === 'modif') || mostrarOrigEnVista(vista);
     return baseListaSinSub().filter(v => {
       if (!pasaSubfiltro(v)) return false;
       if (F.estado && v.estado !== F.estado) return false;
@@ -547,7 +585,7 @@
       if (F.cruceOct === 'Fallida' && !(v.cruceOct && v.cruceOct.resultado === 'Fallida')) return false;
       return true;
     }).sort((a, b) => {
-      if (F.soloModificadas) {
+      if (F.abmSolo === 'modif') {
         return String(a.cuit || '').localeCompare(String(b.cuit || '')) ||
           String(a.nroEstab || '').localeCompare(String(b.nroEstab || '')) ||
           ((a.esOriginalABM ? 0 : 1) - (b.esOriginalABM ? 0 : 1)) ||
@@ -561,7 +599,9 @@
         const kb = `${b.cuit}|${String(b.nroEstab).padStart(4, '0')}|${b.fechaMax || '9'}`;
         return ka.localeCompare(kb);
       }
-      return (a.fechaMax || '9').localeCompare(b.fechaMax || '9') ||
+      const fa = (intercalarPairs && a.fechaSortABM) ? a.fechaSortABM : (a.fechaMax || '9');
+      const fb = (intercalarPairs && b.fechaSortABM) ? b.fechaSortABM : (b.fechaMax || '9');
+      return fa.localeCompare(fb) ||
         String(a.cuit || '').localeCompare(String(b.cuit || '')) ||
         String(a.nroEstab || '').localeCompare(String(b.nroEstab || '')) ||
         ((a.esOriginalABM ? 0 : 1) - (b.esOriginalABM ? 0 : 1));
@@ -600,7 +640,7 @@
       ${item('pot_fallidas', '⚡', 'Pot. fallidas', nPot, true)}
       ${item('todas', '🗂', 'Padrón total', nTodasFull)}
       <div class="grp">Control</div>
-      ${item('abm', '📋', 'Historial ABM', movimientosABMUnificados().length)}
+      ${item('abm', '📜', 'Bitácora de novedades', movimientosABMUnificados().length)}
       ${item('revisar', '🔎', 'Errores / A revisar', nRev, nRev > 0)}
       <button type="button" class="nav" onclick="App.abrirConfig()"><span>⚙</span><span>Configurar</span></button>
       <a class="nav" href="../index.html"><span>↩</span><span>Plataforma anterior</span></a>
@@ -1406,26 +1446,42 @@
   }
 
   function botonesABMHTML(sc, totalMostrado) {
-    const bajasAct = mostrarBajasEnVista(vista);
-    const soloMod = !!F.soloModificadas;
-    const origAct = !soloMod && !!F.incOrig;
-    const bajasOn = !soloMod && bajasAct;
+    const origOn = !F.abmSolo && mostrarOrigEnVista(vista);
+    const bajasOn = !F.abmSolo && mostrarBajasEnVista(vista);
+    const soloAltas = F.abmSolo === 'altas';
+    const soloMod = F.abmSolo === 'modif';
+    const soloBajas = F.abmSolo === 'bajas';
     const totConTodo = sc.vig.length + sc.origs.length + sc.bajas.length;
+    const mesesDisp = mesesABMDisponibles();
+    const selMeses = F.abmMeses || [];
     return `<div class="abm-bar">
-      <span class="abm-lbl">Visibilidad ABM:</span>
-      <button type="button" class="abm-btn ${!soloMod ? 'on' : ''}" onclick="App.togAbm('vig')" title="Ver padrón vigente completo">
-        Vigentes <span class="cnt">${fmt(sc.vig.length)}</span>
+      <span class="abm-lbl">Listado:</span>
+      <button type="button" class="abm-btn ${!F.abmSolo ? 'on' : ''}" onclick="App.togAbm('activas')" title="Mostrar listado completo de visitas activas (en Sin agendar excluye bajas y originales por defecto)">
+        ${!F.abmSolo ? '✓ ' : ''}Activas <span class="cnt">${fmt(sc.vig.length)}</span>
       </button>
-      <button type="button" class="abm-btn ${origAct ? 'on' : (sc.origs.length ? '' : 'dis')}" onclick="App.togAbm('orig')" title="Incluir o quitar versiones originales en cursiva de visitas que cambiaron">
-        ${origAct ? '✓ ' : ''}Originales (cursiva) <span class="cnt">${fmt(sc.origs.length)}</span>
+      <button type="button" class="abm-btn ${origOn ? 'on' : (sc.origs.length ? '' : 'dis')}" onclick="App.togAbm('orig')" title="Sumar o quitar versiones originales en cursiva (y/o al listado, intercaladas)">
+        ${origOn ? '✓ ' : '+ '}Orig. cursiva <span class="cnt">${fmt(sc.origs.length)}</span>
       </button>
-      <button type="button" class="abm-btn ${bajasOn ? 'on-bad' : (sc.bajas.length ? '' : 'dis')}" onclick="App.togAbm('bajas')" title="Incluir o quitar visitas dadas de baja (en rojo)">
-        ${bajasOn ? '✓ ' : ''}Bajas (rojo) <span class="cnt">${fmt(sc.bajas.length)}</span>
+      <button type="button" class="abm-btn ${bajasOn ? 'on-bad' : (sc.bajas.length ? '' : 'dis')}" onclick="App.togAbm('bajas')" title="Sumar o quitar bajas en rojo (y/o al listado)">
+        ${bajasOn ? '✓ ' : '+ '}Bajas rojo <span class="cnt">${fmt(sc.bajas.length)}</span>
       </button>
-      <button type="button" class="abm-btn ${soloMod ? 'on-chg' : (sc.paresMod ? '' : 'dis')}" onclick="App.togAbm('modif')" title="Ver únicamente las visitas que cambiaron: original en cursiva + modificada">
+      <span class="abm-sep"></span>
+      <span class="abm-lbl">Ver solo:</span>
+      <button type="button" class="abm-btn ${soloAltas ? 'on-ok' : (sc.altasVigs.length ? '' : 'dis')}" onclick="App.togAbm('solo_altas')" title="Ver únicamente las altas nuevas del mes o meses elegidos">
+        ✔ Solo altas <span class="cnt">${fmt(sc.altasVigs.length)}</span>
+      </button>
+      <button type="button" class="abm-btn ${soloMod ? 'on-chg' : (sc.paresMod ? '' : 'dis')}" onclick="App.togAbm('solo_modif')" title="Ver únicamente las modificadas (duplicadas: original en cursiva intercalada con modificada)">
         ⇄ Solo modificadas (orig. + modif.) <span class="cnt">${fmt(sc.paresMod)}</span>
       </button>
-      <span style="margin-left:auto" class="note">Mostrando <b>${fmt(totalMostrado)}</b> de ${fmt(totConTodo)} totales (c/orig. y bajas)</span>
+      <button type="button" class="abm-btn ${soloBajas ? 'on-bad' : (sc.bajas.length ? '' : 'dis')}" onclick="App.togAbm('solo_bajas')" title="Ver únicamente las bajas en rojo del mes o meses elegidos">
+        ✖ Solo bajas <span class="cnt">${fmt(sc.bajas.length)}</span>
+      </button>
+      <span style="margin-left:auto" class="note">Mostrando <b>${fmt(totalMostrado)}</b>${totConTodo !== totalMostrado ? ` de ${fmt(totConTodo)} c/orig. y bajas` : ' visitas'}</span>
+      ${mesesDisp.length ? `<div class="abm-meses">
+        <span class="abm-lbl">Mes ABM:</span>
+        ${mesesDisp.map(ym => `<span class="chk ${selMeses.indexOf(ym) >= 0 ? 'on' : ''}" onclick="App.togAbmMes('${esc(ym)}')"><i></i>${esc(C.labelMes(ym))}</span>`).join('')}
+        ${selMeses.length ? '<button type="button" class="clear-lnk" onclick="App.limpiarAbmMeses()">todos los meses</button>' : '<span class="note">(todos los meses)</span>'}
+      </div>` : ''}
     </div>`;
   }
 
@@ -1448,7 +1504,7 @@
 
     const etObj = F.etiqueta ? C.ETIQUETAS_LOGISTICA.find(x => x.id === F.etiqueta) : null;
     const [tit, desc] = etObj ? [etObj.label, 'Prioridad crítica seleccionada desde Resumen.'] : (META_VISTA[vista] || ['Visitas', '']);
-    const hayFiltrosLocales = !!(F.sub || F.etiqueta || F.tarea || F.venc || F.mes || F.estado || F.cruceOct || F.errTipo || F.localidad || F.soloModificadas);
+    const hayFiltrosLocales = !!(F.sub || F.etiqueta || F.tarea || F.venc || F.mes || F.estado || F.cruceOct || F.errTipo || F.localidad || F.abmSolo || (F.abmMeses && F.abmMeses.length));
 
     let ambOptsSin = '', locOptsSin = '';
     if (vista === 'sin_agendar') {
@@ -1641,7 +1697,7 @@
         ${datoB('Gestión previa al momento de baja', m.teniaGestion || 'No')}
         <b>Estado</b><span>${pillEstado('Discontinuada', false)}</span>
       </div>`;
-      $('dvFoot').innerHTML = `<button type="button" class="btn sec" onclick="dlgVisita.close(); App.ir('abm')">📋 Ver en Historial ABM →</button><button type="button" class="btn" onclick="dlgVisita.close()">Cerrar</button>`;
+      $('dvFoot').innerHTML = `<button type="button" class="btn sec" onclick="dlgVisita.close(); App.ir('abm')">📜 Ver en Bitácora de novedades →</button><button type="button" class="btn" onclick="dlgVisita.close()">Cerrar</button>`;
       $('dlgVisita').showModal();
       return;
     }
@@ -2622,11 +2678,13 @@
     btn.disabled = false;
   }
 
-  /* ---------- 5. VISTA INDEPENDIENTE: HISTORIAL ABM ---------- */
+  /* ---------- 5. VISTA INDEPENDIENTE: BITÁCORA DE NOVEDADES (HISTORIAL ABM) ---------- */
   function filtrarMovimientosABM() {
     const todos = movimientosABMUnificados();
     const q = C.sinTildes(ABM_F.q).toLowerCase().trim();
+    const msSel = ABM_F.meses || [];
     return todos.filter(m => {
+      if (msSel.length && msSel.indexOf(mesDeABM(m)) < 0) return false;
       if (ABM_F.lote && (m.loteId || m.fechaABM) !== ABM_F.lote) return false;
       if (ABM_F.tipo) {
         if (ABM_F.tipo === 'OTROS') {
@@ -2650,7 +2708,7 @@
     if (ABM_F.pagina > pags) ABM_F.pagina = pags;
     const sl = filtrados.slice((ABM_F.pagina - 1) * PAGE, ABM_F.pagina * PAGE);
 
-    // Agrupar lotes por loteId o fechaABM
+    // Agrupar lotes y meses ABM
     const lotesMap = {};
     todos.forEach(m => {
       const k = m.loteId || m.fechaABM || 'sin_lote';
@@ -2658,18 +2716,23 @@
       lotesMap[k].count++;
     });
     const lotes = Object.values(lotesMap).sort((a, b) => String(b.fechaABM).localeCompare(String(a.fechaABM)));
+    const mesesDisp = mesesABMDisponibles();
+    const msSel = ABM_F.meses || [];
     const ambitosABM = Array.from(new Set(todos.map(m => m.ambito).filter(Boolean))).sort();
 
-    const baseLote = ABM_F.lote ? todos.filter(m => (m.loteId || m.fechaABM) === ABM_F.lote) : todos;
+    const baseLote = todos.filter(m =>
+      (!ABM_F.lote || (m.loteId || m.fechaABM) === ABM_F.lote) &&
+      (!msSel.length || msSel.indexOf(mesDeABM(m)) >= 0)
+    );
     const nAltas = baseLote.filter(m => m.tipo === 'ALTA').length;
     const nBajas = baseLote.filter(m => m.tipo === 'BAJA').length;
     const nBajasGest = baseLote.filter(m => m.tipo === 'BAJA' && m.teniaGestion && m.teniaGestion !== 'No').length;
     const nTareas = baseLote.filter(m => m.tipo === 'CAMBIO_TAREA').length;
     const nOtros = baseLote.filter(m => m.tipo === 'CAMBIO_PLAZO' || m.tipo === 'MODIFICACION').length;
-    const hayFil = !!(ABM_F.lote || ABM_F.tipo || ABM_F.ambito || ABM_F.q);
+    const hayFil = !!(ABM_F.lote || ABM_F.tipo || ABM_F.ambito || msSel.length || ABM_F.q);
 
     let h = `<div class="page-head">
-      <div><h1>Historial ABM del Padrón</h1><div class="sub">Registro histórico con Fecha de ABM de altas, bajas y cambios de tareas entre listados (sincronizado con hoja <code>Historial_ABM</code>).</div></div>
+      <div><h1>Bitácora de novedades</h1><div class="sub">Registro cronológico de altas, bajas, cambios de tareas y modificaciones entre listados (sincronizado con hoja <code>Historial_ABM</code>).</div></div>
       <div style="display:flex;gap:8px">
         ${ULTIMO_LOTE_ABM ? '<button type="button" class="btn sec" onclick="App.verUltimoPopupABM()">🔔 Ver último resumen</button>' : ''}
         <button type="button" class="btn" onclick="App.abrirPadron()">📥 Subir nuevo listado</button>
@@ -2682,6 +2745,14 @@
       <div class="card bad"><div class="k">Bajas</div><div class="v" style="color:var(--bad)">-${fmt(nBajas)}</div><div class="s">${nBajasGest ? `<span class="venc">${fmt(nBajasGest)} tenían gestión/PDF</span>` : 'dadas de baja'}</div></div>
       <div class="card warn"><div class="k">Cambios de tareas</div><div class="v" style="color:#5B21B6">${fmt(nTareas)}</div><div class="s">${nOtros ? `+ ${fmt(nOtros)} cambio(s) de plazo/datos` : 'mismo CUIT + Estab'}</div></div>
     </div>`;
+
+    if (mesesDisp.length) {
+      h += `<div class="abm-bar" style="margin-top:8px">
+        <span class="abm-lbl">Mes(es) de novedad:</span>
+        ${mesesDisp.map(ym => `<span class="chk ${msSel.indexOf(ym) >= 0 ? 'on' : ''}" onclick="App.abmTogMes('${esc(ym)}')"><i></i>${esc(C.labelMes(ym))}</span>`).join('')}
+        ${msSel.length ? '<button type="button" class="clear-lnk" onclick="App.abmLimpiarMeses()">todos los meses</button>' : '<span class="note">(todos los meses)</span>'}
+      </div>`;
+    }
 
     const segBtn = (k, lbl) => `<button type="button" class="${ABM_F.tipo === k ? 'on' : ''}" onclick="App.abmFiltro('tipo','${k}')">${lbl}</button>`;
     h += `<div class="filters" style="margin-top:6px">
@@ -2702,7 +2773,7 @@
       </select>
       <input type="search" id="abmSearch" placeholder="Buscar CUIT, empleador, tarea…" value="${esc(ABM_F.q)}" oninput="App.abmBuscar(this.value)">
       ${hayFil ? '<button type="button" class="btn sec sm" onclick="App.abmLimpiar()">Limpiar</button>' : ''}
-      <button type="button" class="btn sec sm" style="margin-left:auto" onclick="App.exportarHistorialABM()">⬇ Exportar Historial ABM (.csv)</button>
+      <button type="button" class="btn sec sm" style="margin-left:auto" onclick="App.exportarHistorialABM()">⬇ Exportar Bitácora (.csv)</button>
     </div>`;
 
     h += `<div class="tw"><div style="overflow:auto;max-height:66vh"><table class="grid-op"><thead><tr>
@@ -2853,7 +2924,7 @@
   }
 
   function resetSubfiltrosLista() {
-    Object.assign(F, { sub: '', etiqueta: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '', localidad: '', soloModificadas: false });
+    Object.assign(F, { sub: '', etiqueta: '', estado: '', mes: '', venc: '', tarea: '', cruceOct: '', errTipo: '', localidad: '', abmSolo: '', abmMeses: [] });
     pagina = 1;
   }
 
@@ -2965,18 +3036,36 @@
     limpiarFiltros,
     limpiarGlobal,
     togAbm(k) {
-      if (k === 'vig') {
-        F.soloModificadas = false;
+      if (k === 'activas') {
+        F.abmSolo = '';
       } else if (k === 'orig') {
-        F.soloModificadas = false;
-        F.incOrig = !F.incOrig;
+        F.abmSolo = '';
+        if (vista === 'todas') F.incOrigTodas = !F.incOrigTodas;
+        else F.incOrig = !F.incOrig;
       } else if (k === 'bajas') {
-        F.soloModificadas = false;
+        F.abmSolo = '';
         if (vista === 'todas') F.incBajasTodas = !F.incBajasTodas;
         else F.incBajas = !F.incBajas;
-      } else if (k === 'modif') {
-        F.soloModificadas = !F.soloModificadas;
+      } else if (k === 'solo_altas') {
+        F.abmSolo = (F.abmSolo === 'altas') ? '' : 'altas';
+      } else if (k === 'solo_modif') {
+        F.abmSolo = (F.abmSolo === 'modif') ? '' : 'modif';
+      } else if (k === 'solo_bajas') {
+        F.abmSolo = (F.abmSolo === 'bajas') ? '' : 'bajas';
       }
+      pagina = 1;
+      render();
+    },
+    togAbmMes(ym) {
+      if (!ym) return;
+      const i = F.abmMeses.indexOf(ym);
+      if (i >= 0) F.abmMeses.splice(i, 1);
+      else F.abmMeses.push(ym);
+      pagina = 1;
+      render();
+    },
+    limpiarAbmMeses() {
+      F.abmMeses = [];
       pagina = 1;
       render();
     },
@@ -3001,16 +3090,25 @@
     abrirPadron, cargarArchivoPadron, cambiarHojaPadron, remapearColumnaPadron, setPadronOpt, aplicarPadron, descargarDiffCSV, descargarDatosJS, restaurarPadronBase,
     verAbmMes(ym) {
       vista = 'abm';
-      Object.assign(ABM_F, { lote: '', tipo: '', ambito: '', q: ym || '', pagina: 1 });
+      Object.assign(ABM_F, { lote: '', tipo: '', ambito: '', meses: ym ? [ym] : [], q: '', pagina: 1 });
       render();
       if ($('main')) $('main').scrollTop = 0;
     },
     setAbmPopTab(t) { abmPopTab = t; renderPopupResumenABM(); },
     verUltimoPopupABM() { if (ULTIMO_LOTE_ABM && $('dlgResumenABM')) { renderPopupResumenABM(); $('dlgResumenABM').showModal(); } },
     abmFiltro(k, val) { ABM_F[k] = val; ABM_F.pagina = 1; renderHistorialABM(); },
+    abmTogMes(ym) {
+      if (!ym) return;
+      const i = ABM_F.meses.indexOf(ym);
+      if (i >= 0) ABM_F.meses.splice(i, 1);
+      else ABM_F.meses.push(ym);
+      ABM_F.pagina = 1;
+      renderHistorialABM();
+    },
+    abmLimpiarMeses() { ABM_F.meses = []; ABM_F.pagina = 1; renderHistorialABM(); },
     abmBuscar(val) { ABM_F.q = val; ABM_F.pagina = 1; renderHistorialABM(); const i = $('abmSearch'); if (i) { i.focus(); i.setSelectionRange(val.length, val.length); } },
     abmPag(d) { ABM_F.pagina = Math.max(1, ABM_F.pagina + d); renderHistorialABM(); },
-    abmLimpiar() { Object.assign(ABM_F, { lote: '', tipo: '', ambito: '', q: '', pagina: 1 }); renderHistorialABM(); },
+    abmLimpiar() { Object.assign(ABM_F, { lote: '', tipo: '', ambito: '', meses: [], q: '', pagina: 1 }); renderHistorialABM(); },
     exportarHistorialABM,
     sincronizar, abrirConfig, guardarConfig, exportar,
     _estado: () => ({ VISITAS, BAJAS_DISCONTINUADAS, ORIGINALES_MODIFICADAS, INTENTOS, COLA, LOTE, PADRON_LOCAL, PADRON_UI, ABM_LOCAL, ULTIMO_LOTE_ABM, geminiActivo, F, LOG, ABM_F, vista, subTab })

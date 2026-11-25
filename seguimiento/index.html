@@ -192,7 +192,11 @@
   .abm-btn.on{background:#E6F1F4;border-color:var(--teal);color:var(--teal);font-weight:600}
   .abm-btn.on-bad{background:#FBE9E7;border-color:var(--bad);color:var(--bad);font-weight:600}
   .abm-btn.on-chg{background:#EDE9FE;border-color:#6D28D9;color:#5B21B6;font-weight:600}
+  .abm-btn.on-ok{background:#E4F3EA;border-color:var(--ok);color:var(--ok);font-weight:600}
   .abm-btn.dis{opacity:.55}
+  .abm-sep{width:1px;height:20px;background:var(--line);margin:0 2px}
+  .abm-meses{display:flex;gap:5px;flex-wrap:wrap;align-items:center;padding-top:6px;margin-top:2px;border-top:1px dashed #ECEEEA;width:100%}
+  .abm-bar .chk{padding:2px 8px;font-size:11.5px}
   .tw{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
   table{border-collapse:collapse;width:100%;background:#fff;font-size:13px}
   th,td{padding:8px 10px;border-bottom:1px solid #ECEEEA;text-align:left;vertical-align:middle;font-size:13px}
@@ -397,7 +401,7 @@
   <div class="mf">
     <span class="note" id="abmPopSyncInfo" style="margin-right:auto"></span>
     <button class="btn sec" onclick="dlgResumenABM.close()">Cerrar</button>
-    <button class="btn" onclick="dlgResumenABM.close(); App.ir('abm')">📋 Ir a Historial ABM →</button>
+    <button class="btn" onclick="dlgResumenABM.close(); App.ir('abm')">📜 Ir a Bitácora de novedades →</button>
   </div>
 </dialog>
 
@@ -413,9 +417,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="core.js?v=20261125-5"></script>
-<script src="ocr.js?v=20261125-5"></script>
-<script src="datos.js?v=20261125-5"></script>
-<script src="app.js?v=20261125-5"></script>
+<script src="core.js?v=20261125-6"></script>
+<script src="ocr.js?v=20261125-6"></script>
+<script src="datos.js?v=20261125-6"></script>
+<script src="app.js?v=20261125-6"></script>
 </body>
 </html>
